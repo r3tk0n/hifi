@@ -244,7 +244,10 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.isReady = function(controllerData, deltaTime) {
             var otherModule = this.getOtherModule();
-            if (!this.disabled && this.buttonValue !== 0 && !otherModule.active) {
+            // Rotation check:
+            var rot = controllerData.controllerRotAngles[this.hand];
+            var correctRotation = (rot >= 101.25 && rot <= 135);
+            if (!this.disabled && this.buttonValue !== 0 && !otherModule.active && correctRotation) {
                 this.active = true;
                 this.enterTeleport();
                 return makeRunningValues(true, [], []);
