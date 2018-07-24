@@ -70,6 +70,10 @@ HAPTIC_PULSE_DURATION = 13.0;
 
 ZERO_VEC = { x: 0, y: 0, z: 0 };
 ONE_VEC = { x: 1, y: 1, z: 1 };
+X_UNIT_VEC = { x: 1, y: 0, z: 0 };
+Y_UNIT_VEC = { x: 0, y: 1, z: 0 };
+Z_UNIT_VEC = { x: 0, y: 0, z: 1 };
+
 
 LEFT_HAND = 0;
 RIGHT_HAND = 1;
@@ -481,6 +485,29 @@ entityIsFarGrabbedByOther = function(entityID) {
     }
     return false;
 };
+
+toDegrees = function (angle) {
+    return angle * (180 / Math.PI);
+}
+
+toRadians = function (angle) {
+    return angle * (Math.PI / 180);
+}
+
+controllerTwistAngle = function (hand) {
+    // Retrieve the hand's pose.
+    var handPose = Controller.getPoseValue(hand === LEFT_HAND ? Controller.Standard.LeftHand : Controller.Standard.RightHand);
+    // Get the rotation off the controller for the given hand.
+    var handRotationQuat = handPose.rotation;
+    // Get it into avatar space.
+    var handRotationVector = Vec3.multiplyQbyV(handRotationQuat, Z_UNIT_VEC);
+    // Get rotation of Avatar's hips
+    var avatarHipRotationQuat = MyAvatar.getJointRotation("Hips");
+    // Multiply up vector by hip rotation.
+    var rotatedUpVector = Vec3.multiplyQbyV(avatarHipRotationQuat, Y_UNIT_VEC);
+    // Take the cosine inverse of the dot producft to retrieve theta (angle, returned in degrees).
+    return toDegrees(Math.acos(Vec3.dot(Vec3.normalize(handRotationVector), Vec3.normalize(rotatedUpVector))));
+}
 
 if (typeof module !== 'undefined') {
     module.exports = {
