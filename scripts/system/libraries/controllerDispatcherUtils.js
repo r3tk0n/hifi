@@ -509,6 +509,14 @@ controllerTwistAngle = function (hand) {
     return toDegrees(Math.acos(Vec3.dot(Vec3.normalize(handRotationVector), Vec3.normalize(rotatedUpVector))));
 }
 
+projectVontoW = function (v, w) {
+    // Project vector v onto vector w
+    var denominator = Vec3.length(w);
+    // Denominator should be mag(w)^2
+    denominator *= denominator;
+    return Vec3.multiply((Vec3.dot(v, w) / denominator), w);
+}
+
 if (typeof module !== 'undefined') {
     module.exports = {
         makeDispatcherModuleParameters: makeDispatcherModuleParameters,
