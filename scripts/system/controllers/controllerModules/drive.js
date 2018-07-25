@@ -24,8 +24,6 @@ Script.include("/~/system/libraries/controllers.js");
             return otherModule;
         };
 
-        
-
         this.isReady = function(controllerData, deltaTime) {
             var otherModule = this.getOtherModule();
             var rot = controllerData.controllerRotAngles[this.hand];
@@ -34,6 +32,7 @@ Script.include("/~/system/libraries/controllers.js");
             var correctRotation = (rot >= 67.5 && rot < 101.25);
             if (correctRotation && pressedEnough) {
                 this.active = true;
+                print((this.hand === RIGHT_HAND ? "Right Hand" : "Left Hand") + " Activated");
                 this.registerMappings();
                 Controller.enableMapping(mappingName);
                 return makeRunningValues(true, [], []);
@@ -64,11 +63,11 @@ Script.include("/~/system/libraries/controllers.js");
                     var rotVec = Vec3.multiplyQbyV(pose.rotation, { x: 0, y: 1, z: 0 });
                     var retMe = (projectVontoW(rotVec, { x: 1, y: 0, z: 0 })).x;
                     //print("Amount Pressed: " + amountPressed);
-                    return retMe * amountPressed;
+                    return retMe;
                 }
                 return 0;
             }).
-                to((this.hand === RIGHT_HAND) ? Controller.Standard.RX : Controller.Standard.LX);
+                to(Controller.Standard.LX);
                 
             driverMapping.from(function () {
                 var amountPressed = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT)
@@ -77,11 +76,11 @@ Script.include("/~/system/libraries/controllers.js");
                     var rotVec = Vec3.multiplyQbyV(pose.rotation, { x: 0, y: 1, z: 0 });
                     var retMe = (projectVontoW(rotVec, { x: 0, y: 0, z: 1 })).z;
                     //print("LY/RY Bind Returning: " + retMe * amountPressed);
-                    return retMe * amountPressed;
+                    return retMe;
                 }
                 return 0;
             }).
-                to((this.hand === RIGHT_HAND) ? Controller.Standard.RY : Controller.Standard.LY);
+                to(Controller.Standard.LY);
         };
 
         this.cleanup = function() {
