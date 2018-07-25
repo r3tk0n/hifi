@@ -34,13 +34,18 @@ Script.include("/~/system/libraries/controllers.js");
             if (correctRotation && pressedEnough) {
                 this.active = true;
                 registerMappings();
+                Controller.enableMapping(mappingName);
                 return makeRunningValues(true, [], []);
             }
             return makeRunningValues(false, [], []);
         };
 
         this.run = function(controllerData, deltaTime) {
-            // Check trigger pull conditions here.
+            var triggerPress = controllerData.triggerValues[this.hand];
+            var pressedEnough = (triggerPress >= 0.1);
+            if (!pressedEnough) {
+                driverMapping.disable();
+            }
         };
 
         this.cleanup = function() {
@@ -53,14 +58,24 @@ Script.include("/~/system/libraries/controllers.js");
             [],
             100
         );
-
     } // END Driver(hand)
 
     function registerMappings() {
         mappingName = 'Hifi-Driver-Dev-' + Math.random();
         driverMapping = Controller.newMapping(mappingName);
 
-        // FROM, PEEK, TO stuff goes here.
+        // lambda functions should take projections
+        if (this.hand === RIGHT_HAND) {
+            driverMapping.from(/*lambda*/).
+                to(Controller.Standard.LX);
+            driverMapping.from(/*lambda*/).
+                to(Controller.Standard.LY);
+        } else {
+            driverMapping.from(/*lambda*/).
+                to(Controller.Standard.RX);
+            driverMapping.from(/*lambda*/).
+                to(Controller.Standard.RY);
+        }
     };
 
     var leftDriver = new Driver(LEFT_HAND);
@@ -68,9 +83,9 @@ Script.include("/~/system/libraries/controllers.js");
 
     enableDispatcherModule("LeftDriver", leftDriver);
     enableDispatcherModule("RightDriver", rightDriver);
-        // Call registerMappings()
 
     function cleanup() {
+        driverMapping.disable();
         leftDriver.cleanup();
         rightDriver.cleanup();
         disableDispatcherModule("LeftDriver");
