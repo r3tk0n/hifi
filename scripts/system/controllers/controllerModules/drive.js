@@ -18,22 +18,23 @@ Script.include("/~/system/libraries/controllers.js");
         var _this = this;
         this.hand = hand;
         this.active = false;
-        var mappingName, driverMapping;
 
         this.getOtherModule = function() {
             var otherModule = this.hand === RIGHT_HAND ? leftDriver : rightDriver;
             return otherModule;
         };
 
+        
+
         this.isReady = function(controllerData, deltaTime) {
             var otherModule = this.getOtherModule();
             var rot = controllerData.controllerRotAngles[this.hand];
             var triggerPress = controllerData.triggerValues[this.hand];
-            var pressedEnough = (triggerPress >= 0.1);
+            var pressedEnough = (triggerPress >= 0.05);
             var correctRotation = (rot >= 67.5 && rot < 101.25);
             if (correctRotation && pressedEnough) {
                 this.active = true;
-                registerMappings();
+                this.registerMappings();
                 Controller.enableMapping(mappingName);
                 return makeRunningValues(true, [], []);
             }
@@ -42,10 +43,45 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.run = function(controllerData, deltaTime) {
             var triggerPress = controllerData.triggerValues[this.hand];
-            var pressedEnough = (triggerPress >= 0.1);
+            var pressedEnough = (triggerPress >= 0.05);
             if (!pressedEnough) {
                 driverMapping.disable();
+                return makeRunningValues(false, [], []);
             }
+            return makeRunningValues(true, [], []);
+        };
+
+        this.registerMappings = function() {
+            mappingName = 'Hifi-Driver-Dev-' + Math.random();
+            driverMapping = Controller.newMapping(mappingName);
+
+            
+            driverMapping.from(function () {
+                var amountPressed = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT)
+                //print("Trigger Value: " + amountPressed);
+                var pose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+                if (pose.valid) {
+                    var rotVec = Vec3.multiplyQbyV(pose.rotation, { x: 0, y: 1, z: 0 });
+                    var retMe = (projectVontoW(rotVec, { x: 1, y: 0, z: 0 })).x;
+                    //print("Amount Pressed: " + amountPressed);
+                    return retMe * amountPressed;
+                }
+                return 0;
+            }).
+                to((this.hand === RIGHT_HAND) ? Controller.Standard.RX : Controller.Standard.LX);
+                
+            driverMapping.from(function () {
+                var amountPressed = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT)
+                var pose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+                if (pose.valid) {
+                    var rotVec = Vec3.multiplyQbyV(pose.rotation, { x: 0, y: 1, z: 0 });
+                    var retMe = (projectVontoW(rotVec, { x: 0, y: 0, z: 1 })).z;
+                    //print("LY/RY Bind Returning: " + retMe * amountPressed);
+                    return retMe * amountPressed;
+                }
+                return 0;
+            }).
+                to((this.hand === RIGHT_HAND) ? Controller.Standard.RY : Controller.Standard.LY);
         };
 
         this.cleanup = function() {
@@ -60,23 +96,7 @@ Script.include("/~/system/libraries/controllers.js");
         );
     } // END Driver(hand)
 
-    function registerMappings() {
-        mappingName = 'Hifi-Driver-Dev-' + Math.random();
-        driverMapping = Controller.newMapping(mappingName);
-
-        // lambda functions should take projections
-        if (this.hand === RIGHT_HAND) {
-            driverMapping.from(/*lambda*/).
-                to(Controller.Standard.LX);
-            driverMapping.from(/*lambda*/).
-                to(Controller.Standard.LY);
-        } else {
-            driverMapping.from(/*lambda*/).
-                to(Controller.Standard.RX);
-            driverMapping.from(/*lambda*/).
-                to(Controller.Standard.RY);
-        }
-    };
+    var mappingName, driverMapping;
 
     var leftDriver = new Driver(LEFT_HAND);
     var rightDriver = new Driver(RIGHT_HAND);
