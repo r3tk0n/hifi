@@ -63,7 +63,7 @@ Script.include("/~/system/libraries/controllers.js");
                     var rotVec = Vec3.multiplyQbyV(pose.rotation, { x: 0, y: 1, z: 0 });
                     var retMe = (projectVontoW(rotVec, { x: 1, y: 0, z: 0 })).x;
                     //print("Amount Pressed: " + amountPressed);
-                    return retMe;
+                    return retMe * amountPressed;
                 }
                 return 0;
             }).
@@ -76,7 +76,7 @@ Script.include("/~/system/libraries/controllers.js");
                     var rotVec = Vec3.multiplyQbyV(pose.rotation, { x: 0, y: 1, z: 0 });
                     var retMe = (projectVontoW(rotVec, { x: 0, y: 0, z: 1 })).z;
                     //print("LY/RY Bind Returning: " + retMe * amountPressed);
-                    return retMe;
+                    return retMe * amountPressed;
                 }
                 return 0;
             }).
