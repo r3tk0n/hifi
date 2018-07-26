@@ -14,6 +14,9 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
 Script.include("/~/system/libraries/controllers.js");
 
 (function () {// BEGIN LOCAL_SCOPE
+
+    var mappingName, driverMapping;
+
     function Driver(hand) {
         var _this = this;
         this.hand = hand;
@@ -50,36 +53,55 @@ Script.include("/~/system/libraries/controllers.js");
             return makeRunningValues(true, [], []);
         };
 
+        this.driverMappingFunction1 = function (hand = this.hand) {
+            console.log(hand);
+            var amountPressed = Controller.getValue((hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT);
+            console.log(amountPressed);
+            //print("Trigger Value: " + amountPressed);
+            var pose = Controller.getPoseValue((hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+            if(this.hand===RIGHT_HAND) {
+                console.log(pose.valid);
+            }
+            if (pose.valid) {
+                var rotVec = Vec3.multiplyQbyV(pose.rotation, { x: 0, y: 1, z: 0 });
+                var retMe = (projectVontoW(rotVec, { x: 1, y: 0, z: 0 })).x;
+                //print("Amount Pressed: " + amountPressed);
+                if (this.hand === RIGHT_HAND) {
+                    console.log(JSON.stringify(pose.rotation));
+                    console.log(JSON.stringify(rotVec));
+                    console.log(JSON.stringify(retMe));
+                }
+                return retMe * amountPressed;
+            }
+            return 0;
+        }
+
+        this.driverMappingFunction2 = function (hand = this.hand) {
+            var amountPressed = Controller.getValue((hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT)
+            var pose = Controller.getPoseValue((hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+            if (pose.valid) {
+                var rotVec = Vec3.multiplyQbyV(pose.rotation, { x: 0, y: 1, z: 0 });
+                var retMe = (projectVontoW(rotVec, { x: 0, y: 0, z: 1 })).z;
+                //print("LY/RY Bind Returning: " + retMe * amountPressed);
+                if (this.hand === RIGHT_HAND) {
+                    console.log(JSON.stringify(pose.rotation));
+                    console.log(JSON.stringify(rotVec));
+                    console.log(JSON.stringify(retMe));
+                }
+                return retMe * amountPressed;
+            }
+            return 0;
+        }
+
         this.registerMappings = function() {
+
             mappingName = 'Hifi-Driver-Dev-' + Math.random();
             driverMapping = Controller.newMapping(mappingName);
 
-            
-            driverMapping.from(function () {
-                var amountPressed = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT)
-                //print("Trigger Value: " + amountPressed);
-                var pose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
-                if (pose.valid) {
-                    var rotVec = Vec3.multiplyQbyV(pose.rotation, { x: 0, y: 1, z: 0 });
-                    var retMe = (projectVontoW(rotVec, { x: 1, y: 0, z: 0 })).x;
-                    //print("Amount Pressed: " + amountPressed);
-                    return retMe * amountPressed;
-                }
-                return 0;
-            }).
+            driverMapping.from(this.driverMappingFunction1).
                 to(Controller.Standard.LX);
                 
-            driverMapping.from(function () {
-                var amountPressed = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT)
-                var pose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
-                if (pose.valid) {
-                    var rotVec = Vec3.multiplyQbyV(pose.rotation, { x: 0, y: 1, z: 0 });
-                    var retMe = (projectVontoW(rotVec, { x: 0, y: 0, z: 1 })).z;
-                    //print("LY/RY Bind Returning: " + retMe * amountPressed);
-                    return retMe * amountPressed;
-                }
-                return 0;
-            }).
+            driverMapping.from(this.driverMappingFunction2).
                 to(Controller.Standard.LY);
         };
 
@@ -94,8 +116,6 @@ Script.include("/~/system/libraries/controllers.js");
             100
         );
     } // END Driver(hand)
-
-    var mappingName, driverMapping;
 
     var leftDriver = new Driver(LEFT_HAND);
     var rightDriver = new Driver(RIGHT_HAND);
