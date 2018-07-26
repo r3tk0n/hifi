@@ -453,59 +453,8 @@ Script.include("/~/system/libraries/Xform.js");
 
                 var rayPickInfo = controllerData.rayPicks[this.hand];
                 if (rayPickInfo.type === Picks.INTERSECTED_ENTITY) {
-                    if (controllerData.triggerClicks[this.hand]) {
-                        var entityID = rayPickInfo.objectID;
-                        Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
-                            this.highlightedEntity);
-                        this.highlightedEntity = null;
-                        var targetProps = Entities.getEntityProperties(entityID, [
-                            "dynamic", "shapeType", "position",
-                            "rotation", "dimensions", "density",
-                            "userData", "locked", "type", "href"
-                        ]);
-                        if (targetProps.href !== "") {
-                            AddressManager.handleLookupString(targetProps.href);
-                            return makeRunningValues(false, [], []);
-                        }
 
-                        this.targetObject = new TargetObject(entityID, targetProps);
-                        this.targetObject.parentProps = getEntityParents(targetProps);
-
-                        if (this.contextOverlayTimer) {
-                            Script.clearTimeout(this.contextOverlayTimer);
-                        }
-                        this.contextOverlayTimer = false;
-                        if (entityID === this.entityWithContextOverlay) {
-                            this.destroyContextOverlay();
-                        } else {
-                            Selection.removeFromSelectedItemsList("contextOverlayHighlightList", "entity", entityID);
-                        }
-
-                        var targetEntity = this.targetObject.getTargetEntity();
-                        entityID = targetEntity.id;
-                        targetProps = targetEntity.props;
-
-                        if (entityIsGrabbable(targetProps) || entityIsGrabbable(this.targetObject.entityProps)) {
-                            if (!entityIsDistanceGrabbable(targetProps)) {
-                                this.targetObject.makeDynamic();
-                            }
-
-                            if (!this.distanceRotating) {
-                                this.grabbedThingID = entityID;
-                                this.grabbedDistance = rayPickInfo.distance;
-                            }
-
-                            if (otherFarGrabModule.grabbedThingID === this.grabbedThingID &&
-                                otherFarGrabModule.distanceHolding) {
-                                this.prepareDistanceRotatingData(controllerData);
-                                this.distanceRotate(otherFarGrabModule);
-                            } else {
-                                this.distanceHolding = true;
-                                this.distanceRotating = false;
-                                this.startFarGrabAction(controllerData, targetProps);
-                            }
-                        }
-                    } else {
+                    if !(controllerData.triggerClicks[this.hand]) {
                         var targetEntityID = rayPickInfo.objectID;
                         if (this.highlightedEntity !== targetEntityID) {
                             Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
@@ -562,6 +511,9 @@ Script.include("/~/system/libraries/Xform.js");
                                 }, 500);
                             }
                         }
+                    } else {
+                        // trying to inspect.
+                        return makeRunningValues(false, [], []);
                     }
                 } else if (this.distanceRotating) {
                     this.distanceRotate(otherFarGrabModule);
