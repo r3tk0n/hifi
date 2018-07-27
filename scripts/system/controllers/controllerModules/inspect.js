@@ -92,7 +92,7 @@ Script.include("/~/system/libraries/Xform.js");
         var DISTANCE_HOLDING_UNITY_DISTANCE = 6; //  The distance at which the distance holding action timeframe is unmodified
 
         this.parameters = makeDispatcherModuleParameters(
-            580,
+            540,
             this.hand === RIGHT_HAND ? ["rightHand"] : ["leftHand"],
             [],
             100,
@@ -211,7 +211,7 @@ Script.include("/~/system/libraries/Xform.js");
             
             var rayPickInfo = controllerData.rayPicks[this.hand];
             if (rayPickInfo.type === Picks.INTERSECTED_ENTITY) {
-                if (!controllerData.triggerClicks[this.hand]) {
+                if (controllerData.triggerClicks[this.hand]) {
                     var targetEntityID = rayPickInfo.objectID;
                     if (this.highlightedEntity !== targetEntityID) {
                         Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
@@ -221,6 +221,11 @@ Script.include("/~/system/libraries/Xform.js");
                             "rotation", "dimensions", "density",
                             "userData", "locked", "type", "href"
                         ]);
+
+                        if (targetProps.href === "") {
+                            AddressManager.handleLookupString(targetProps.href);
+                            return makeRunningValues(false, [], []);
+                        }
 
                         var selectionTargetObject = new TargetObject(targetEntityID, selectionTargetProps);
                         selectionTargetObject.parentProps = getEntityParents(selectionTargetProps);
@@ -269,7 +274,7 @@ Script.include("/~/system/libraries/Xform.js");
                         }
                     }
                 } else {
-                    // far grabbing. return false.
+                    // trigger click is off
                     return makeRunningValues(false, [], []);
                 }
             } else if (this.highlightedEntity) {
