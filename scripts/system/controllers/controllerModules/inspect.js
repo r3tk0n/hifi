@@ -98,6 +98,12 @@ Script.include("/~/system/libraries/Xform.js");
             100,
             makeLaserParams(this.hand, false));
 
+        this.updateRecommendedArea = function() {
+            var dims = Controller.getViewportDimensions();
+            this.reticleMaxX = dims.x - MARGIN;
+            this.reticleMaxY = dims.y - MARGIN;
+        };
+
         this.calculateNewReticlePosition = function(intersection) {
             this.updateRecommendedArea();
             var point2d = HMD.overlayFromWorldPoint(intersection);
