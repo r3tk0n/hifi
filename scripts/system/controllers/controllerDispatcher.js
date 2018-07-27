@@ -377,7 +377,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
                     }
                 }
             }
-            _this.pointerManager.updatePointersRenderState(controllerData.triggerClicks, controllerData.triggerValues);
+            _this.pointerManager.updatePointersRenderState(controllerData.triggerClicks, controllerData.triggerValues, controllerData.controllerRotAngles);
             if (PROFILE) {
                 Script.endProfileRange("dispatch.run");
             }

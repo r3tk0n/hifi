@@ -76,16 +76,116 @@ Pointer = function(hudLayer, pickType, pointerData) {
         drawHUDLayer: hudLayer,
     };
 
+    this.teleportPath = {
+        type: "line3d",
+        color: CONTROLLER_EXP2_CYAN,
+        visible: true,
+        alpha: 1,
+        solid: true,
+        glow: 1.0,
+        ignoreRayIntersection: true, // always ignore this
+        drawInFront: !hudLayer, // Even when burried inside of something, show it.
+        drawHUDLayer: hudLayer,
+    };
+    this.teleportEnd = {
+        type: "sphere",
+        dimensions: this.dim,
+        solid: true,
+        color: CONTROLLER_EXP2_CYAN,
+        alpha: 0.9,
+        ignoreRayIntersection: true,
+        drawInFront: !hudLayer, // Even when burried inside of something, show it.
+        drawHUDLayer: hudLayer,
+        visible: true
+    };
+
+    this.drivePath = {
+        type: "line3d",
+        color: CONTROLLER_EXP2_YELLOW,
+        visible: true,
+        alpha: 1,
+        solid: true,
+        glow: 1.0,
+        ignoreRayIntersection: true, // always ignore this
+        drawInFront: !hudLayer, // Even when burried inside of something, show it.
+        drawHUDLayer: hudLayer,
+    };
+    this.driveEnd = {
+        type: "sphere",
+        dimensions: this.dim,
+        solid: true,
+        color: CONTROLLER_EXP2_YELLOW,
+        alpha: 0.9,
+        ignoreRayIntersection: true,
+        drawInFront: !hudLayer, // Even when burried inside of something, show it.
+        drawHUDLayer: hudLayer,
+        visible: true
+    };
+
+    this.inspectPath = {
+        type: "line3d",
+        color: CONTROLLER_EXP2_MAGENTA,
+        visible: true,
+        alpha: 1,
+        solid: true,
+        glow: 1.0,
+        ignoreRayIntersection: true, // always ignore this
+        drawInFront: !hudLayer, // Even when burried inside of something, show it.
+        drawHUDLayer: hudLayer,
+    };
+    this.inspectEnd = {
+        type: "sphere",
+        dimensions: this.dim,
+        solid: true,
+        color: CONTROLLER_EXP2_MAGENTA,
+        alpha: 0.9,
+        ignoreRayIntersection: true,
+        drawInFront: !hudLayer, // Even when burried inside of something, show it.
+        drawHUDLayer: hudLayer,
+        visible: true
+    };
+
+    this.farGrabPath = {
+        type: "line3d",
+        color: CONTROLLER_EXP2_ORANGE,
+        visible: true,
+        alpha: 1,
+        solid: true,
+        glow: 1.0,
+        ignoreRayIntersection: true, // always ignore this
+        drawInFront: !hudLayer, // Even when burried inside of something, show it.
+        drawHUDLayer: hudLayer,
+    };
+    this.farGrabEnd = {
+        type: "sphere",
+        dimensions: this.dim,
+        solid: true,
+        color: CONTROLLER_EXP2_ORANGE,
+        alpha: 0.9,
+        ignoreRayIntersection: true,
+        drawInFront: !hudLayer, // Even when burried inside of something, show it.
+        drawHUDLayer: hudLayer,
+        visible: true
+    };
+
     this.renderStates = [
         {name: "half", path: this.halfPath, end: this.halfEnd},
         {name: "full", path: this.fullPath, end: this.fullEnd},
-        {name: "hold", path: this.holdPath}
+        {name: "hold", path: this.holdPath},
+        {name: "teleport", path: this.teleportPath, end: this.teleportEnd},
+        {name: "drive", path: this.drivePath, end: this.driveEnd},
+        {name: "inspect", path: this.inspectPath, end: this.inspectEnd},
+        {name: "fargrab", path: this.farGrabPath, end: this.farGrabEnd}
     ];
 
     this.defaultRenderStates = [
         {name: "half", distance: DEFAULT_SEARCH_SPHERE_DISTANCE, path: this.halfPath},
         {name: "full", distance: DEFAULT_SEARCH_SPHERE_DISTANCE, path: this.fullPath},
-        {name: "hold", distance: DEFAULT_SEARCH_SPHERE_DISTANCE, path: this.holdPath}
+        {name: "hold", distance: DEFAULT_SEARCH_SPHERE_DISTANCE, path: this.holdPath},
+        {name: "teleport", distance: DEFAULT_SEARCH_SPHERE_DISTANCE, path: this.teleportPath},
+        {name: "drive", distance: DEFAULT_SEARCH_SPHERE_DISTANCE, path: this.drivePath},
+        {name: "inspect", distance: DEFAULT_SEARCH_SPHERE_DISTANCE, path: this.inspectPath},
+        {name: "fargrab", distance: DEFAULT_SEARCH_SPHERE_DISTANCE, path: this.farGrabPath}
     ];
 
 
@@ -141,7 +241,8 @@ Pointer = function(hudLayer, pickType, pointerData) {
         }
     };
 
-    this.updateRenderState = function(triggerClicks, triggerValues) {
+    this.updateRenderState = function (triggerClicks, triggerValues, rotationAngles) {
+        var rot = rotationAngles[this.hand];
         var mode = "";
         if (this.visible) {
             if (this.locked) {
@@ -149,7 +250,17 @@ Pointer = function(hudLayer, pickType, pointerData) {
             } else if (triggerClicks[this.hand]) {
                 mode = "full";
             } else if (triggerValues[this.hand] > TRIGGER_ON_VALUE || this.allwaysOn) {
-                mode = "half";
+                if (rot >= CONTROLLER_EXP2_TELEPORT_MIN_ANGLE && rot <= CONTROLLER_EXP2_TELEPORT_MAX_ANGLE) {
+                    mode = "teleport";
+                } else if (rot >= CONTROLLER_EXP2_DRIVE_MIN_ANGLE && rot < CONTROLLER_EXP2_DRIVE_MAX_ANGLE) {
+                    mode = "drive";
+                } else if (rot >= CONTROLLER_EXP2_INSPECT_MIN_ANGLE && rot < CONTROLLER_EXP2_INSPECT_MAX_ANGLE) {
+                    mode = "inspect";
+                } else if (rot >= CONTROLLER_EXP2_FARGRAB_MIN_ANGLE && rot < CONTROLLER_EXP2_FARGRAB_MAX_ANGLE) {
+                    mode = "fargrab";
+                } else {
+                    mode = "half";
+                }
             }
         }
 
@@ -192,9 +303,9 @@ PointerManager = function() {
         }
     };
 
-    this.updatePointersRenderState = function(triggerClicks, triggerValues) {
+    this.updatePointersRenderState = function(triggerClicks, triggerValues, rotationAngles) {
         for (var index = 0; index < this.pointers.length; index++) {
-            this.pointers[index].updateRenderState(triggerClicks, triggerValues);
+            this.pointers[index].updateRenderState(triggerClicks, triggerValues, rotationAngles);
         }
     };
 

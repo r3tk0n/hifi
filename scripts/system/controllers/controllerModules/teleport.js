@@ -246,7 +246,7 @@ Script.include("/~/system/libraries/controllers.js");
             var otherModule = this.getOtherModule();
             // Rotation check:
             var rot = controllerData.controllerRotAngles[this.hand];
-            var correctRotation = (rot >= 101.25 && rot <= 135);
+            var correctRotation = (rot >= CONTROLLER_EXP2_TELEPORT_MIN_ANGLE && rot <= CONTROLLER_EXP2_TELEPORT_MAX_ANGLE);
             if (!this.disabled && this.buttonValue !== 0 && !otherModule.active && correctRotation) {
                 this.active = true;
                 this.enterTeleport();

@@ -32,10 +32,9 @@ Script.include("/~/system/libraries/controllers.js");
             var rot = controllerData.controllerRotAngles[this.hand];
             var triggerPress = controllerData.triggerValues[this.hand];
             var pressedEnough = (triggerPress >= 0.05);
-            var correctRotation = (rot >= 67.5 && rot < 101.25);
+            var correctRotation = (rot >= CONTROLLER_EXP2_DRIVE_MIN_ANGLE && rot < CONTROLLER_EXP2_DRIVE_MAX_ANGLE);
             if (correctRotation && pressedEnough) {
                 this.active = true;
-                print((this.hand === RIGHT_HAND ? "Right Hand" : "Left Hand") + " Activated");
                 this.registerMappings();
                 Controller.enableMapping(mappingName);
                 return makeRunningValues(true, [], []);
