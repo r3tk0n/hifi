@@ -98,6 +98,10 @@ Script.include("/~/system/libraries/Xform.js");
             100,
             makeLaserParams(this.hand, false));
 
+        this.handToController = function() {
+            return (this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand;
+        };
+
         this.updateRecommendedArea = function() {
             var dims = Controller.getViewportDimensions();
             this.reticleMaxX = dims.x - MARGIN;
