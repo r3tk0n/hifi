@@ -249,4 +249,18 @@ Script.include("/~/system/libraries/Xform.js");
             return makeRunningValues(true, [], []);
         };
 
+    }
+
+    var leftInspectEntity = new InspectEntity(LEFT_HAND);
+    var rightInspectEntity = new InspectEntity(RIGHT_HAND);
+
+    enableDispatcherModule("LeftInspectEntity", leftInspectEntity);
+    enableDispatcherModule("RightInspectEntity", rightInspectEntity);
+
+    function cleanup() {
+        disableDispatcherModule("LeftInspectEntity");
+        disableDispatcherModule("RightInspectEntity");
+    }
+    Script.scriptEnding.connect(cleanup);
+
 }());
