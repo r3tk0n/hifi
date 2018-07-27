@@ -98,6 +98,14 @@ Script.include("/~/system/libraries/Xform.js");
             100,
             makeLaserParams(this.hand, false));
 
+        this.calculateNewReticlePosition = function(intersection) {
+            this.updateRecommendedArea();
+            var point2d = HMD.overlayFromWorldPoint(intersection);
+            point2d.x = Math.max(this.reticleMinX, Math.min(point2d.x, this.reticleMaxX));
+            point2d.y = Math.max(this.reticleMinY, Math.min(point2d.y, this.reticleMaxY));
+            return point2d;
+        };
+
         this.notPointingAtEntity = function(controllerData) {
             var intersection = controllerData.rayPicks[this.hand];
             var entityProperty = Entities.getEntityProperties(intersection.objectID);
