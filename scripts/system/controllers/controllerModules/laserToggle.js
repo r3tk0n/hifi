@@ -19,53 +19,63 @@ Script.include("/~/system/libraries/controllers.js");
         var _this = this;
         this.hand = hand;
         this.active = false;
-        this.prev_click = false;
-        this.last_swing_val = 0;
+        this.prevClick = false;
+        this.clicked = false;
+        this.lastSwingVal = 0;
+        this.firstPass = false;
 
         this.getOtherModule = function () {
-            var otherModule = this.hand === RIGHT_HAND ? leftDriver : rightDriver;
+            var otherModule = this.hand === RIGHT_HAND ? leftSelectionLaser : rightSelectionLaser;
             return otherModule;
         };
 
         this.isReady = function (controllerData, deltaTime) {
+            if (!HMD.active) {
+                return makeRunningValues(false, [], []);
+            }
             var otherModule = this.getOtherModule();
 
             var rot = controllerData.controllerRotAngles[this.hand];
-            var swing_val = controllerData.triggerValues[this.hand];
+            var swingVal = controllerData.triggerValues[this.hand];
 
-            var clicked = controllerData.triggerClicks[this.hand];
+            this.clicked = controllerData.triggerClicks[this.hand];
 
-            //var correctRotation = (rot >= CONTROLLER_EXP2_FARGRAB_MIN_ANGLE && rot <= CONTROLLER_EXP2_TELEPORT_MAX_ANGLE);
+            var swingDelta = swingVal - this.lastSwingVal;
 
-            var swing_delta = swing_val - this.last_swing_val;
+            this.lastSwingVal = swingVal;
 
-            this.last_swing_val = swing_val;
-
-            if (clicked && !prev_click && swing_delta > 0) {
+            if (this.clicked && !this.prevClick && swingDelta > 0) {
+                print("Initial click to enable!");
                 // First click to make run, in correct rotation.
-                this.prev_click = clicked;
+                this.firstPass = true;
+                this.prevClick = this.clicked;
                 this.active = true;
                 return makeRunningValues(true, [], []);
-            }
-            else if (click && prev_click && swing_delta > 0) {
-                // Second click, time to turn it off.
-                this.active = false;
-                this.prev_click = false;
-                makeRunningValues(false, [], []);
-            }
-            else if (prev_click) {
-                // Already clicked, keep it on.
-                return makeRunningValues(true, [], []);
-            }
-            else {
+            } else {
                 // Failing these conditions, 
-                this.prev_click = false;
-                this.active = false;
                 return makeRunningValues(false, [], []);
             }
         };
 
         this.run = function (controllerData, deltaTime) {
+            if (this.firstPass) {
+                this.firstPass = false;
+                return makeRunningValues(true, [], []);
+            }
+
+            this.clicked = controllerData.triggerClicks[this.hand];
+            var swingVal = controllerData.triggerValues[this.hand];
+            var swingDelta = swingVal - this.lastSwingVal;
+            this.lastSwingVal = swingVal;
+
+            print("\nClicked: " + this.clicked + "\nprevClick: " + this.prevClick + "\nswingDelta: " + swingDelta);
+            if (this.clicked && this.prevClick && swingDelta > 0) {
+                print("Second click, time to turn it off...");
+                // Second click, time to turn it off.
+                this.active = false;
+                this.prevClick = false;
+                return makeRunningValues(false, [], CONTROLLER_EXP2_KILL_LASER);
+            }
             return makeRunningValues(true, [], []);
         };
 

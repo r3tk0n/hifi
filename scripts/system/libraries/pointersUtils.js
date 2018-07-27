@@ -259,7 +259,7 @@ Pointer = function(hudLayer, pickType, pointerData) {
                 } else if (rot >= CONTROLLER_EXP2_FARGRAB_MIN_ANGLE && rot < CONTROLLER_EXP2_FARGRAB_MAX_ANGLE) {
                     mode = "fargrab";
                 } else {
-                    mode = "half";
+                    mode = "";
                 }
             }
         }

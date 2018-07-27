@@ -365,7 +365,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
                             // of running plugins and mark its activity-slots as "not in use"
                             delete _this.runningPluginNames[runningPluginName];
                             _this.markSlots(plugin, false);
-                            _this.pointerManager.makePointerInvisible(plugin.parameters.handLaser);
+                            _this.pointerManager.makePointerInvisible(plugin.parameters.handLaser || plugin.parameters.requiredDataForRun === CONTROLLER_EXP2_KILL_LASER);
                             if (DEBUG) {
                                 print("controllerDispatcher stopping " + runningPluginName);
                             }
