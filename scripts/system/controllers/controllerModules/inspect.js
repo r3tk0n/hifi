@@ -179,8 +179,7 @@ Script.include("/~/system/libraries/Xform.js");
 
         this.run = function (controllerData) {
             if (controllerData.triggerValues[this.hand] < TRIGGER_OFF_VALUE ||
-                this.notPointingAtEntity(controllerData) || this.targetIsNull()) {
-                this.endFarGrabAction();
+                this.notPointingAtEntity(controllerData)) {
                 Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                     this.highlightedEntity);
                 this.highlightedEntity = null;
@@ -206,7 +205,6 @@ Script.include("/~/system/libraries/Xform.js");
             // where it could near-grab something, stop searching.
             for (var j = 0; j < nearGrabReadiness.length; j++) {
                 if (nearGrabReadiness[j].active) {
-                    this.endFarGrabAction();
                     return makeRunningValues(false, [], []);
                 }
             }
