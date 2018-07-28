@@ -492,6 +492,7 @@ Script.include("/~/system/libraries/Xform.js");
 
                             if (!this.distanceRotating) {
                                 this.grabbedThingID = entityID;
+                                B
                                 this.grabbedDistance = rayPickInfo.distance;
                             }
 
