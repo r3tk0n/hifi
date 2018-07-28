@@ -137,7 +137,6 @@ Script.include("/~/system/libraries/controllers.js");
     function Teleporter(hand) {
         var _this = this;
         this.hand = hand;
-        this.buttonValue = 0;
         this.disabled = false; // used by the 'Hifi-Teleport-Disabler' message handler
         this.active = false;
         this.state = TELEPORTER_STATES.IDLE;
@@ -189,10 +188,6 @@ Script.include("/~/system/libraries/controllers.js");
             Pointers.removePointer(this.teleportRayHandInvisible);
             Pointers.removePointer(this.teleportRayHeadVisible);
             Pointers.removePointer(this.teleportRayHeadInvisible);
-        };
-
-        this.buttonPress = function(value) {
-            _this.buttonValue = value;
         };
 
         this.parameters = makeDispatcherModuleParameters(
@@ -247,7 +242,7 @@ Script.include("/~/system/libraries/controllers.js");
             // Rotation check:
             var rot = controllerData.controllerRotAngles[this.hand];
             var correctRotation = (rot >= CONTROLLER_EXP2_TELEPORT_MIN_ANGLE && rot <= CONTROLLER_EXP2_TELEPORT_MAX_ANGLE);
-            if (!this.disabled && this.buttonValue !== 0 && !otherModule.active && correctRotation) {
+            if (!this.disabled && (controllerData.triggerValues[this.hand] > TRIGGER_ON_VALUE) && !otherModule.active && correctRotation) {
                 this.active = true;
                 this.enterTeleport();
                 return makeRunningValues(true, [], []);
@@ -312,12 +307,12 @@ Script.include("/~/system/libraries/controllers.js");
             } else if (teleportLocationType === TARGET.SEAT) {
                 this.setTeleportState(mode, "", "seat");
             }
-            return this.teleport(result, teleportLocationType);
+            return this.teleport(controllerData, result, teleportLocationType);
         };
 
-        this.teleport = function(newResult, target) {
+        this.teleport = function(controllerData, newResult, target) {
             var result = newResult;
-            if (_this.buttonValue !== 0) {
+            if (controllerData.triggerValues[this.hand] > TRIGGER_ON_VALUE)  {
                 return makeRunningValues(true, [], []);
             }
 
@@ -438,21 +433,21 @@ Script.include("/~/system/libraries/controllers.js");
         }
     }
 
-    function registerMappings() {
-        mappingName = 'Hifi-Teleporter-Dev-' + Math.random();
-        teleportMapping = Controller.newMapping(mappingName);
+/*    function registerMappings() {*/
+        //mappingName = 'Hifi-Teleporter-Dev-' + Math.random();
+        //teleportMapping = Controller.newMapping(mappingName);
 
-        teleportMapping.from(Controller.Standard.RightPrimaryThumb).peek().to(rightTeleporter.buttonPress);
-        teleportMapping.from(Controller.Standard.LeftPrimaryThumb).peek().to(leftTeleporter.buttonPress);
-    }
+        //teleportMapping.from(Controller.Standard.RightPrimaryThumb).peek().to(rightTeleporter.buttonPress);
+        //teleportMapping.from(Controller.Standard.LeftPrimaryThumb).peek().to(leftTeleporter.buttonPress);
+    /*}*/
 
     var leftTeleporter = new Teleporter(LEFT_HAND);
     var rightTeleporter = new Teleporter(RIGHT_HAND);
 
     enableDispatcherModule("LeftTeleporter", leftTeleporter);
     enableDispatcherModule("RightTeleporter", rightTeleporter);
-    registerMappings();
-    Controller.enableMapping(mappingName);
+    //registerMappings();
+    //Controller.enableMapping(mappingName);
 
     function cleanup() {
         teleportMapping.disable();
