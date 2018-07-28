@@ -450,7 +450,7 @@ Script.include("/~/system/libraries/controllers.js");
     //Controller.enableMapping(mappingName);
 
     function cleanup() {
-        teleportMapping.disable();
+        //teleportMapping.disable();
         leftTeleporter.cleanup();
         rightTeleporter.cleanup();
         disableDispatcherModule("LeftTeleporter");

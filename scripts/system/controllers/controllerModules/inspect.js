@@ -212,7 +212,38 @@ Script.include("/~/system/libraries/Xform.js");
             var rayPickInfo = controllerData.rayPicks[this.hand];
             if (rayPickInfo.type === Picks.INTERSECTED_ENTITY) {
                 if (controllerData.triggerClicks[this.hand]) {
-                    var targetEntityID = rayPickInfo.objectID;
+                    var entityID = rayPickInfo.objectID;
+                    Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
+                        this.highlightedEntity);
+                    this.highlightedEntity = null;
+                    var targetProps = Entities.getEntityProperties(entityID, [
+                        "dynamic", "shapeType", "position",
+                        "rotation", "dimensions", "density",
+                        "userData", "locked", "type", "href"
+                    ]);
+                    if (targetProps.href !== "") {
+                        AddressManager.handleLookupString(targetProps.href);
+                        return makeRunningValues(false, [], []);
+                    }
+
+                    this.targetObject = new TargetObject(entityID, targetProps);
+                    this.targetObject.parentProps = getEntityParents(targetProps);
+
+                    if (this.contextOverlayTimer) {
+                        Script.clearTimeout(this.contextOverlayTimer);
+                    }
+                    this.contextOverlayTimer = false;
+                    if (entityID === this.entityWithContextOverlay) {
+                        this.destroyContextOverlay();
+                    } else {
+                        Selection.removeFromSelectedItemsList("contextOverlayHighlightList", "entity", entityID);
+                    }
+
+                    var targetEntity = this.targetObject.getTargetEntity();
+                    entityID = targetEntity.id;
+                    targetProps = targetEntity.props;
+
+                } else {
                     if (this.highlightedEntity !== targetEntityID) {
                         Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                             this.highlightedEntity);
@@ -221,11 +252,6 @@ Script.include("/~/system/libraries/Xform.js");
                             "rotation", "dimensions", "density",
                             "userData", "locked", "type", "href"
                         ]);
-
-                        if (targetProps.href === "") {
-                            AddressManager.handleLookupString(targetProps.href);
-                            return makeRunningValues(false, [], []);
-                        }
 
                         var selectionTargetObject = new TargetObject(targetEntityID, selectionTargetProps);
                         selectionTargetObject.parentProps = getEntityParents(selectionTargetProps);
@@ -273,9 +299,6 @@ Script.include("/~/system/libraries/Xform.js");
                             }, 500);
                         }
                     }
-                } else {
-                    // trigger click is off
-                    return makeRunningValues(false, [], []);
                 }
             } else if (this.highlightedEntity) {
                 Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity", this.highlightedEntity);
