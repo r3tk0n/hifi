@@ -31,7 +31,7 @@ Script.include("/~/system/libraries/controllers.js");
             var otherModule = this.getOtherModule();
             var rot = controllerData.controllerRotAngles[this.hand];
             var triggerPress = controllerData.triggerValues[this.hand];
-            var pressedEnough = (triggerPress >= 0.05);
+            var pressedEnough = (triggerPress >= TRIGGER_OFF_VALUE);
             var correctRotation = (rot >= CONTROLLER_EXP2_DRIVE_MIN_ANGLE && rot < CONTROLLER_EXP2_DRIVE_MAX_ANGLE);
             if (correctRotation && pressedEnough) {
                 this.active = true;
@@ -44,7 +44,7 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.run = function(controllerData, deltaTime) {
             var triggerPress = controllerData.triggerValues[this.hand];
-            var pressedEnough = (triggerPress >= 0.05);
+            var pressedEnough = (triggerPress >= TRIGGER_OFF_VALUE);
             if (!pressedEnough) {
                 driverMapping.disable();
                 return makeRunningValues(false, [], []);
@@ -59,12 +59,10 @@ Script.include("/~/system/libraries/controllers.js");
 
             driverMapping.from(function () {
                 var amountPressed = Controller.getValue((_this.hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT);
-                //print("Trigger Value: " + amountPressed);
                 var pose = Controller.getPoseValue((_this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
                 if (pose.valid) {
-                    var rotVec = Vec3.multiplyQbyV(pose.rotation, { x: 0, y: 1, z: 0 });
-                    var retMe = (projectVontoW(rotVec, { x: 1, y: 0, z: 0 })).x;
-                    //print("Amount Pressed: " + amountPressed);
+                    var rotVec = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
+                    var retMe = (projectVontoW(rotVec, Vec3.UNIT_X)).x;
                     return retMe * amountPressed;
                 }
                 return 0;
@@ -75,9 +73,8 @@ Script.include("/~/system/libraries/controllers.js");
                 var amountPressed = Controller.getValue((_this.hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT)
                 var pose = Controller.getPoseValue((_this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
                 if (pose.valid) {
-                    var rotVec = Vec3.multiplyQbyV(pose.rotation, { x: 0, y: 1, z: 0 });
-                    var retMe = (projectVontoW(rotVec, { x: 0, y: 0, z: 1 })).z;
-                    //print("LY/RY Bind Returning: " + retMe * amountPressed);
+                    var rotVec = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
+                    var retMe = (projectVontoW(rotVec, Vec3.UNIT_Z)).z;
                     return retMe * amountPressed;
                 }
                 return 0;
