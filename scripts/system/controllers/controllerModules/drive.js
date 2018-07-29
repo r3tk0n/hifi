@@ -22,13 +22,7 @@ Script.include("/~/system/libraries/controllers.js");
         this.hand = hand;
         this.active = false;
 
-        this.getOtherModule = function() {
-            var otherModule = this.hand === RIGHT_HAND ? leftDriver : rightDriver;
-            return otherModule;
-        };
-
         this.isReady = function(controllerData, deltaTime) {
-            var otherModule = this.getOtherModule();
             var rot = controllerData.controllerRotAngles[this.hand];
             var triggerPress = controllerData.triggerValues[this.hand];
             var pressedEnough = (triggerPress >= TRIGGER_OFF_VALUE);
