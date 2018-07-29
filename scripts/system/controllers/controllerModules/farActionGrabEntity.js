@@ -388,7 +388,12 @@ Script.include("/~/system/libraries/Xform.js");
                 this.distanceHolding = false;
                 this.distanceRotating = false;
 
-                if (controllerData.triggerValues[this.hand] > TRIGGER_ON_VALUE) {
+                var rot = controllerData.controllerRotAngles[this.hand];
+                var triggerPress = controllerData.triggerValues[this.hand];
+                var pressedEnough = (triggerPress >= TRIGGER_OFF_VALUE);
+                var correctRotation = (rot >= CONTROLLER_EXP2_FARGRAB_MIN_ANGLE && rot < CONTROLLER_EXP2_FARGRAB_MAX_ANGLE);
+
+                if (pressedEnough && correctRotation) {
                     this.prepareDistanceRotatingData(controllerData);
                     return makeRunningValues(true, [], []);
                 } else {
