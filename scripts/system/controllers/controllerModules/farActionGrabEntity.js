@@ -476,16 +476,6 @@ Script.include("/~/system/libraries/Xform.js");
                         this.targetObject = new TargetObject(entityID, targetProps);
                         this.targetObject.parentProps = getEntityParents(targetProps);
 
-                        if (this.contextOverlayTimer) {
-                            Script.clearTimeout(this.contextOverlayTimer);
-                        }
-                        this.contextOverlayTimer = false;
-                        if (entityID === this.entityWithContextOverlay) {
-                            this.destroyContextOverlay();
-                        } else {
-                            Selection.removeFromSelectedItemsList("contextOverlayHighlightList", "entity", entityID);
-                        }
-
                         var targetEntity = this.targetObject.getTargetEntity();
                         entityID = targetEntity.id;
                         targetProps = targetEntity.props;
@@ -510,65 +500,7 @@ Script.include("/~/system/libraries/Xform.js");
                                 this.startFarGrabAction(controllerData, targetProps);
                             }
                         }
-                    } else {
-                        var targetEntityID = rayPickInfo.objectID;
-                        if (this.highlightedEntity !== targetEntityID) {
-                            Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
-                                this.highlightedEntity);
-                            var selectionTargetProps = Entities.getEntityProperties(targetEntityID, [
-                                "dynamic", "shapeType", "position",
-                                "rotation", "dimensions", "density",
-                                "userData", "locked", "type", "href"
-                            ]);
-
-                            var selectionTargetObject = new TargetObject(targetEntityID, selectionTargetProps);
-                            selectionTargetObject.parentProps = getEntityParents(selectionTargetProps);
-                            var selectionTargetEntity = selectionTargetObject.getTargetEntity();
-
-                            if (entityIsGrabbable(selectionTargetEntity.props) ||
-                                entityIsGrabbable(selectionTargetObject.entityProps)) {
-
-                                Selection.addToSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity", rayPickInfo.objectID);
-                            }
-                            this.highlightedEntity = rayPickInfo.objectID;
-                        }
-
-                        if (!this.entityWithContextOverlay) {
-                            var _this = this;
-
-                            if (_this.potentialEntityWithContextOverlay !== rayPickInfo.objectID) {
-                                if (_this.contextOverlayTimer) {
-                                    Script.clearTimeout(_this.contextOverlayTimer);
-                                }
-                                _this.contextOverlayTimer = false;
-                                _this.potentialEntityWithContextOverlay = rayPickInfo.objectID;
-                            }
-
-                            if (!_this.contextOverlayTimer) {
-                                _this.contextOverlayTimer = Script.setTimeout(function () {
-                                    if (!_this.entityWithContextOverlay &&
-                                        _this.contextOverlayTimer &&
-                                        _this.potentialEntityWithContextOverlay === rayPickInfo.objectID) {
-                                        var props = Entities.getEntityProperties(rayPickInfo.objectID);
-                                        var pointerEvent = {
-                                            type: "Move",
-                                            id: _this.hand + 1, // 0 is reserved for hardware mouse
-                                            pos2D: projectOntoEntityXYPlane(rayPickInfo.objectID, rayPickInfo.intersection, props),
-                                            pos3D: rayPickInfo.intersection,
-                                            normal: rayPickInfo.surfaceNormal,
-                                            direction: Vec3.subtract(ZERO_VEC, rayPickInfo.surfaceNormal),
-                                            button: "Secondary"
-                                        };
-                                        if (ContextOverlay.createOrDestroyContextOverlay(rayPickInfo.objectID, pointerEvent)) {
-                                            _this.entityWithContextOverlay = rayPickInfo.objectID;
-                                        }
-                                    }
-                                    _this.contextOverlayTimer = false;
-                                }, 500);
-                            }
-                        }
-                    }
-                } else if (this.distanceRotating) {
+                    }                 } else if (this.distanceRotating) {
                     this.distanceRotate(otherFarGrabModule);
                 } else if (this.highlightedEntity) {
                     Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity", this.highlightedEntity);
