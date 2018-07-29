@@ -500,7 +500,8 @@ Script.include("/~/system/libraries/Xform.js");
                                 this.startFarGrabAction(controllerData, targetProps);
                             }
                         }
-                    }                 } else if (this.distanceRotating) {
+                    }
+                } else if (this.distanceRotating) {
                     this.distanceRotate(otherFarGrabModule);
                 } else if (this.highlightedEntity) {
                     Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity", this.highlightedEntity);
