@@ -142,6 +142,7 @@ Script.include("/~/system/libraries/controllers.js");
         this.state = TELEPORTER_STATES.IDLE;
         this.currentTarget = TARGET.INVALID;
         this.currentResult = null;
+        this.triggerClicked = 0;
 
         this.getOtherModule = function() {
             var otherModule = this.hand === RIGHT_HAND ? leftTeleporter : rightTeleporter;
@@ -243,9 +244,13 @@ Script.include("/~/system/libraries/controllers.js");
             var rot = controllerData.controllerRotAngles[this.hand];
             var correctRotation = (rot >= CONTROLLER_EXP2_TELEPORT_MIN_ANGLE && rot <= CONTROLLER_EXP2_TELEPORT_MAX_ANGLE);
             if (!this.disabled && (controllerData.triggerValues[this.hand] > TRIGGER_ON_VALUE) && !otherModule.active && correctRotation) {
-                this.active = true;
-                this.enterTeleport();
-                return makeRunningValues(true, [], []);
+                if (this.triggerClicked && !controllerData.triggerClicks[this.hand]) {
+                    this.active = true;
+                    this.enterTeleport();
+                    this.triggerClicked = 0;
+                    return makeRunningValues(true, [{laserInfo: makeLaserParams(this.hand, false)}], []);
+                }
+                this.triggerClicked = controllerData.triggerClicks[this.hand];
             }
             return makeRunningValues(false, [], []);
         };
@@ -311,26 +316,28 @@ Script.include("/~/system/libraries/controllers.js");
         };
 
         this.teleport = function(controllerData, newResult, target) {
-            var result = newResult;
-            if (controllerData.triggerValues[this.hand] > TRIGGER_ON_VALUE)  {
-                return makeRunningValues(true, [], []);
-            }
 
-            if (target === TARGET.NONE || target === TARGET.INVALID || this.state === TELEPORTER_STATES.COOL_IN) {
-                // Do nothing
-            } else if (target === TARGET.SEAT) {
-                Entities.callEntityMethod(result.objectID, 'sit');
-            } else if (target === TARGET.SURFACE) {
-                var offset = getAvatarFootOffset();
-                result.intersection.y += offset;
-                MyAvatar.goToLocation(result.intersection, true, HMD.orientation, false);
-                HMD.centerUI();
-                MyAvatar.centerBody();
-            }
+            if (this.triggerClicked && !controllerData.triggerClicks[this.hand]) {
+                var result = newResult;
+                if (target === TARGET.NONE || target === TARGET.INVALID || this.state === TELEPORTER_STATES.COOL_IN) {
+                    // Do nothing
+                } else if (target === TARGET.SEAT) {
+                    Entities.callEntityMethod(result.objectID, 'sit');
+                } else if (target === TARGET.SURFACE) {
+                    var offset = getAvatarFootOffset();
+                    result.intersection.y += offset;
+                    MyAvatar.goToLocation(result.intersection, true, HMD.orientation, false);
+                    HMD.centerUI();
+                    MyAvatar.centerBody();
+                }
 
-            this.disableLasers();
-            this.active = false;
-            return makeRunningValues(false, [], []);
+                this.disableLasers();
+                this.active = false;
+                this.triggerClicked = 0;
+                return makeRunningValues(false, [], []);
+            }
+            this.triggerClicked = controllerData.triggerClicks[this.hand];
+            return makeRunningValues(true, [], []);
         };
 
         this.disableLasers = function() {

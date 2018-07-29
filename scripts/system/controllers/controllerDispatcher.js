@@ -62,16 +62,32 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             mouse: false
         };
 
+        this.handEnabled = {
+            rightHand: false,
+            leftHand: false
+        };
+
         this.laserVisibleStatus = [false, false, false, false];
         this.laserLockStatus = [false, false, false, false];
 
         this.slotsAreAvailableForPlugin = function (plugin) {
             for (var i = 0; i < plugin.parameters.activitySlots.length; i++) {
-                if (_this.activitySlots[plugin.parameters.activitySlots[i]]) {
+                var activity = plugin.parameters.activitySlots[i];
+                if (_this.activitySlots[activity]) {
                     return false; // something is already using a slot which _this plugin requires
                 }
             }
             return true;
+        };
+
+        this.isHandAvialable = function(plugin) {
+            for (var i = 0; i < plugin.parameters.activitySlots.length; i++) {
+                var activity = plugin.parameters.activitySlots[i];
+                if (_this.handEnabled[activity]) {
+                    return true;
+                }
+            }
+            return false;
         };
 
         this.markSlots = function (plugin, pluginName) {
@@ -96,6 +112,8 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
         this.rightTriggerClicked = 0;
         this.leftSecondaryValue = 0;
         this.rightSecondaryValue = 0;
+        this.leftHandClicked = 0;
+        this.rightHandClicked = 0;
 
         this.leftTriggerPress = function (value) {
             _this.leftTriggerValue = value;
@@ -165,6 +183,37 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
                 print(e);
             }
             Script.setTimeout(_this.update, BASIC_TIMER_INTERVAL_MS);
+        };
+
+
+        this.shouldEnabledHand = function(controllerData) {
+            if (!_this.handEnabled.leftHand) {
+                if (_this.leftHandClicked && !controllerData.triggerClicks[LEFT_HAND]) {
+                    _this.handEnabled.leftHand = true;
+                    var leftParams = makeLaserParams(LEFT_HAND, true);
+                    _this.pointerManager.makePointerVisible(leftParams);
+                }
+                _this.leftHandClicked = controllerData.triggerClicks[LEFT_HAND];
+            }
+
+            if (!_this.handEnabled.rightHand) {
+                if (_this.rightHandClicked && !controllerData.triggerClicks[RIGHT_HAND]) {
+                    _this.handEnabled.rightHand = true;
+                    var rightParams = makeLaserParams(RIGHT_HAND, true);
+                    _this.pointerManager.makePointerVisible(rightParams);
+                }
+
+                _this.rightHandClicked = controllerData.triggerClicks[RIGHT_HAND];
+            }
+        };
+
+        this.disableHand = function(plugin) {
+            for (var i = 0; i < plugin.parameters.activitySlots.length; i++) {
+                var activity = plugin.parameters.activitySlots[i];
+                if (_this.handEnabled[activity]) {
+                    _this.handEnabled[activity] = false;
+                }
+            }
         };
 
         this.updateInternal = function () {
@@ -315,11 +364,13 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
                 Script.beginProfileRange("dispatch.isReady");
             }
             // check for plugins that would like to start.  ask in order of increasing priority value
+
+            _this.shouldEnabledHand(controllerData);
             for (var pluginIndex = 0; pluginIndex < _this.orderedPluginNames.length; pluginIndex++) {
                 var orderedPluginName = _this.orderedPluginNames[pluginIndex];
                 var candidatePlugin = controllerDispatcherPlugins[orderedPluginName];
 
-                if (_this.slotsAreAvailableForPlugin(candidatePlugin)) {
+                if (_this.slotsAreAvailableForPlugin(candidatePlugin) && _this.isHandAvialable(candidatePlugin)) {
                     if (PROFILE) {
                         Script.beginProfileRange("dispatch.isReady." + orderedPluginName);
                     }
@@ -327,6 +378,16 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
                     if (readiness.active) {
                         // this plugin will start.  add it to the list of running plugins and mark the
                         // activity-slots which this plugin consumes as "in use"
+
+                        // disable laser if module specifies
+                        if (readiness.targets.length > 0) {
+                            var entry = readiness.targets[0];
+                            var type = typeof entry;
+                            if (type === "object" && entry.hasOwnProperty("laserInfo")) {
+                                var laserParams = entry.laserInfo;
+                                _this.pointerManager.makePointerInvisible(laserParams);
+                            }
+                        }
                         _this.runningPluginNames[orderedPluginName] = true;
                         _this.markSlots(candidatePlugin, orderedPluginName);
                         _this.pointerManager.makePointerVisible(candidatePlugin.parameters.handLaser);
@@ -366,6 +427,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
                             delete _this.runningPluginNames[runningPluginName];
                             _this.markSlots(plugin, false);
                             _this.pointerManager.makePointerInvisible(plugin.parameters.handLaser || plugin.parameters.requiredDataForRun === CONTROLLER_EXP2_KILL_LASER);
+                            _this.disableHand(plugin);
                             if (DEBUG) {
                                 print("controllerDispatcher stopping " + runningPluginName);
                             }
