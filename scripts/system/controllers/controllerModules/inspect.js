@@ -244,6 +244,7 @@ Script.include("/~/system/libraries/Xform.js");
                     targetProps = targetEntity.props;
 
                 } else {
+                    var targetEntityID = rayPickInfo.objectID;
                     if (this.highlightedEntity !== targetEntityID) {
                         Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                             this.highlightedEntity);
