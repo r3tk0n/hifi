@@ -21,7 +21,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
 Script.include("/~/system/libraries/controllers.js");
 Script.include("/~/system/libraries/Xform.js");
 
-(function() {
+(function () {
     var GRABBABLE_PROPERTIES = [
         "position",
         "registrationPoint",
@@ -42,6 +42,11 @@ Script.include("/~/system/libraries/Xform.js");
 
     var MARGIN = 25;
 
+    // maximum angle for ready function.
+    var READY_MAXIMUM_ANGLE = 20.0;
+    // maximum angle for run function.
+    var RUN_MAXIMUM_ANGLE = 40.0;
+
     function TargetObject(entityID, entityProps) {
         this.entityID = entityID;
         this.entityProps = entityProps;
@@ -50,7 +55,7 @@ Script.include("/~/system/libraries/Xform.js");
         this.previousCollisionStatus = null;
         this.madeDynamic = null;
 
-        this.makeDynamic = function() {
+        this.makeDynamic = function () {
             if (this.targetEntityID) {
                 var newProps = {
                     dynamic: true,
@@ -62,24 +67,25 @@ Script.include("/~/system/libraries/Xform.js");
             }
         };
 
-        this.restoreTargetEntityOriginalProps = function() {
+        this.restoreTargetEntityOriginalProps = function () {
             if (this.madeDynamic) {
                 var props = {};
                 props.dynamic = false;
                 props.collisionless = this.previousCollisionStatus;
-                var zeroVector = {x: 0, y: 0, z:0};
+                var zeroVector = { x: 0, y: 0, z: 0 };
                 props.localVelocity = zeroVector;
                 props.localRotation = zeroVector;
                 Entities.editEntity(this.targetEntityID, props);
             }
         };
 
-        this.getTargetEntity = function() {
+        this.getTargetEntity = function () {
             var parentPropsLength = this.parentProps.length;
             if (parentPropsLength !== 0) {
                 var targetEntity = {
                     id: this.parentProps[parentPropsLength - 1].id,
-                    props: this.parentProps[parentPropsLength - 1]};
+                    props: this.parentProps[parentPropsLength - 1]
+                };
                 this.targetEntityID = targetEntity.id;
                 this.targetEntityProps = targetEntity.props;
                 return targetEntity;
@@ -88,7 +94,8 @@ Script.include("/~/system/libraries/Xform.js");
             this.targetEntityProps = this.entityProps;
             return {
                 id: this.entityID,
-                props: this.entityProps};
+                props: this.entityProps
+            };
         };
     }
 
@@ -108,6 +115,10 @@ Script.include("/~/system/libraries/Xform.js");
         this.reticleMaxX;
         this.reticleMinY = MARGIN;
         this.reticleMaxY;
+        this.lastTriggerValue = 0;
+        this.triggerPressedOnce = 0;
+        this.triggerClicked = false;
+        this.justStartedRunning = false;
 
         var ACTION_TTL = 15; // seconds
 
@@ -121,14 +132,14 @@ Script.include("/~/system/libraries/Xform.js");
             this.hand === RIGHT_HAND ? ["rightHand"] : ["leftHand"],
             [],
             100,
-            makeLaserParams(this.hand, false));
+            makeLaserParams(this.hand, true));
 
 
-        this.handToController = function() {
+        this.handToController = function () {
             return (this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand;
         };
 
-        this.distanceGrabTimescale = function(mass, distance) {
+        this.distanceGrabTimescale = function (mass, distance) {
             var timeScale = DISTANCE_HOLDING_ACTION_TIMEFRAME * mass /
                 DISTANCE_HOLDING_UNITY_MASS * distance /
                 DISTANCE_HOLDING_UNITY_DISTANCE;
@@ -138,7 +149,7 @@ Script.include("/~/system/libraries/Xform.js");
             return timeScale;
         };
 
-        this.getMass = function(dimensions, density) {
+        this.getMass = function (dimensions, density) {
             return (dimensions.x * dimensions.y * dimensions.z) * density;
         };
 
@@ -200,7 +211,7 @@ Script.include("/~/system/libraries/Xform.js");
             this.previousRoomControllerPosition = roomControllerPosition;
         };
 
-        this.continueDistanceHolding = function(controllerData) {
+        this.continueDistanceHolding = function (controllerData) {
             var controllerLocation = controllerData.controllerLocations[this.hand];
             var worldControllerPosition = controllerLocation.position;
             var worldControllerRotation = controllerLocation.orientation;
@@ -299,13 +310,13 @@ Script.include("/~/system/libraries/Xform.js");
             this.potentialEntityWithContextOverlay = false;
         };
 
-        this.updateRecommendedArea = function() {
+        this.updateRecommendedArea = function () {
             var dims = Controller.getViewportDimensions();
             this.reticleMaxX = dims.x - MARGIN;
             this.reticleMaxY = dims.y - MARGIN;
         };
 
-        this.calculateNewReticlePosition = function(intersection) {
+        this.calculateNewReticlePosition = function (intersection) {
             this.updateRecommendedArea();
             var point2d = HMD.overlayFromWorldPoint(intersection);
             point2d.x = Math.max(this.reticleMinX, Math.min(point2d.x, this.reticleMaxX));
@@ -313,7 +324,7 @@ Script.include("/~/system/libraries/Xform.js");
             return point2d;
         };
 
-        this.notPointingAtEntity = function(controllerData) {
+        this.notPointingAtEntity = function (controllerData) {
             var intersection = controllerData.rayPicks[this.hand];
             var entityProperty = Entities.getEntityProperties(intersection.objectID);
             var entityType = entityProperty.type;
@@ -326,7 +337,7 @@ Script.include("/~/system/libraries/Xform.js");
             return false;
         };
 
-        this.distanceRotate = function(otherFarGrabModule) {
+        this.distanceRotate = function (otherFarGrabModule) {
             this.distanceRotating = true;
             this.distanceHolding = false;
 
@@ -343,7 +354,7 @@ Script.include("/~/system/libraries/Xform.js");
             this.previousWorldControllerRotation = worldControllerRotation;
         };
 
-        this.prepareDistanceRotatingData = function(controllerData) {
+        this.prepareDistanceRotatingData = function (controllerData) {
             var intersection = controllerData.rayPicks[this.hand];
 
             var controllerLocation = getControllerWorldLocation(this.handToController(), true);
@@ -363,7 +374,7 @@ Script.include("/~/system/libraries/Xform.js");
             this.previousWorldControllerRotation = worldControllerRotation;
         };
 
-        this.destroyContextOverlay = function(controllerData) {
+        this.destroyContextOverlay = function (controllerData) {
             if (this.entityWithContextOverlay) {
                 ContextOverlay.destroyContextOverlay(this.entityWithContextOverlay);
                 this.entityWithContextOverlay = false;
@@ -371,7 +382,7 @@ Script.include("/~/system/libraries/Xform.js");
             }
         };
 
-        this.targetIsNull = function() {
+        this.targetIsNull = function () {
             var properties = Entities.getEntityProperties(this.grabbedThingID);
             if (Object.keys(properties).length === 0 && this.distanceHolding) {
                 return true;
@@ -379,43 +390,80 @@ Script.include("/~/system/libraries/Xform.js");
             return false;
         };
 
+        this.isControllerInHmdFOV = function (controllerData, maxAngle) {
+            if (!HMD.active || !controllerData.controllerLocations[this.hand].valid) {
+                return false;
+            }
+            var handPosition = controllerData.controllerLocations[this.hand].position;
+            var hmdPosition = HMD.position;
+
+            var vecHmdToHand = Vec3.subtract(hmdPosition, handPosition);
+
+            // rotate z Vec about y axis. 
+            var orientation = HMD.orientation;
+
+            var rotation = Quat.fromPitchYawRollDegrees(0, 180, 0);
+            var rotatedOrientation = Quat.multiply(orientation, rotation);
+            var vecRotated = Quat.getFront(rotatedOrientation);
+
+            var angleBetweenHmdAndHand = toDegrees(Vec3.getAngle(vecRotated, vecHmdToHand));
+
+            if (angleBetweenHmdAndHand <= maxAngle) {
+                return true;
+            }
+            return false;
+        };
+
         this.isReady = function (controllerData) {
             if (HMD.active) {
-                if (this.notPointingAtEntity(controllerData)) {
-                    return makeRunningValues(false, [], []);
-                }
-
-                this.distanceHolding = false;
-                this.distanceRotating = false;
-
                 var rot = controllerData.controllerRotAngles[this.hand];
-                var triggerPress = controllerData.triggerValues[this.hand];
-                var pressedEnough = (triggerPress >= TRIGGER_OFF_VALUE);
-                var correctRotation = (rot >= CONTROLLER_EXP2_FARGRAB_MIN_ANGLE && rot < CONTROLLER_EXP2_FARGRAB_MAX_ANGLE);
+                var correctRotation = (rot >= CONTROLLER_EXP2_FARGRAB_MIN_ANGLE && rot <= CONTROLLER_EXP2_FARGRAB_MAX_ANGLE);
+                if (correctRotation) {
+                    // controllerDispatcher should enable the laser if controller in HMD FoV and trigger value is above threshold
+                    if (this.triggerClicked && !controllerData.triggerClicks[this.hand]) {
 
-                if (pressedEnough && correctRotation) {
-                    this.prepareDistanceRotatingData(controllerData);
-                    return makeRunningValues(true, [], []);
+                        this.distanceHolding = false;
+                        this.distanceRotating = false;
+
+                        this.prepareDistanceRotatingData(controllerData);
+                        this.justStartedRunning = true;
+                        return makeRunningValues(true, [], []);
+                    } else {
+                        this.triggerClicked = controllerData.triggerClicks[this.hand];
+                        return makeRunningValues(false, [], []);
+                    }
                 } else {
+                    // else, it should not run the module nor enable the laser.
                     this.destroyContextOverlay();
+                    this.triggerClicked = false;
                     return makeRunningValues(false, [], []);
                 }
             }
+            this.triggerClicked = false;
             return makeRunningValues(false, [], []);
         };
 
         this.run = function (controllerData) {
-            if (controllerData.triggerValues[this.hand] < TRIGGER_OFF_VALUE ||
-                this.notPointingAtEntity(controllerData) || this.targetIsNull()) {
+
+            if (!this.justStartedRunning && !this.triggerClicked) {
+                this.endFarGrabAction();
+                this.highlightedEntity = null;
+                this.justStartedRunning = true;
+                this.triggerClicked = controllerData.triggerClicks[this.hand];
+                return makeRunningValues(false, [], []);
+            }
+            if (this.notPointingAtEntity(controllerData) || this.targetIsNull()) {
                 this.endFarGrabAction();
                 Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                     this.highlightedEntity);
                 this.highlightedEntity = null;
+                this.triggerClicked = false;
+                this.justStartedRunning = false;
                 return makeRunningValues(false, [], []);
             }
             this.intersectionDistance = controllerData.rayPicks[this.hand].distance;
 
-            var otherModuleName =this.hand === RIGHT_HAND ? "LeftFarActionGrabEntity" : "RightFarActionGrabEntity";
+            var otherModuleName = this.hand === RIGHT_HAND ? "LeftFarActionGrabEntity" : "RightFarActionGrabEntity";
             var otherFarGrabModule = getEnabledModuleByName(otherModuleName);
 
             // gather up the readiness of the near-grab modules
@@ -441,6 +489,8 @@ Script.include("/~/system/libraries/Xform.js");
                     if (nearGrabReadiness[k].active && (nearGrabReadiness[k].targets[0] === this.grabbedThingID
                         || HMD.tabletID && nearGrabReadiness[k].targets[0] === HMD.tabletID)) {
                         this.endFarGrabAction();
+                        this.triggerClicked = false;
+                        this.justStartedRunning = false;
                         return makeRunningValues(false, [], []);
                     }
                 }
@@ -452,6 +502,8 @@ Script.include("/~/system/libraries/Xform.js");
                 for (var j = 0; j < nearGrabReadiness.length; j++) {
                     if (nearGrabReadiness[j].active) {
                         this.endFarGrabAction();
+                        this.triggerClicked = false;
+                        this.justStartedRunning = false;
                         return makeRunningValues(false, [], []);
                     }
                 }
@@ -470,11 +522,22 @@ Script.include("/~/system/libraries/Xform.js");
                         ]);
                         if (targetProps.href !== "") {
                             AddressManager.handleLookupString(targetProps.href);
+                            this.triggerClicked = false;
                             return makeRunningValues(false, [], []);
                         }
 
                         this.targetObject = new TargetObject(entityID, targetProps);
                         this.targetObject.parentProps = getEntityParents(targetProps);
+
+                        if (this.contextOverlayTimer) {
+                            Script.clearTimeout(this.contextOverlayTimer);
+                        }
+                        this.contextOverlayTimer = false;
+                        if (entityID === this.entityWithContextOverlay) {
+                            this.destroyContextOverlay();
+                        } else {
+                            Selection.removeFromSelectedItemsList("contextOverlayHighlightList", "entity", entityID);
+                        }
 
                         var targetEntity = this.targetObject.getTargetEntity();
                         entityID = targetEntity.id;
@@ -498,6 +561,64 @@ Script.include("/~/system/libraries/Xform.js");
                                 this.distanceHolding = true;
                                 this.distanceRotating = false;
                                 this.startFarGrabAction(controllerData, targetProps);
+                                this.justStartedRunning = false;
+                            }
+                        }
+                    } else {
+                        var targetEntityID = rayPickInfo.objectID;
+                        if (this.highlightedEntity !== targetEntityID) {
+                            Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
+                                this.highlightedEntity);
+                            var selectionTargetProps = Entities.getEntityProperties(targetEntityID, [
+                                "dynamic", "shapeType", "position",
+                                "rotation", "dimensions", "density",
+                                "userData", "locked", "type", "href"
+                            ]);
+
+                            var selectionTargetObject = new TargetObject(targetEntityID, selectionTargetProps);
+                            selectionTargetObject.parentProps = getEntityParents(selectionTargetProps);
+                            var selectionTargetEntity = selectionTargetObject.getTargetEntity();
+
+                            if (entityIsGrabbable(selectionTargetEntity.props) ||
+                                entityIsGrabbable(selectionTargetObject.entityProps)) {
+
+                                Selection.addToSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity", rayPickInfo.objectID);
+                            }
+                            this.highlightedEntity = rayPickInfo.objectID;
+                        }
+
+                        if (!this.entityWithContextOverlay) {
+                            var _this = this;
+
+                            if (_this.potentialEntityWithContextOverlay !== rayPickInfo.objectID) {
+                                if (_this.contextOverlayTimer) {
+                                    Script.clearTimeout(_this.contextOverlayTimer);
+                                }
+                                _this.contextOverlayTimer = false;
+                                _this.potentialEntityWithContextOverlay = rayPickInfo.objectID;
+                            }
+
+                            if (!_this.contextOverlayTimer) {
+                                _this.contextOverlayTimer = Script.setTimeout(function () {
+                                    if (!_this.entityWithContextOverlay &&
+                                        _this.contextOverlayTimer &&
+                                        _this.potentialEntityWithContextOverlay === rayPickInfo.objectID) {
+                                        var props = Entities.getEntityProperties(rayPickInfo.objectID);
+                                        var pointerEvent = {
+                                            type: "Move",
+                                            id: _this.hand + 1, // 0 is reserved for hardware mouse
+                                            pos2D: projectOntoEntityXYPlane(rayPickInfo.objectID, rayPickInfo.intersection, props),
+                                            pos3D: rayPickInfo.intersection,
+                                            normal: rayPickInfo.surfaceNormal,
+                                            direction: Vec3.subtract(ZERO_VEC, rayPickInfo.surfaceNormal),
+                                            button: "Secondary"
+                                        };
+                                        if (ContextOverlay.createOrDestroyContextOverlay(rayPickInfo.objectID, pointerEvent)) {
+                                            _this.entityWithContextOverlay = rayPickInfo.objectID;
+                                        }
+                                    }
+                                    _this.contextOverlayTimer = false;
+                                }, 500);
                             }
                         }
                     }
@@ -511,7 +632,7 @@ Script.include("/~/system/libraries/Xform.js");
             return this.exitIfDisabled(controllerData);
         };
 
-        this.exitIfDisabled = function(controllerData) {
+        this.exitIfDisabled = function (controllerData) {
             var moduleName = this.hand === RIGHT_HAND ? "RightDisableModules" : "LeftDisableModules";
             var disableModule = getEnabledModuleByName(moduleName);
             if (disableModule) {
@@ -520,22 +641,25 @@ Script.include("/~/system/libraries/Xform.js");
                     Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                         this.highlightedEntity);
                     this.highlightedEntity = null;
+                    this.triggerClicked = false;
+                    this.justStartedRunning = false;
                     return makeRunningValues(false, [], []);
                 }
             }
             var grabbedThing = (this.distanceHolding || this.distanceRotating) ? this.targetObject.entityID : null;
             var offset = this.calculateOffset(controllerData);
             var laserLockInfo = makeLaserLockInfo(grabbedThing, false, this.hand, offset);
+            this.triggerClicked = controllerData.triggerClicks[this.hand];
             return makeRunningValues(true, [], [], laserLockInfo);
         };
 
-        this.calculateOffset = function(controllerData) {
+        this.calculateOffset = function (controllerData) {
             if (this.distanceHolding || this.distanceRotating) {
                 var targetProps = Entities.getEntityProperties(this.targetObject.entityID, [
                     "position",
                     "rotation"
                 ]);
-                var zeroVector = { x: 0, y: 0, z:0, w: 0 };
+                var zeroVector = { x: 0, y: 0, z: 0, w: 0 };
                 var intersection = controllerData.rayPicks[this.hand].intersection;
                 var intersectionMat = new Xform(zeroVector, intersection);
                 var modelMat = new Xform(targetProps.rotation, targetProps.position);
