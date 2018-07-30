@@ -83,6 +83,8 @@ Script.include("/~/system/libraries/Xform.js");
         this.reticleMaxX;
         this.reticleMinY = MARGIN;
         this.reticleMaxY;
+        this.triggerClicked = false;
+        this.justStartedRunning = false;
 
         var ACTION_TTL = 15; // seconds
 
@@ -96,7 +98,7 @@ Script.include("/~/system/libraries/Xform.js");
             this.hand === RIGHT_HAND ? ["rightHand"] : ["leftHand"],
             [],
             100,
-            makeLaserParams(this.hand, false));
+            makeLaserParams(this.hand, true));
 
         this.handToController = function() {
             return (this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand;
@@ -171,22 +173,35 @@ Script.include("/~/system/libraries/Xform.js");
                 var correctRotation = (rot >= CONTROLLER_EXP2_INSPECT_MIN_ANGLE && rot < CONTROLLER_EXP2_INSPECT_MAX_ANGLE);
 
                 if (pressedEnough && correctRotation) {
-                    this.prepareDistanceRotatingData(controllerData);
-                    return makeRunningValues(true, [], []);
+                    if (this.triggerClicked && !controllerData.triggerClicks[this.hand]) {
+                        this.prepareDistanceRotatingData(controllerData);
+                        this.justStartedRunning = true;
+                        return makeRunningValues(true, [], []);
+                    }
+                    this.triggerClicked = controllerData.triggerClicks[this.hand];
                 } else {
                     this.destroyContextOverlay();
+                    this.triggerClicked = false;
                     return makeRunningValues(false, [], []);
                 }
             }
+            this.triggerClicked = false;
             return makeRunningValues(false, [], []);
         };
 
         this.run = function (controllerData) {
+            if (!this.justStartedRunning && !this.triggerClicked) {
+                this.highlightedEntity = null;
+                this.justStartedRunning = true;
+                this.triggerClicked = controllerData.triggerClicks[this.hand];
+                return makeRunningValues(false, [], []);
+            }
             if (controllerData.triggerValues[this.hand] < TRIGGER_OFF_VALUE ||
                 this.notPointingAtEntity(controllerData)) {
                 Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                     this.highlightedEntity);
                 this.highlightedEntity = null;
+                this.triggerClicked = false;
                 return makeRunningValues(false, [], []);
             }
             // gather up the readiness of the near-grab modules
@@ -209,6 +224,7 @@ Script.include("/~/system/libraries/Xform.js");
             // where it could near-grab something, stop searching.
             for (var j = 0; j < nearGrabReadiness.length; j++) {
                 if (nearGrabReadiness[j].active) {
+                    this.triggerClicked = false;
                     return makeRunningValues(false, [], []);
                 }
             }
@@ -227,6 +243,7 @@ Script.include("/~/system/libraries/Xform.js");
                     ]);
                     if (targetProps.href !== "") {
                         AddressManager.handleLookupString(targetProps.href);
+                        this.triggerClicked = false;
                         return makeRunningValues(false, [], []);
                     }
 
@@ -320,9 +337,12 @@ Script.include("/~/system/libraries/Xform.js");
                     Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                         this.highlightedEntity);
                     this.highlightedEntity = null;
+                    this.triggerClicked = false;
+                    this.justStartedRunning = false;
                     return makeRunningValues(false, [], []);
                 }
             }
+            this.triggerClicked = controllerData.triggerClicks[this.hand];
             return makeRunningValues(true, [], []);
         };
 
