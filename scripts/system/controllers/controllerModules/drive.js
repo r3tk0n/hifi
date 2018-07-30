@@ -18,31 +18,46 @@ Script.include("/~/system/libraries/controllers.js");
     var mappingName, driverMapping;
 
     function Driver(hand) {
+        //print("Loaded Driver...");
         var _this = this;
         this.hand = hand;
         this.active = false;
+        this.triggerClicked = 0;
 
         this.isReady = function(controllerData, deltaTime) {
             var rot = controllerData.controllerRotAngles[this.hand];
             var triggerPress = controllerData.triggerValues[this.hand];
             var pressedEnough = (triggerPress >= TRIGGER_OFF_VALUE);
             var correctRotation = (rot >= CONTROLLER_EXP2_DRIVE_MIN_ANGLE && rot < CONTROLLER_EXP2_DRIVE_MAX_ANGLE);
-            if (correctRotation && pressedEnough) {
-                this.active = true;
-                this.registerMappings();
-                Controller.enableMapping(mappingName);
-                return makeRunningValues(true, [], []);
+            if (this.triggerClicked && !controllerData.triggerClicks[this.hand]) {
+                //print("Trigger has been clicked before and is not clicked now.")
+                if (correctRotation && pressedEnough) {
+                    //print("We're in the correct rotation and it's pulled enough.");
+                    this.active = true;
+                    this.registerMappings();
+                    Controller.enableMapping(mappingName);
+                    this.triggerClicked = 0;
+                    return makeRunningValues(true, [{laserInfo: makeLaserParams(this.hand, false)}], []);
+                }
             }
+            this.triggerClicked = controllerData.triggerClicks[this.hand];
             return makeRunningValues(false, [], []);
         };
 
-        this.run = function(controllerData, deltaTime) {
-            var triggerPress = controllerData.triggerValues[this.hand];
-            var pressedEnough = (triggerPress >= TRIGGER_OFF_VALUE);
-            if (!pressedEnough) {
-                driverMapping.disable();
-                return makeRunningValues(false, [], []);
+        this.run = function (controllerData, deltaTime) {
+            if (this.triggerClicked && !controllerData.triggerClicks[this.hand]) {
+                //print("Trigger clicked prior and not clicked now for test...");
+                var triggerPress = controllerData.triggerValues[this.hand];
+                var pressedEnough = (triggerPress >= TRIGGER_OFF_VALUE);
+                if (!pressedEnough) {
+                    driverMapping.disable();
+                    this.triggerClicked = 0;
+                    this.active = false;
+                    return makeRunningValues(false, [], []);
+                }
+                return makeRunningValues(true, [], []);
             }
+            this.triggerClicked = controllerData.triggerClicks[this.hand];
             return makeRunningValues(true, [], []);
         };
 
