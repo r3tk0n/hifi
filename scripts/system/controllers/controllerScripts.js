@@ -19,7 +19,7 @@ var CONTOLLER_SCRIPTS = [
     //"controllerModules/nearParentGrabEntity.js",
     //"controllerModules/nearParentGrabOverlay.js",
     //"controllerModules/nearActionGrabEntity.js",
-    //"controllerModules/farActionGrabEntity.js",
+    "controllerModules/farActionGrabEntity.js",
     //"controllerModules/inspect.js",
     //"controllerModules/stylusInput.js",
     //"controllerModules/equipEntity.js",
