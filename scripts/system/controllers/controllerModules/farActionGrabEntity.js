@@ -627,6 +627,11 @@ Script.include("/~/system/libraries/Xform.js");
                 } else if (this.highlightedEntity) {
                     Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity", this.highlightedEntity);
                     this.highlightedEntity = null;
+                } else {
+                    this.endFarGrabAction();
+                    this.triggerClicked = false;
+                    this.justStartedRunning = false;
+                    return makeRunningValues(false, [], []);
                 }
             }
             return this.exitIfDisabled(controllerData);
