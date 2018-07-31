@@ -179,6 +179,7 @@ Script.include("/~/system/libraries/Xform.js");
                         return makeRunningValues(true, [], []);
                     }
                     this.triggerClicked = controllerData.triggerClicks[this.hand];
+                    return makeRunningValues(false, [], []);
                 } else {
                     this.destroyContextOverlay();
                     this.triggerClicked = false;
