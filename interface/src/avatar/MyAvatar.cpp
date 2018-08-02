@@ -297,6 +297,14 @@ void MyAvatar::registerMetaTypes(ScriptEnginePointer engine) {
     qScriptRegisterMetaType(engine.data(), driveKeysToScriptValue, driveKeysFromScriptValue);
 }
 
+glm::vec3 MyAvatar::getAvatarFeet() {
+    ShapeInfo shapeInfo;
+    computeShapeInfo(shapeInfo);
+    glm::vec3 halfExtents = shapeInfo.getHalfExtents(); // x = radius, y = halfHeight
+    glm::vec3 localFeet(0.0f, shapeInfo.getOffset().y - halfExtents.y, 0.0f);
+    return Avatar::getWorldOrientation() * localFeet + getWorldPosition();
+}
+
 void MyAvatar::setOrientationVar(const QVariant& newOrientationVar) {
     Avatar::setWorldOrientation(quatFromVariant(newOrientationVar));
 }

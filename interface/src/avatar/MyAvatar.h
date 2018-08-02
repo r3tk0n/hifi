@@ -295,6 +295,12 @@ public:
     const glm::quat& getHMDSensorOrientation() const { return _hmdSensorOrientation; }
 
     /**jsdoc
+     * @function MyAvatar.getAvatarFeet();
+     * @returns {Vec3}
+    */
+    Q_INVOKABLE glm::vec3 MyAvatar::getAvatarFeet();
+
+    /**jsdoc
      * @function MyAvatar.setOrientationVar
      * @param {object} newOrientationVar
      */
