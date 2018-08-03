@@ -560,6 +560,12 @@ void MyAvatar::simulate(float deltaTime) {
     
     animateScaleChanges(deltaTime);
 
+    Settings settings;
+    if (settings.contains("Avatar/flyingEnabled")) {
+        qDebug() << "Found flying setting...";
+        settings.remove("Avatar/flyingEnabled");
+    }
+
     setFlyingEnabled(getFlyingEnabled());
 
     if (_cauterizationNeedsUpdate) {
