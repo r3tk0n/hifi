@@ -1143,7 +1143,6 @@ void MyAvatar::saveData() {
     settings.setValue("collisionSoundURL", _collisionSoundURL);
     settings.setValue("useSnapTurn", _useSnapTurn);
     settings.setValue("userHeight", getUserHeight());
-    settings.setValue("flyingDesktop", getFlyingDesktopPref());
     settings.setValue("flyingHMD", getFlyingHMDPref());
 
     settings.endGroup();
@@ -1297,7 +1296,6 @@ void MyAvatar::loadData() {
 
     // Flying preferences must be loaded before calling setFlyingEnabled()
     Setting::Handle<bool> firstRunVal { Settings::firstRun, true };
-    setFlyingDesktopPref(firstRunVal.get() ? true : settings.value("flyingDesktop").toBool());
     setFlyingHMDPref(firstRunVal.get() ? false : settings.value("flyingHMD").toBool());
     setFlyingEnabled(getFlyingEnabled());
 
