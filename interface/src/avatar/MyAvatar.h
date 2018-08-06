@@ -298,7 +298,9 @@ public:
      * @function MyAvatar.getAvatarFeet();
      * @returns {Vec3}
     */
-    Q_INVOKABLE glm::vec3 MyAvatar::getAvatarFeet();
+    Q_INVOKABLE glm::vec3 getAvatarFeet();
+
+    void computeShapeInfo(ShapeInfo& shapeInfo);
 
     /**jsdoc
      * @function MyAvatar.setOrientationVar

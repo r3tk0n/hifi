@@ -21,6 +21,7 @@
 
 #include <QtCore/QTimer>
 
+#include <AvatarConstants.h>
 #include <shared/QtHelpers.h>
 #include <scripting/HMDScriptingInterface.h>
 #include <AccountManager.h>
@@ -298,11 +299,21 @@ void MyAvatar::registerMetaTypes(ScriptEnginePointer engine) {
 }
 
 glm::vec3 MyAvatar::getAvatarFeet() {
+    float uniformScale = getModelScale();
     ShapeInfo shapeInfo;
     computeShapeInfo(shapeInfo);
     glm::vec3 halfExtents = shapeInfo.getHalfExtents(); // x = radius, y = halfHeight
-    glm::vec3 localFeet(0.0f, shapeInfo.getOffset().y - halfExtents.y, 0.0f);
-    return Avatar::getWorldOrientation() * localFeet + getWorldPosition();
+    glm::vec3 localFeet(0.0f, shapeInfo.getOffset().y - halfExtents.y - halfExtents.x, 0.0f);
+    return getWorldOrientation() * localFeet + getWorldPosition();
+}
+
+void MyAvatar::computeShapeInfo(ShapeInfo& shapeInfo) {
+    float uniformScale = getModelScale();
+    float radius = glm::max(MIN_AVATAR_RADIUS, uniformScale * _skeletonModel->getBoundingCapsuleRadius());
+    float height = glm::max(MIN_AVATAR_HEIGHT, uniformScale *  _skeletonModel->getBoundingCapsuleHeight());
+    shapeInfo.setCapsuleY(radius, 0.5f * height);
+    glm::vec3 offset = uniformScale * _skeletonModel->getBoundingCapsuleOffset();
+    shapeInfo.setOffset(offset);
 }
 
 void MyAvatar::setOrientationVar(const QVariant& newOrientationVar) {
