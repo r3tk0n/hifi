@@ -207,13 +207,15 @@ void Avatar::animateScaleChanges(float deltaTime) {
 }
 
 void Avatar::setTargetScale(float targetScale) {
-    float newValue = glm::clamp(targetScale, MIN_AVATAR_SCALE, MAX_AVATAR_SCALE);
+    float minScale = getDomainMinScale();
+    float maxScale = getDomainMaxScale();
+    float newValue = glm::clamp(targetScale, minScale, maxScale);
     if (_targetScale != newValue) {
         _targetScale = newValue;
         _scaleChanged = usecTimestampNow();
         _isAnimatingScale = true;
 
-        emit targetScaleChanged(targetScale);
+        emit targetScaleChanged(newValue);
     }
 }
 
