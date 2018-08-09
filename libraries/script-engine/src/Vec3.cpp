@@ -94,3 +94,20 @@ float Vec3::getAngle(const glm::vec3& v1, const glm::vec3& v2) {
     return glm::acos(glm::dot(glm::normalize(v1), glm::normalize(v2)));
 }
 
+float Vec3::distanceBetweenLines(const glm::vec3& p0, const glm::vec3& v1, const glm::vec3 p1, const glm::vec3& v2) {
+    glm::vec3 u = glm::normalize(v1);
+    glm::vec3 v = glm::normalize(v2);
+    glm::vec3 w = p0 - p1;
+    float a = glm::dot(u, u);
+    float b = glm::dot(u, v);
+    float c = glm::dot(v, v);
+    float d = glm::dot(u, w);
+    float e = glm::dot(v, w);
+    float denominator = (a * c) - (b * b);
+    
+    float sc = (denominator < EPSILON) ? 0.0f : (b * e - c * d) / denominator;
+    float tc = ((denominator < EPSILON) ? (b > c ? (d / b) : (e / c)) : (a * e - b * d) / denominator);
+    
+    glm::vec3 dVec = w + (sc * u) - (tc * v);
+    return glm::length(dVec);
+}

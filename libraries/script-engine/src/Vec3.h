@@ -410,6 +410,17 @@ public slots:
      */
     float getAngle(const glm::vec3& v1, const glm::vec3& v2);
 
+    /**jsdoc
+     * Calculate the closest point of approach between two lines.
+     * @function Vec3(0).
+     * @param {Vec3} p0 - The starting point of the first line.
+     * @param {Vec3} v1 - The direction vector of the first line.
+     * @param {Vec3} p1 - The starting point of the second line.
+     * @param {Vec3} v2 - The direction vector of the second line.
+     * @returns {number} The closest distance between the two vectors.
+    */
+    float distanceBetweenLines(const glm::vec3& p0, const glm::vec3& v1, const glm::vec3 p1, const glm::vec3& v2);
+
 private:
     const glm::vec3& UNIT_X() { return Vectors::UNIT_X; }
     const glm::vec3& UNIT_Y() { return Vectors::UNIT_Y; }
