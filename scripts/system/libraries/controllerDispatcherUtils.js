@@ -488,6 +488,41 @@ entityIsFarGrabbedByOther = function(entityID) {
     return false;
 };
 
+toDegrees = function (angle) {
+    return angle * (180 / Math.PI);
+}
+
+toRadians = function (angle) {
+    return angle * (Math.PI / 180);
+}
+
+controllerTwistAngle = function (hand) {
+    // Retrieve the hand's pose.
+    var handPose = Controller.getPoseValue(hand === LEFT_HAND ? Controller.Standard.LeftHand : Controller.Standard.RightHand);
+    // Get the rotation of the controller for the given hand.
+    var handRotationQuat = handPose.rotation;
+    // Get it into avatar space.
+    var handRotationVector = Vec3.multiplyQbyV(handRotationQuat, Vec3.UNIT_X);
+
+    // Figure out the plane we're testing against...
+
+    // Multiply up vector by avatar rotation.
+    var v1 = Vec3.multiplyQbyV(MyAvatar.rotation, Vec3.UNIT_Z);
+    var v2 = Vec3.multiplyQbyV(MyAvatar.rotation, Vec3.UNIT_Y);
+    var normal = Vec3.cross(v1, v2);
+    // Take the cosine inverse of the dot product to retrieve theta (angle, returned in degrees).
+    return toDegrees(Math.acos(Vec3.dot(Vec3.normalize(handRotationVector), Vec3.normalize(normal))));
+}
+
+projectVontoW = function (v, w) {
+    // Project vector v onto vector w
+    var denominator = Vec3.length(w);
+    // Denominator should be mag(w)^2
+    denominator *= denominator;
+    return Vec3.multiply((Vec3.dot(v, w) / denominator), w);
+}
+
+
 if (typeof module !== 'undefined') {
     module.exports = {
         makeDispatcherModuleParameters: makeDispatcherModuleParameters,
