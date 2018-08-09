@@ -73,6 +73,7 @@ ONE_VEC = { x: 1, y: 1, z: 1 };
 
 LEFT_HAND = 0;
 RIGHT_HAND = 1;
+AVATAR_HEAD = 2;
 
 FORBIDDEN_GRAB_TYPES = ["Unknown", "Light", "PolyLine", "Zone"];
 

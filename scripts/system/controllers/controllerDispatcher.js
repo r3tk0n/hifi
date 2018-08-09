@@ -155,6 +155,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
                 this.tabletID = HMD.tabletID;
                 Pointers.setIgnoreItems(_this.leftPointer, _this.blacklist);
                 Pointers.setIgnoreItems(_this.rightPointer, _this.blacklist);
+                Pointers.setIgnoreItems(_this.headPointer, _this.blacklist);
             }
         };
 
@@ -244,7 +245,8 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             // raypick for each controller
             var rayPicks = [
                 Pointers.getPrevPickResult(_this.leftPointer),
-                Pointers.getPrevPickResult(_this.rightPointer)
+                Pointers.getPrevPickResult(_this.rightPointer),
+                Pointers.getPrevPickResult(_this.headPointer)
             ];
             var hudRayPicks = [
                 Pointers.getPrevPickResult(_this.leftHudPointer),
@@ -385,6 +387,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
         this.setBlacklist = function() {
             Pointers.setIgnoreItems(_this.leftPointer, this.blacklist);
             Pointers.setIgnoreItems(_this.rightPointer, this.blacklist);
+            Pointers.setIgnoreItems(_this.headPointer, this.blacklist);
         };
 
         var MAPPING_NAME = "com.highfidelity.controllerDispatcher";
@@ -420,6 +423,13 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             scaleWithAvatar: true,
             distanceScaleEnd: true,
             hand: RIGHT_HAND
+        });
+        this.headPointer = this.pointerManager.createPointer(true, Picktype.Ray, {
+            joint: "Avatar",
+            filter: Picks.PICK_OVERLAYS | Picks.PICK_ENTITIES,
+            hover: false,
+            scaleWithAvatar: true,
+            distanceScaleEnd: true
         });
         this.leftHudPointer = this.pointerManager.createPointer(true, PickType.Ray, {
             joint: "_CAMERA_RELATIVE_CONTROLLER_LEFTHAND",
