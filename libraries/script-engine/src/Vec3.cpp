@@ -94,10 +94,10 @@ float Vec3::getAngle(const glm::vec3& v1, const glm::vec3& v2) {
     return glm::acos(glm::dot(glm::normalize(v1), glm::normalize(v2)));
 }
 
-float Vec3::distanceBetweenLines(const glm::vec3& p0, const glm::vec3& v1, const glm::vec3 p1, const glm::vec3& v2) {
+float Vec3::distanceBetweenLines(const glm::vec3& p0, const glm::vec3& v1, const glm::vec3& q0, const glm::vec3& v2) {
     glm::vec3 u = glm::normalize(v1);
     glm::vec3 v = glm::normalize(v2);
-    glm::vec3 w = p0 - p1;
+    glm::vec3 w = p0 - q0;
     float a = glm::dot(u, u);
     float b = glm::dot(u, v);
     float c = glm::dot(v, v);

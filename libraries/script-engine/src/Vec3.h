@@ -419,7 +419,7 @@ public slots:
      * @param {Vec3} v2 - The direction vector of the second line.
      * @returns {number} The closest distance between the two vectors.
     */
-    float distanceBetweenLines(const glm::vec3& p0, const glm::vec3& v1, const glm::vec3 p1, const glm::vec3& v2);
+    float distanceBetweenLines(const glm::vec3& p0, const glm::vec3& v1, const glm::vec3& q0, const glm::vec3& v2);
 
 private:
     const glm::vec3& UNIT_X() { return Vectors::UNIT_X; }
