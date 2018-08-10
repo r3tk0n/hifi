@@ -424,7 +424,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             distanceScaleEnd: true,
             hand: RIGHT_HAND
         });
-        this.headPointer = this.pointerManager.createPointer(true, Picktype.Ray, {
+        this.headPointer = this.pointerManager.createPointer(false, Picktype.Ray, {
             joint: "Avatar",
             filter: Picks.PICK_OVERLAYS | Picks.PICK_ENTITIES,
             hover: false,
