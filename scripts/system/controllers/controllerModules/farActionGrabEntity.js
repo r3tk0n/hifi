@@ -554,14 +554,17 @@ Script.include("/~/system/libraries/Xform.js");
                         this.setLasersVisibility(true);
                         if (this.HEAD_LASER_ENABLED) { this.updateHeadLine(headPick); }
                         this.updateHandLine(ctrlrPick);
-                        if (this.timer >= EXP3_STARE_THRESHOLD) {
-                            otherModule.timer = 0.0;
+                        if (this.timer < EXP3_STARE_THRESHOLD) {
+                            this.timer += (this.time >= EXP3_STARE_THRESHOLD) ? 0 : deltaTime;
+                            //return makeRunningValues(false, [], []);
+                        }
+                        if (controllerData.triggerClicks[this.hand]) {
+                            //otherModule.timer = 0.0;
                             this.timer = 0.0;
                             this.setLasersVisibility(false);
                             this.prepareDistanceRotatingData(controllerData);
                             return makeRunningValues(true, [], []);
                         } else {
-                            this.timer += deltaTime;
                             return makeRunningValues(false, [], []);
                         }
                     }
@@ -579,7 +582,7 @@ Script.include("/~/system/libraries/Xform.js");
 
         this.run = function (controllerData) {
             var correctRotation = (this.ROTATION_ENABLED) ? (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE) : true;    // Strip out the ternary operator for final version.
-            if (/*controllerData.triggerValues[this.hand] < TRIGGER_OFF_VALUE*/ !correctRotation ||
+            if (controllerData.triggerValues[this.hand] < TRIGGER_OFF_VALUE || !correctRotation ||
                 this.notPointingAtEntity(controllerData) || this.targetIsNull() || this.buttonValue !== 0) {
                 this.endFarGrabAction();
                 Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
@@ -632,8 +635,8 @@ Script.include("/~/system/libraries/Xform.js");
 
                 var rayPickInfo = controllerData.rayPicks[this.hand];
                 if (rayPickInfo.type === Picks.INTERSECTED_ENTITY) {
-                    //if (controllerData.triggerClicks[this.hand]) {
-                    if (this.buttonValue === 0) {
+                    if (controllerData.triggerClicks[this.hand]) {
+                    //if (this.buttonValue === 0) {
                         var entityID = rayPickInfo.objectID;
                         Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                             this.highlightedEntity);
