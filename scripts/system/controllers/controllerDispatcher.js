@@ -22,7 +22,7 @@ Script.include("/~/system/libraries/utils.js");
 Script.include("/~/system/libraries/controllers.js");
 Script.include("/~/system/libraries/controllerDispatcherUtils.js");
 
-(function() {
+(function () {
     Script.include("/~/system/libraries/pointersUtils.js");
     var NEAR_MAX_RADIUS = 0.1;
 
@@ -150,11 +150,12 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             return deltaTime;
         };
 
-        this.setIgnorePointerItems = function() {
+        this.setIgnorePointerItems = function () {
             if (HMD.tabletID && HMD.tabletID !== this.tabletID) {
                 this.tabletID = HMD.tabletID;
                 Pointers.setIgnoreItems(_this.leftPointer, _this.blacklist);
                 Pointers.setIgnoreItems(_this.rightPointer, _this.blacklist);
+                Pointers.setIgnoreItems(_this.headPointer, _this.blacklist);
             }
         };
 
@@ -244,7 +245,8 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             // raypick for each controller
             var rayPicks = [
                 Pointers.getPrevPickResult(_this.leftPointer),
-                Pointers.getPrevPickResult(_this.rightPointer)
+                Pointers.getPrevPickResult(_this.rightPointer),
+                Pointers.getPrevPickResult(_this.headPointer)
             ];
             var hudRayPicks = [
                 Pointers.getPrevPickResult(_this.leftHudPointer),
@@ -382,9 +384,10 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             }
         };
 
-        this.setBlacklist = function() {
+        this.setBlacklist = function () {
             Pointers.setIgnoreItems(_this.leftPointer, this.blacklist);
             Pointers.setIgnoreItems(_this.rightPointer, this.blacklist);
+            Pointers.setIgnoreItems(_this.headPointer, this.blacklist);
         };
 
         var MAPPING_NAME = "com.highfidelity.controllerDispatcher";
@@ -404,7 +407,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
         this.leftPointer = this.pointerManager.createPointer(false, PickType.Ray, {
             joint: "_CAMERA_RELATIVE_CONTROLLER_LEFTHAND",
             filter: Picks.PICK_OVERLAYS | Picks.PICK_ENTITIES,
-            triggers: [{action: Controller.Standard.LTClick, button: "Focus"}, {action: Controller.Standard.LTClick, button: "Primary"}],
+            triggers: [{ action: Controller.Standard.LTClick, button: "Focus" }, { action: Controller.Standard.LTClick, button: "Primary" }],
             posOffset: getGrabPointSphereOffset(Controller.Standard.LeftHand, true),
             hover: true,
             scaleWithAvatar: true,
@@ -414,7 +417,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
         this.rightPointer = this.pointerManager.createPointer(false, PickType.Ray, {
             joint: "_CAMERA_RELATIVE_CONTROLLER_RIGHTHAND",
             filter: Picks.PICK_OVERLAYS | Picks.PICK_ENTITIES,
-            triggers: [{action: Controller.Standard.RTClick, button: "Focus"}, {action: Controller.Standard.RTClick, button: "Primary"}],
+            triggers: [{ action: Controller.Standard.RTClick, button: "Focus" }, { action: Controller.Standard.RTClick, button: "Primary" }],
             posOffset: getGrabPointSphereOffset(Controller.Standard.RightHand, true),
             hover: true,
             scaleWithAvatar: true,
@@ -426,7 +429,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             filter: Picks.PICK_HUD,
             maxDistance: DEFAULT_SEARCH_SPHERE_DISTANCE,
             posOffset: getGrabPointSphereOffset(Controller.Standard.LeftHand, true),
-            triggers: [{action: Controller.Standard.LTClick, button: "Focus"}, {action: Controller.Standard.LTClick, button: "Primary"}],
+            triggers: [{ action: Controller.Standard.LTClick, button: "Focus" }, { action: Controller.Standard.LTClick, button: "Primary" }],
             hover: true,
             scaleWithAvatar: true,
             distanceScaleEnd: true,
@@ -437,7 +440,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             filter: Picks.PICK_HUD,
             maxDistance: DEFAULT_SEARCH_SPHERE_DISTANCE,
             posOffset: getGrabPointSphereOffset(Controller.Standard.RightHand, true),
-            triggers: [{action: Controller.Standard.RTClick, button: "Focus"}, {action: Controller.Standard.RTClick, button: "Primary"}],
+            triggers: [{ action: Controller.Standard.RTClick, button: "Focus" }, { action: Controller.Standard.RTClick, button: "Primary" }],
             hover: true,
             scaleWithAvatar: true,
             distanceScaleEnd: true,
@@ -448,7 +451,14 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             filter: Picks.PICK_ENTITIES | Picks.PICK_OVERLAYS,
             enabled: true
         });
-        this.handleHandMessage = function(channel, message, sender) {
+        this.headPointer = this.pointerManager.createPointer(false, PickType.Ray, {
+            joint: "Avatar",
+            filter: Picks.PICK_OVERLAYS | Picks.PICK_ENTITIES,
+            hover: false,
+            scaleWithAvatar: true,
+            distanceScaleEnd: true
+        });
+        this.handleHandMessage = function (channel, message, sender) {
             var data;
             if (sender === MyAvatar.sessionUUID) {
                 try {

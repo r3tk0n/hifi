@@ -73,6 +73,7 @@ ONE_VEC = { x: 1, y: 1, z: 1 };
 
 LEFT_HAND = 0;
 RIGHT_HAND = 1;
+AVATAR_HEAD = 2;
 
 FORBIDDEN_GRAB_TYPES = ["Unknown", "Light", "PolyLine", "Zone"];
 
@@ -88,6 +89,8 @@ BUMPER_ON_VALUE = 0.5;
 PICK_MAX_DISTANCE = 500; // max length of pick-ray
 DEFAULT_SEARCH_SPHERE_DISTANCE = 1000; // how far from camera to search intersection?
 NEAR_GRAB_PICK_RADIUS = 0.25; // radius used for search ray vs object for near grabbing.
+EXP3_MAX_DISTANCE = 0.5;    // distance used between head and hand picks
+EXP3_STARE_THRESHOLD = 1.0; // time, in seconds, user must hold gaze and point before action starts
 
 COLORS_GRAB_SEARCHING_HALF_SQUEEZE = { red: 10, green: 10, blue: 255 };
 COLORS_GRAB_SEARCHING_FULL_SQUEEZE = { red: 250, green: 10, blue: 10 };
@@ -102,13 +105,13 @@ DISPATCHER_HOVERING_LIST = "dispactherHoveringList";
 DISPATCHER_HOVERING_STYLE = {
     isOutlineSmooth: true,
     outlineWidth: 0,
-    outlineUnoccludedColor: {red: 255, green: 128, blue: 128},
+    outlineUnoccludedColor: { red: 255, green: 128, blue: 128 },
     outlineUnoccludedAlpha: 0.0,
-    outlineOccludedColor: {red: 255, green: 128, blue: 128},
-    outlineOccludedAlpha:0.0,
-    fillUnoccludedColor: {red: 255, green: 255, blue: 255},
+    outlineOccludedColor: { red: 255, green: 128, blue: 128 },
+    outlineOccludedAlpha: 0.0,
+    fillUnoccludedColor: { red: 255, green: 255, blue: 255 },
     fillUnoccludedAlpha: 0.12,
-    fillOccludedColor: {red: 255, green: 255, blue: 255},
+    fillOccludedColor: { red: 255, green: 255, blue: 255 },
     fillOccludedAlpha: 0.0
 };
 
@@ -154,7 +157,7 @@ makeDispatcherModuleParameters = function (priority, activitySlots, requiredData
     };
 };
 
-makeLaserLockInfo = function(targetID, isOverlay, hand, offset) {
+makeLaserLockInfo = function (targetID, isOverlay, hand, offset) {
     return {
         targetID: targetID,
         isOverlay: isOverlay,
@@ -163,7 +166,7 @@ makeLaserLockInfo = function(targetID, isOverlay, hand, offset) {
     };
 };
 
-makeLaserParams = function(hand, allwaysOn) {
+makeLaserParams = function (hand, allwaysOn) {
     if (allwaysOn === undefined) {
         allwaysOn = false;
     }
@@ -247,19 +250,19 @@ entityIsGrabbable = function (props) {
     return true;
 };
 
-clearHighlightedEntities = function() {
+clearHighlightedEntities = function () {
     Selection.clearSelectedItemsList(DISPATCHER_HOVERING_LIST);
 };
 
-highlightTargetEntity = function(entityID) {
+highlightTargetEntity = function (entityID) {
     Selection.addToSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity", entityID);
 };
 
-unhighlightTargetEntity = function(entityID) {
+unhighlightTargetEntity = function (entityID) {
     Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity", entityID);
 };
 
-entityIsDistanceGrabbable = function(props) {
+entityIsDistanceGrabbable = function (props) {
     if (!entityIsGrabbable(props)) {
         return false;
     }
@@ -285,12 +288,12 @@ getControllerJointIndex = function (hand) {
             var controllerJointIndex = -1;
             if (Camera.mode === "first person") {
                 controllerJointIndex = MyAvatar.getJointIndex(hand === RIGHT_HAND ?
-                                                              "_CONTROLLER_RIGHTHAND" :
-                                                              "_CONTROLLER_LEFTHAND");
+                    "_CONTROLLER_RIGHTHAND" :
+                    "_CONTROLLER_LEFTHAND");
             } else if (Camera.mode === "third person") {
                 controllerJointIndex = MyAvatar.getJointIndex(hand === RIGHT_HAND ?
-                                                              "_CAMERA_RELATIVE_CONTROLLER_RIGHTHAND" :
-                                                              "_CAMERA_RELATIVE_CONTROLLER_LEFTHAND");
+                    "_CAMERA_RELATIVE_CONTROLLER_RIGHTHAND" :
+                    "_CAMERA_RELATIVE_CONTROLLER_LEFTHAND");
             }
 
             getControllerJointIndexCacheTime[hand] = now;
@@ -360,8 +363,8 @@ ensureDynamic = function (entityID) {
 
 findGroupParent = function (controllerData, targetProps) {
     while (targetProps.parentID &&
-           targetProps.parentID !== Uuid.NULL &&
-           Entities.getNestableType(targetProps.parentID) == "entity") {
+        targetProps.parentID !== Uuid.NULL &&
+        Entities.getNestableType(targetProps.parentID) == "entity") {
         var parentProps = Entities.getEntityProperties(targetProps.parentID, DISPATCHER_PROPERTIES);
         if (!parentProps) {
             break;
@@ -374,11 +377,11 @@ findGroupParent = function (controllerData, targetProps) {
     return targetProps;
 };
 
-getEntityParents = function(targetProps) {
+getEntityParents = function (targetProps) {
     var parentProperties = [];
     while (targetProps.parentID &&
-           targetProps.parentID !== Uuid.NULL &&
-           Entities.getNestableType(targetProps.parentID) == "entity") {
+        targetProps.parentID !== Uuid.NULL &&
+        Entities.getNestableType(targetProps.parentID) == "entity") {
         var parentProps = Entities.getEntityProperties(targetProps.parentID, DISPATCHER_PROPERTIES);
         if (!parentProps) {
             break;
@@ -392,7 +395,7 @@ getEntityParents = function(targetProps) {
 };
 
 
-findHandChildEntities = function(hand) {
+findHandChildEntities = function (hand) {
     // find children of avatar's hand joint
     var handJointIndex = MyAvatar.getJointIndex(hand === RIGHT_HAND ? "RightHand" : "LeftHand");
     var children = Entities.getChildrenIDsOfJoint(MyAvatar.sessionUUID, handJointIndex);
@@ -405,8 +408,8 @@ findHandChildEntities = function(hand) {
 
     // find children of faux camera-relative controller joint
     var controllerCRJointIndex = MyAvatar.getJointIndex(hand === RIGHT_HAND ?
-                                                        "_CAMERA_RELATIVE_CONTROLLER_RIGHTHAND" :
-                                                        "_CAMERA_RELATIVE_CONTROLLER_LEFTHAND");
+        "_CAMERA_RELATIVE_CONTROLLER_RIGHTHAND" :
+        "_CAMERA_RELATIVE_CONTROLLER_LEFTHAND");
     children = children.concat(Entities.getChildrenIDsOfJoint(MyAvatar.sessionUUID, controllerCRJointIndex));
     children = children.concat(Entities.getChildrenIDsOfJoint(MyAvatar.SELF_ID, controllerCRJointIndex));
 
@@ -416,7 +419,7 @@ findHandChildEntities = function(hand) {
     });
 };
 
-distanceBetweenEntityLocalPositionAndBoundingBox = function(entityProps, jointGrabOffset) {
+distanceBetweenEntityLocalPositionAndBoundingBox = function (entityProps, jointGrabOffset) {
     var DEFAULT_REGISTRATION_POINT = { x: 0.5, y: 0.5, z: 0.5 };
     var rotInv = Quat.inverse(entityProps.localRotation);
     var localPosition = Vec3.sum(entityProps.localPosition, jointGrabOffset);
@@ -429,7 +432,7 @@ distanceBetweenEntityLocalPositionAndBoundingBox = function(entityProps, jointGr
     var localMax = Vec3.sum(entityCenter, halfDims);
 
 
-    var v = {x: localPoint.x, y: localPoint.y, z: localPoint.z};
+    var v = { x: localPoint.x, y: localPoint.y, z: localPoint.z };
     v.x = Math.max(v.x, localMin.x);
     v.x = Math.min(v.x, localMax.x);
     v.y = Math.max(v.y, localMin.y);
@@ -440,7 +443,7 @@ distanceBetweenEntityLocalPositionAndBoundingBox = function(entityProps, jointGr
     return Vec3.distance(v, localPoint);
 };
 
-distanceBetweenPointAndEntityBoundingBox = function(point, entityProps) {
+distanceBetweenPointAndEntityBoundingBox = function (point, entityProps) {
     var entityXform = new Xform(entityProps.rotation, entityProps.position);
     var localPoint = entityXform.inv().xformPoint(point);
     var minOffset = Vec3.multiplyVbyV(entityProps.registrationPoint, entityProps.dimensions);
@@ -448,7 +451,7 @@ distanceBetweenPointAndEntityBoundingBox = function(point, entityProps) {
     var localMin = Vec3.subtract(entityXform.trans, minOffset);
     var localMax = Vec3.sum(entityXform.trans, maxOffset);
 
-    var v = {x: localPoint.x, y: localPoint.y, z: localPoint.z};
+    var v = { x: localPoint.x, y: localPoint.y, z: localPoint.z };
     v.x = Math.max(v.x, localMin.x);
     v.x = Math.min(v.x, localMax.x);
     v.y = Math.max(v.y, localMin.y);
@@ -459,7 +462,7 @@ distanceBetweenPointAndEntityBoundingBox = function(point, entityProps) {
     return Vec3.distance(v, localPoint);
 };
 
-entityIsEquipped = function(entityID) {
+entityIsEquipped = function (entityID) {
     var rightEquipEntity = getEnabledModuleByName("RightEquipEntity");
     var leftEquipEntity = getEnabledModuleByName("LeftEquipEntity");
     var equippedInRightHand = rightEquipEntity ? rightEquipEntity.targetEntityID === entityID : false;
@@ -467,7 +470,7 @@ entityIsEquipped = function(entityID) {
     return equippedInRightHand || equippedInLeftHand;
 };
 
-entityIsFarGrabbedByOther = function(entityID) {
+entityIsFarGrabbedByOther = function (entityID) {
     // by convention, a far grab sets the tag of its action to be far-grab-*owner-session-id*.
     var actionIDs = Entities.getActionIDs(entityID);
     var myFarGrabTag = "far-grab-" + MyAvatar.sessionUUID;
@@ -486,6 +489,13 @@ entityIsFarGrabbedByOther = function(entityID) {
     }
     return false;
 };
+
+vecInDirWithMagOf = function (u, v) {
+    // Returns a vector in the direction of u with the magnitude of v
+    var length = Vec3.length(v);
+    var dir = Vec3.normalize(u);
+    return Vec3.multiply(length, dir);
+}
 
 if (typeof module !== 'undefined') {
     module.exports = {

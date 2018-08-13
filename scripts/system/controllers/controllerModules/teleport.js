@@ -206,11 +206,46 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.isReady = function(controllerData, deltaTime) {
             var otherModule = this.getOtherModule();
-            if (!this.disabled && this.buttonValue !== 0 && !otherModule.active) {
+
+            var otherModule = this.getOtherModule();
+            //print("Running teleport.js isReady() function...");
+            // Controller Exp3 activation criteria.
+            var headPick = controllerData.rayPicks[AVATAR_HEAD];
+            var ctrlrPick = controllerData.rayPicks[this.hand];
+            if (ctrlrPick.intersects && !otherModule.active) {
+                var ctrlrVec = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.position);
+                var headVec = Vec3.subtract(headPick.intersection, headPick.searchRay.position);
+
+                var headDist = vecInDirWithMagOf(headVec, ctrlrVec);
+
+                //print("Timer is at: " + this.timer + " seconds");
+
+                var distance = Vec3.length(Vec3.subtract(headDist, ctrlrVec));
+                if (distance <= EXP3_MAX_DISTANCE) {
+                    if (this.timer >= EXP3_STARE_THRESHOLD) {
+                        print("Timer hit activation threshold: " + EXP3_STARE_THRESHOLD + " seconds, entering teleport.");
+                        this.active = true;
+                        this.enterTeleport();
+                        otherModule.timer = 0.0;
+                        this.timer = 0.0;
+                        return makeRunningValues(true, [], []);
+                    } else {
+                        // Increment the timer.
+                        print("Incrementing timer...");
+                        this.timer += deltaTime;
+                        return makeRunningValues(false, [], []);
+                    }
+                } else {
+                    timer = 0;
+                }
+            }
+
+            /*if (!this.disabled && this.buttonValue !== 0 && !otherModule.active) {
                 this.active = true;
                 this.enterTeleport();
                 return makeRunningValues(true, [], []);
             }
+            */
             return makeRunningValues(false, [], []);
         };
 
