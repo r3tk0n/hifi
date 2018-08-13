@@ -220,6 +220,7 @@ Script.include("/~/system/libraries/controllers.js");
         this.updateHandLine = function (ctrlrPick) {
             if (Uuid.isEqual(this.handLine1, Uuid.NULL)) {
                 // We don't have a line yet...
+                // This is the segment that originates from the hand controller and ends at the LERP between start and end.
                 this.handLine1 = Overlays.addOverlay("line3d",
                     {
                         name: "handLine1",
@@ -229,6 +230,8 @@ Script.include("/~/system/libraries/controllers.js");
                         visible: true,
                         position: ctrlrPick.searchRay.position
                     });
+
+                // This is the segment that originates from the LERP between overall line's start and end, and the endpoint.
                 this.handLine2 = Overlays.addOverlay("line3d",
                     {
                         name: "handLine2",
@@ -268,6 +271,7 @@ Script.include("/~/system/libraries/controllers.js");
         this.updateHeadLine = function (headPick) {
             if (Uuid.isEqual(this.headLine1, Uuid.NULL)) {
                 // We don't have a line yet...
+                // This is the segment that originates from the "head" and ends at the LERP between start and end.
                 this.headLine1 = Overlays.addOverlay("line3d",
                     {
                         name: "headLine",
@@ -277,6 +281,8 @@ Script.include("/~/system/libraries/controllers.js");
                         visible: true,
                         position: headPick.searchRay.position
                     });
+
+                // This is the segment that originates from the LERP between overall line's start and end, and the endpoint.
                 this.headLine2 = Overlays.addOverlay("line3d",
                     {
                         name: "headLine2",
@@ -287,6 +293,7 @@ Script.include("/~/system/libraries/controllers.js");
                         position: headPick.searchRay.position
                     })
             }
+            // If we've got an intersection from the head, we know we've got an endpoint.
             if (headPick.intersects) {
                 var startPos = headPick.searchRay.origin;
                 var endPos = headPick.intersection;
@@ -313,16 +320,20 @@ Script.include("/~/system/libraries/controllers.js");
             }
         };
 
+
+        // Utility function to hide the two segments of the head laser.
         this.setHeadLineVisibility = function (viz) {
             Overlays.editOverlay(this.headLine1, { visible: viz });
             Overlays.editOverlay(this.headLine2, { visible: viz });
         };
 
+        // Utility function to hide the two segments of the hand laser.
         this.setHandLineVisibility = function (viz) {
             Overlays.editOverlay(this.handLine1, { visible: viz });
             Overlays.editOverlay(this.handLine2, { visible: viz });
         };
 
+        // Lazy utility function for disabling both lasers.
         this.setLasersVisibility = function (viz) {
             this.setHandLineVisibility(viz);
             this.setHeadLineVisibility(false);
@@ -330,34 +341,35 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.isReady = function(controllerData, deltaTime) {
             var otherModule = this.getOtherModule();
-            //print("Running teleport.js isReady() function...");
+
             // Controller Exp3 activation criteria.
-            var headPick = controllerData.rayPicks[AVATAR_HEAD];
-            var ctrlrPick = controllerData.rayPicks[this.hand];
+            var headPick = controllerData.rayPicks[AVATAR_HEAD];        // Head raypick.
+            var ctrlrPick = controllerData.rayPicks[this.hand];         // Raypick for this hand.
             if (ctrlrPick.intersects && !otherModule.active) {
+                // Get the vectors for head and hand controller.
                 var ctrlrVec = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin);
                 var headVec = Vec3.subtract(headPick.intersection, headPick.searchRay.origin);
 
+                // headDist is used to determine distance between intersection and
+                // the avatar's look vector.
                 var headDist = vecInDirWithMagOf(headVec, ctrlrVec);
-
-                //print("Timer is at: " + this.timer + " seconds");
 
                 var distance = Vec3.length(Vec3.subtract(headDist, ctrlrVec));
                 if (distance <= (ctrlrPick.distance * EXP3_DISTANCE_RATIO)) {
                     this.setLasersVisibility(true);
                     this.updateHeadLine(headPick);
                     this.updateHandLine(ctrlrPick);
+                    // If the timer is at or exceeds the amount of time we should gaze to activate...
                     if (this.timer >= EXP3_STARE_THRESHOLD) {
-                        //print("Timer hit activation threshold: " + EXP3_STARE_THRESHOLD + " seconds, entering teleport.");
-                        this.active = true;
-                        this.enterTeleport();
-                        otherModule.timer = 0.0;
-                        this.timer = 0.0;
-                        this.setLasersVisibility(false);
+                        // Activate the module.
+                        this.active = true;                     // Set the module to active.
+                        this.enterTeleport();                   // Activate teleport.
+                        otherModule.timer = 0.0;                // Reset the other module's timer.
+                        this.timer = 0.0;                       // Reset the timer.
+                        this.setLasersVisibility(false);        // Hide the lasers. Maybe destroy instead?
                         return makeRunningValues(true, [], []);
                     } else {
                         // Increment the timer.
-                        //print("Incrementing timer...: " + this.timer);
                         this.timer += deltaTime;
                         return makeRunningValues(false, [], []);
                     }
