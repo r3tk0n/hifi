@@ -345,7 +345,9 @@ Script.include("/~/system/libraries/controllers.js");
             // Controller Exp3 activation criteria.
             var headPick = controllerData.rayPicks[AVATAR_HEAD];        // Head raypick.
             var ctrlrPick = controllerData.rayPicks[this.hand];         // Raypick for this hand.
-            if (ctrlrPick.intersects && !otherModule.active) {
+            var handRotation = controllerData.controllerRotAngles[this.hand];
+            var correctRotation = (handRotation > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
+            if (ctrlrPick.intersects && !otherModule.active && correctRotation) {
                 // Get the vectors for head and hand controller.
                 var ctrlrVec = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin);
                 var headVec = Vec3.subtract(headPick.intersection, headPick.searchRay.origin);
@@ -373,7 +375,6 @@ Script.include("/~/system/libraries/controllers.js");
                         return makeRunningValues(false, [], []);
                     }
                 }
-                this.setLasersVisibility(false);
             }
 
             /*if (!this.disabled && this.buttonValue !== 0 && !otherModule.active) {
@@ -382,6 +383,7 @@ Script.include("/~/system/libraries/controllers.js");
                 return makeRunningValues(true, [], []);
             }
             */
+            this.setLasersVisibility(false);
             this.timer = 0;
             return makeRunningValues(false, [], []);
         };
