@@ -188,7 +188,10 @@ Script.include("/~/system/libraries/controllers.js");
             Pointers.removePointer(this.teleportParabolaHandInvisible);
             Pointers.removePointer(this.teleportParabolaHeadVisible);
             Pointers.removePointer(this.teleportParabolaHeadInvisible);
-            Overlays.deleteOverlay(this.headLaser);
+            Overlays.deleteOverlay(this.headLaser1);
+            Overlays.deleteOverlay(this.headLaser2);
+            Overlays.deleteOverlay(this.handLaser1);
+            Overlays.deleteOverlay(this.handLaser2);
         };
 
         this.buttonPress = function(value) {
@@ -206,35 +209,55 @@ Script.include("/~/system/libraries/controllers.js");
         };
 
         this.timer = 0;
+        
+        // Two lines per head and hand, each a segment, showing progress of wait time for action.
+        this.headLine1 = Uuid.NULL;
+        this.handLine1 = Uuid.NULL;
 
-        this.headLine = Uuid.NULL;
-        this.handLine = Uuid.NULL;
+        this.headLine2 = Uuid.NULL;
+        this.handline2 = Uuid.NULL;
 
         this.updateHandLine = function (ctrlrPick) {
-            Vec3.print("ctrlrPickRayPos: ", ctrlrPick.searchRay.origin);
-            if (Uuid.isEqual(this.handLine, Uuid.NULL)) {
+            if (Uuid.isEqual(this.handLine1, Uuid.NULL)) {
                 // We don't have a line yet...
-                this.handLine = Overlays.addOverlay("line3d",
+                this.handLine1 = Overlays.addOverlay("line3d",
                     {
-                        name: "headLine",
+                        name: "handLine1",
                         color: EXP3_LINE3D_COLOR,
                         alpha: 1.0,
                         isSolid: true,
                         visible: true,
                         position: ctrlrPick.searchRay.position
                     });
+                this.handLine2 = Overlays.addOverlay("line3d",
+                    {
+                        name: "handLine2",
+                        color: EXP3_LOADING_COLOR,
+                        alpha: 1.0,
+                        isSolid: true,
+                        visible: true,
+                        position: ctrlrPick.searchRay.position
+                    });
             }
-            var lineProps = {};
             if (ctrlrPick.intersects) {
+                var startPos = ctrlrPick.searchRay.origin;
+                var endPos = ctrlrPick.intersection;
+                var localT = normalizeRange(0, EXP3_STARE_THRESHOLD, this.timer);
+                var progressPos = lerp(startPos, endPos, localT);
                 // We have an endpoint
-                Overlays.editOverlay(this.handLine, {
-                    position: ctrlrPick.searchRay.origin,
-                    endPoint: ctrlrPick.intersection,
+                Overlays.editOverlay(this.handLine1, {
+                    position: startPos,
+                    endPoint: progressPos,
                     color: EXP3_LINE3D_COLOR
+                });
+                Overlays.editOverlay(this.handLine2, {
+                    position: progressPos,
+                    endPoint: endPos,
+                    color: EXP3_LOADING_COLOR
                 });
             } else {
                 // No endpoint
-                Overlays.editOverlay(this.handLine, {
+                Overlays.editOverlay(this.handLine1, {
                     position: ctrlrPick.searchRay.origin,
                     endPoint: Vec3.sum(ctrlrPick.searchRay.origin, Vec3.multiply(10, ctrlrPick.searchRay.direction)),
                     color: EXP3_LINE3D_NO_INTERSECTION
@@ -243,10 +266,9 @@ Script.include("/~/system/libraries/controllers.js");
         };
 
         this.updateHeadLine = function (headPick) {
-            Vec3.print("headPickRayPos: ", headPick.searchRay.origin);
-            if (Uuid.isEqual(this.headLine, Uuid.NULL)) {
+            if (Uuid.isEqual(this.headLine1, Uuid.NULL)) {
                 // We don't have a line yet...
-                this.headLine = Overlays.addOverlay("line3d",
+                this.headLine1 = Overlays.addOverlay("line3d",
                     {
                         name: "headLine",
                         color: EXP3_LINE3D_COLOR,
@@ -255,18 +277,35 @@ Script.include("/~/system/libraries/controllers.js");
                         visible: true,
                         position: headPick.searchRay.position
                     });
+                this.headLine2 = Overlays.addOverlay("line3d",
+                    {
+                        name: "headLine2",
+                        color: EXP3_LOADING_COLOR,
+                        alpha: 1.0,
+                        isSolid: true,
+                        visible: true,
+                        position: headPick.searchRay.position
+                    })
             }
-            var lineProps = {};
             if (headPick.intersects) {
+                var startPos = headPick.searchRay.origin;
+                var endPos = headPick.intersection;
+                var localT = normalizeRange(0, EXP3_STARE_THRESHOLD, this.timer);
+                var progressPos = lerp(startPos, endPos, localT);
                 // We have an endpoint
-                Overlays.editOverlay(this.headLine, {
-                    position: headPick.searchRay.origin,
-                    endPoint: headPick.intersection,
+                Overlays.editOverlay(this.headLine1, {
+                    position: startPos,
+                    endPoint: progressPos,
                     color: EXP3_LINE3D_COLOR
+                });
+                Overlays.editOverlay(this.headLine2, {
+                    position: progressPos,
+                    endPoint: endPos,
+                    color: EXP3_LOADING_COLOR
                 });
             } else {
                 // No endpoint
-                Overlays.editOverlay(this.headLine, {
+                Overlays.editOverlay(this.headLine1, {
                     position: headPick.searchRay.origin,
                     endPoint: Vec3.sum(headPick.searchRay.origin, Vec3.multiply(10, headPick.searchRay.direction)),
                     color: EXP3_LINE3D_NO_INTERSECTION
@@ -275,12 +314,19 @@ Script.include("/~/system/libraries/controllers.js");
         };
 
         this.setHeadLineVisibility = function (viz) {
-            Overlays.editOverlay(this.headLine, { visible: viz });
+            Overlays.editOverlay(this.headLine1, { visible: viz });
+            Overlays.editOverlay(this.headLine2, { visible: viz });
         };
 
         this.setHandLineVisibility = function (viz) {
-            Overlays.editOverlay(this.handLine, { visible: viz });
+            Overlays.editOverlay(this.handLine1, { visible: viz });
+            Overlays.editOverlay(this.handLine2, { visible: viz });
         };
+
+        this.setLasersVisibility = function (viz) {
+            this.setHandLineVisibility(viz);
+            this.setHeadLineVisibility(false);
+        }
 
         this.isReady = function(controllerData, deltaTime) {
             var otherModule = this.getOtherModule();
@@ -298,26 +344,25 @@ Script.include("/~/system/libraries/controllers.js");
 
                 var distance = Vec3.length(Vec3.subtract(headDist, ctrlrVec));
                 if (distance <= (ctrlrPick.distance * EXP3_DISTANCE_RATIO)) {
-                    this.setHeadLineVisibility(true);
-                    this.setHandLineVisibility(true);
+                    this.setLasersVisibility(true);
                     this.updateHeadLine(headPick);
                     this.updateHandLine(ctrlrPick);
                     if (this.timer >= EXP3_STARE_THRESHOLD) {
-                        print("Timer hit activation threshold: " + EXP3_STARE_THRESHOLD + " seconds, entering teleport.");
+                        //print("Timer hit activation threshold: " + EXP3_STARE_THRESHOLD + " seconds, entering teleport.");
                         this.active = true;
                         this.enterTeleport();
                         otherModule.timer = 0.0;
                         this.timer = 0.0;
+                        this.setLasersVisibility(false);
                         return makeRunningValues(true, [], []);
                     } else {
                         // Increment the timer.
-                        print("Incrementing timer...: " + this.timer);
+                        //print("Incrementing timer...: " + this.timer);
                         this.timer += deltaTime;
                         return makeRunningValues(false, [], []);
                     }
                 }
-                this.setHeadLineVisibility(false);
-                this.setHandLineVisibility(false);
+                this.setLasersVisibility(false);
             }
 
             /*if (!this.disabled && this.buttonValue !== 0 && !otherModule.active) {
@@ -331,9 +376,6 @@ Script.include("/~/system/libraries/controllers.js");
         };
 
         this.run = function(controllerData, deltaTime) {
-            this.setHeadLineVisibility(true);
-            this.setHandLineVisibility(true);
-            this.updateHeadLine(controllerData.rayPicks[AVATAR_HEAD]);
             // Get current hand pose information to see if the pose is valid
             var pose = Controller.getPoseValue(handInfo[(_this.hand === RIGHT_HAND) ? 'right' : 'left'].controllerInput);
             var mode = pose.valid ? _this.hand : 'head';
@@ -408,8 +450,6 @@ Script.include("/~/system/libraries/controllers.js");
 
             this.disableLasers();
             this.active = false;
-            this.setHeadLineVisibility(false);
-            this.setHandLineVisibility(false);
             return makeRunningValues(false, [], []);
         };
 

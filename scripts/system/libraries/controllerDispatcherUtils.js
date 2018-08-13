@@ -93,8 +93,9 @@ NEAR_GRAB_PICK_RADIUS = 0.25; // radius used for search ray vs object for near g
 // Experiment3 Constants:
 EXP3_MAX_DISTANCE = 0.5;    // distance used between head and hand picks
 EXP3_STARE_THRESHOLD = 2.0; // time, in seconds, user must hold gaze and point before action starts
-EXP3_LINE3D_COLOR = { red: 255, green: 128, blue: 0 };
+EXP3_LINE3D_COLOR = { red: 0, green: 0, blue: 255 };
 EXP3_LINE3D_NO_INTERSECTION = { red: 255, green: 0, blue: 0 };
+EXP3_LOADING_COLOR = { red: 255, green: 255, blue: 0 };
 EXP3_DISTANCE_RATIO = 0.1;
 
 COLORS_GRAB_SEARCHING_HALF_SQUEEZE = { red: 10, green: 10, blue: 255 };
@@ -500,6 +501,14 @@ vecInDirWithMagOf = function (u, v) {
     var length = Vec3.length(v);
     var dir = Vec3.normalize(u);
     return Vec3.multiply(length, dir);
+}
+
+lerp = function (start, end, t) {
+    return Vec3.sum(Vec3.multiply(t, end), Vec3.multiply((1 - t), start));
+}
+
+normalizeRange = function (min, max, val) {
+    return (val - min) / (max - min);
 }
 
 if (typeof module !== 'undefined') {
