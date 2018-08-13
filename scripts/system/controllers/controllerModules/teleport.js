@@ -362,7 +362,7 @@ Script.include("/~/system/libraries/controllers.js");
                 var distance = Vec3.length(Vec3.subtract(headDist, ctrlrVec));
                 if (distance <= (ctrlrPick.distance * EXP3_DISTANCE_RATIO)) {
                     this.setLasersVisibility(true);
-                    //this.updateHeadLine(headPick);
+                    this.updateHeadLine(headPick);
                     this.updateHandLine(ctrlrPick);
                     // If the timer is at or exceeds the amount of time we should gaze to activate...
                     if (this.timer >= EXP3_STARE_THRESHOLD) {
