@@ -321,7 +321,7 @@ Script.include("/~/system/libraries/controllers.js");
         };
 
         // Switches for laser visibility and rotation-based activation.
-        this.ROTATION_ENABLED = false;          // Whether we activate based on rotation.
+        this.ROTATION_ENABLED = true;          // Whether we activate based on rotation.
         this.HEAD_LASER_ENABLED = false;
 
         // Utility function to hide the two segments of the head laser.

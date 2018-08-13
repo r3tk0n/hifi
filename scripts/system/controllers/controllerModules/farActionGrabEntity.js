@@ -93,6 +93,7 @@ Script.include("/~/system/libraries/Xform.js");
     }
 
     function FarActionGrabEntity(hand) {
+        var _this = this;
         this.hand = hand;
         this.grabbedThingID = null;
         this.targetObject = null;
@@ -379,29 +380,207 @@ Script.include("/~/system/libraries/Xform.js");
             return false;
         };
 
-        this.isReady = function (controllerData) {
+        this.timer = 0;
+
+        // Two lines per head and hand, each a segment, showing progress of wait time for action.
+        this.headLine1 = Uuid.NULL;
+        this.handLine1 = Uuid.NULL;
+
+        this.headLine2 = Uuid.NULL;
+        this.handline2 = Uuid.NULL;
+
+        this.updateHandLine = function (ctrlrPick) {
+            if (Uuid.isEqual(this.handLine1, Uuid.NULL)) {
+                // We don't have a line yet...
+                // This is the segment that originates from the hand controller and ends at the LERP between start and end.
+                this.handLine1 = Overlays.addOverlay("line3d",
+                    {
+                        name: "handLine1",
+                        color: EXP3_FARGRAB_LOADED_COLOR,
+                        alpha: 1.0,
+                        isSolid: true,
+                        visible: true,
+                        position: ctrlrPick.searchRay.position
+                    });
+
+                // This is the segment that originates from the LERP between overall line's start and end, and the endpoint.
+                this.handLine2 = Overlays.addOverlay("line3d",
+                    {
+                        name: "handLine2",
+                        color: EXP3_FARGRAB_LOADING_COLOR,
+                        alpha: 1.0,
+                        isSolid: true,
+                        visible: true,
+                        position: ctrlrPick.searchRay.position
+                    });
+            }
+            if (ctrlrPick.intersects) {
+                var startPos = ctrlrPick.searchRay.origin;
+                var endPos = ctrlrPick.intersection;
+                var localT = normalizeRange(0, EXP3_STARE_THRESHOLD, this.timer);
+                var progressPos = lerp(startPos, endPos, localT);
+                // We have an endpoint
+                Overlays.editOverlay(this.handLine1, {
+                    position: startPos,
+                    endPoint: progressPos,
+                    color: EXP3_FARGRAB_LOADED_COLOR
+                });
+                Overlays.editOverlay(this.handLine2, {
+                    position: progressPos,
+                    endPoint: endPos,
+                    color: EXP3_FARGRAB_LOADING_COLOR
+                });
+            } else {
+                // No endpoint
+                Overlays.editOverlay(this.handLine1, {
+                    position: ctrlrPick.searchRay.origin,
+                    endPoint: Vec3.sum(ctrlrPick.searchRay.origin, Vec3.multiply(10, ctrlrPick.searchRay.direction)),
+                    color: EXP3_LINE3D_NO_INTERSECTION
+                });
+            }
+        };
+
+        this.updateHeadLine = function (headPick) {
+            if (Uuid.isEqual(this.headLine1, Uuid.NULL)) {
+                // We don't have a line yet...
+                // This is the segment that originates from the "head" and ends at the LERP between start and end.
+                this.headLine1 = Overlays.addOverlay("line3d",
+                    {
+                        name: "headLine",
+                        color: EXP3_FARGRAB_LOADED_COLOR,
+                        alpha: 1.0,
+                        isSolid: true,
+                        visible: true,
+                        position: headPick.searchRay.position
+                    });
+
+                // This is the segment that originates from the LERP between overall line's start and end, and the endpoint.
+                this.headLine2 = Overlays.addOverlay("line3d",
+                    {
+                        name: "headLine2",
+                        color: EXP3_FARGRAB_LOADING_COLOR,
+                        alpha: 1.0,
+                        isSolid: true,
+                        visible: true,
+                        position: headPick.searchRay.position
+                    })
+            }
+            // If we've got an intersection from the head, we know we've got an endpoint.
+            if (headPick.intersects) {
+                var startPos = headPick.searchRay.origin;
+                var endPos = headPick.intersection;
+                var localT = normalizeRange(0, EXP3_STARE_THRESHOLD, this.timer);
+                var progressPos = lerp(startPos, endPos, localT);
+                // We have an endpoint
+                Overlays.editOverlay(this.headLine1, {
+                    position: startPos,
+                    endPoint: progressPos,
+                    color: EXP3_FARGRAB_LOADED_COLOR
+                });
+                Overlays.editOverlay(this.headLine2, {
+                    position: progressPos,
+                    endPoint: endPos,
+                    color: EXP3_FARGRAB_LOADING_COLOR
+                });
+            } else {
+                // No endpoint
+                Overlays.editOverlay(this.headLine1, {
+                    position: headPick.searchRay.origin,
+                    endPoint: Vec3.sum(headPick.searchRay.origin, Vec3.multiply(10, headPick.searchRay.direction)),
+                    color: EXP3_LINE3D_NO_INTERSECTION
+                });
+            }
+        };
+
+        // Switches for laser visibility and rotation-based activation.
+        this.ROTATION_ENABLED = false;          // Whether we activate based on rotation.
+        this.HEAD_LASER_ENABLED = false;
+
+        // Utility function to hide the two segments of the head laser.
+        this.setHeadLineVisibility = function (viz) {
+            Overlays.editOverlay(this.headLine1, { visible: viz });
+            Overlays.editOverlay(this.headLine2, { visible: viz });
+        };
+
+        // Utility function to hide the two segments of the hand laser.
+        this.setHandLineVisibility = function (viz) {
+            Overlays.editOverlay(this.handLine1, { visible: viz });
+            Overlays.editOverlay(this.handLine2, { visible: viz });
+        };
+
+        // Lazy utility function for disabling both lasers.
+        this.setLasersVisibility = function (viz) {
+            this.setHandLineVisibility(viz);
+            this.setHeadLineVisibility(this.HEAD_LASER_ENABLED ? viz : false);
+        }
+
+        this.getOtherModule = function () {
+            var otherModule = this.hand === RIGHT_HAND ? leftFarActionGrabEntity : rightFarActionGrabEntity;
+            return otherModule;
+        };
+
+        this.buttonValue = 0;
+
+        this.buttonPress = function (value) {
+            _this.buttonValue = value;
+        };
+
+        this.isReady = function (controllerData, deltaTime) {
             if (HMD.active) {
                 if (this.notPointingAtEntity(controllerData)) {
                     return makeRunningValues(false, [], []);
                 }
-
                 this.distanceHolding = false;
                 this.distanceRotating = false;
 
-                if (controllerData.triggerValues[this.hand] > TRIGGER_ON_VALUE) {
-                    this.prepareDistanceRotatingData(controllerData);
-                    return makeRunningValues(true, [], []);
+                var otherModule = this.getOtherModule();
+
+                // Controller Exp3 activation criteria.
+                var headPick = controllerData.rayPicks[AVATAR_HEAD];        // Head raypick.
+                var ctrlrPick = controllerData.rayPicks[this.hand];         // Raypick for this hand.
+                var handRotation = controllerData.controllerRotAngles[this.hand];
+                var correctRotation = (this.ROTATION_ENABLED) ? (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE) : true;    // Strip out the ternary operator for final version.
+
+                if (ctrlrPick.intersects && correctRotation) {
+                    var ctrlrVec = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin);
+                    var headVec = Vec3.subtract(headPick.intersection, headPick.searchRay.origin);
+
+                    // headDist is the distance between intersection and the avatar's look vector.
+                    var headDist = vecInDirWithMagOf(headVec, ctrlrVec);
+
+                    var distance = Vec3.length(Vec3.subtract(headDist, ctrlrVec));
+
+                    if (distance <= (ctrlrPick.distance * EXP3_DISTANCE_RATIO)) {
+                        this.setLasersVisibility(true);
+                        if (this.HEAD_LASER_ENABLED) { this.updateHeadLine(headPick); }
+                        this.updateHandLine(ctrlrPick);
+                        if (this.timer >= EXP3_STARE_THRESHOLD) {
+                            otherModule.timer = 0.0;
+                            this.timer = 0.0;
+                            this.setLasersVisibility(false);
+                            this.prepareDistanceRotatingData(controllerData);
+                            return makeRunningValues(true, [], []);
+                        } else {
+                            this.timer += deltaTime;
+                            return makeRunningValues(false, [], []);
+                        }
+                    }
                 } else {
                     this.destroyContextOverlay();
+                    this.setLasersVisibility(false);
+                    this.timer = 0;
                     return makeRunningValues(false, [], []);
                 }
             }
+            this.setLasersVisibility(false);
+            this.timer = 0;
             return makeRunningValues(false, [], []);
         };
 
         this.run = function (controllerData) {
-            if (controllerData.triggerValues[this.hand] < TRIGGER_OFF_VALUE ||
-                this.notPointingAtEntity(controllerData) || this.targetIsNull()) {
+            var correctRotation = (this.ROTATION_ENABLED) ? (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE) : true;    // Strip out the ternary operator for final version.
+            if (/*controllerData.triggerValues[this.hand] < TRIGGER_OFF_VALUE*/ !correctRotation ||
+                this.notPointingAtEntity(controllerData) || this.targetIsNull() || this.buttonValue !== 0) {
                 this.endFarGrabAction();
                 Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                     this.highlightedEntity);
@@ -453,7 +632,9 @@ Script.include("/~/system/libraries/Xform.js");
 
                 var rayPickInfo = controllerData.rayPicks[this.hand];
                 if (rayPickInfo.type === Picks.INTERSECTED_ENTITY) {
-                    if (controllerData.triggerClicks[this.hand]) {
+                    //if (controllerData.triggerClicks[this.hand]) {
+                    if (this.buttonValue === 0) {
+                        print("buttonValue: " + this.buttonValue);
                         var entityID = rayPickInfo.objectID;
                         Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                             this.highlightedEntity);
@@ -610,15 +791,29 @@ Script.include("/~/system/libraries/Xform.js");
         };
     }
 
+    var mappingName, farGrabMapping;
+
+    function registerMappings() {
+        mappingName = 'Hifi-FarActionGrabEntity-Dev-' + Math.random();
+        farGrabMapping = Controller.newMapping(mappingName);
+
+        farGrabMapping.from(Controller.Standard.RightPrimaryThumb).peek().to(rightFarActionGrabEntity.buttonPress);
+        farGrabMapping.from(Controller.Standard.LeftPrimaryThumb).peek().to(leftFarActionGrabEntity.buttonPress);
+    }
+
     var leftFarActionGrabEntity = new FarActionGrabEntity(LEFT_HAND);
     var rightFarActionGrabEntity = new FarActionGrabEntity(RIGHT_HAND);
 
     enableDispatcherModule("LeftFarActionGrabEntity", leftFarActionGrabEntity);
     enableDispatcherModule("RightFarActionGrabEntity", rightFarActionGrabEntity);
+    registerMappings();
+    Controller.enableMapping(mappingName);
 
     function cleanup() {
+        farGrabMapping.disable();
         disableDispatcherModule("LeftFarActionGrabEntity");
         disableDispatcherModule("RightFarActionGrabEntity");
+
     }
     Script.scriptEnding.connect(cleanup);
 }());
