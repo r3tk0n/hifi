@@ -350,14 +350,13 @@ Script.include("/~/system/libraries/controllers.js");
                 var ctrlrVec = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin);
                 var headVec = Vec3.subtract(headPick.intersection, headPick.searchRay.origin);
 
-                // headDist is used to determine distance between intersection and
-                // the avatar's look vector.
+                // headDist is the distance between intersection and the avatar's look vector.
                 var headDist = vecInDirWithMagOf(headVec, ctrlrVec);
 
                 var distance = Vec3.length(Vec3.subtract(headDist, ctrlrVec));
                 if (distance <= (ctrlrPick.distance * EXP3_DISTANCE_RATIO)) {
                     this.setLasersVisibility(true);
-                    this.updateHeadLine(headPick);
+                    //this.updateHeadLine(headPick);
                     this.updateHandLine(ctrlrPick);
                     // If the timer is at or exceeds the amount of time we should gaze to activate...
                     if (this.timer >= EXP3_STARE_THRESHOLD) {

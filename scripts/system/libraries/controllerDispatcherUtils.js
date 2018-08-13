@@ -98,6 +98,12 @@ EXP3_LINE3D_NO_INTERSECTION = { red: 255, green: 0, blue: 0 };
 EXP3_LOADING_COLOR = { red: 255, green: 255, blue: 0 };
 EXP3_DISTANCE_RATIO = 0.1;
 
+// Controller Experiment 3 Rotation Angles:
+CONTROLLER_EXP3_FARGRAB_MIN_ANGLE = 0;
+CONTROLLER_EXP3_FARGRAB_MAX_ANGLE = 60;
+CONTROLLER_EXP3_TELEPORT_MIN_ANGLE = 60;
+CONTROLLER_EXP3_TELEPORT_MAX_ANGLE = 120;
+
 COLORS_GRAB_SEARCHING_HALF_SQUEEZE = { red: 10, green: 10, blue: 255 };
 COLORS_GRAB_SEARCHING_FULL_SQUEEZE = { red: 250, green: 10, blue: 10 };
 COLORS_GRAB_DISTANCE_HOLD = { red: 238, green: 75, blue: 214 };
@@ -509,6 +515,41 @@ lerp = function (start, end, t) {
 
 normalizeRange = function (min, max, val) {
     return (val - min) / (max - min);
+}
+
+toDegrees = function (angle) {
+    return angle * (180 / Math.PI);
+}
+
+toRadians = function (angle) {
+    return angle * (Math.PI / 180);
+}
+
+// Came from controller_experiment2, used here for controlling whether we're checking teleport or fargrab.
+controllerTwistAngle = function (hand) {
+    // Retrieve the hand's pose.
+    var handPose = Controller.getPoseValue(hand === LEFT_HAND ? Controller.Standard.LeftHand : Controller.Standard.RightHand);
+    // Get the rotation of the controller for the given hand.
+    var handRotationQuat = handPose.rotation;
+    // Get it into avatar space.
+    var handRotationVector = Vec3.multiplyQbyV(handRotationQuat, Vec3.UNIT_X);
+
+    // Figure out the plane we're testing against...
+
+    // Multiply up vector by avatar rotation.
+    var v1 = Vec3.multiplyQbyV(MyAvatar.rotation, Vec3.UNIT_Z);
+    var v2 = Vec3.multiplyQbyV(MyAvatar.rotation, Vec3.UNIT_Y);
+    var normal = Vec3.cross(v1, v2);
+    // Take the cosine inverse of the dot product to retrieve theta (angle, returned in degrees).
+    return toDegrees(Math.acos(Vec3.dot(Vec3.normalize(handRotationVector), Vec3.normalize(normal))));
+}
+
+projectVontoW = function (v, w) {
+    // Project vector v onto vector w
+    var denominator = Vec3.length(w);
+    // Denominator should be mag(w)^2
+    denominator *= denominator;
+    return Vec3.multiply((Vec3.dot(v, w) / denominator), w);
 }
 
 if (typeof module !== 'undefined') {

@@ -299,6 +299,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             var controllerData = {
                 triggerValues: [_this.leftTriggerValue, _this.rightTriggerValue],
                 triggerClicks: [_this.leftTriggerClicked, _this.rightTriggerClicked],
+                controllerRotAngles: [controllerTwistAngle(LEFT_HAND), controllerTwistAngle(RIGHT_HAND)],
                 secondaryValues: [_this.leftSecondaryValue, _this.rightSecondaryValue],
                 controllerLocations: controllerLocations,
                 nearbyEntityProperties: nearbyEntityProperties,
