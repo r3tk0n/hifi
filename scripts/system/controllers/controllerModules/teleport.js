@@ -188,6 +188,7 @@ Script.include("/~/system/libraries/controllers.js");
             Pointers.removePointer(this.teleportParabolaHandInvisible);
             Pointers.removePointer(this.teleportParabolaHeadVisible);
             Pointers.removePointer(this.teleportParabolaHeadInvisible);
+            Overlays.deleteOverlay(this.headLaser);
         };
 
         this.buttonPress = function(value) {
@@ -204,24 +205,103 @@ Script.include("/~/system/libraries/controllers.js");
             this.state = TELEPORTER_STATES.TARGETTING;
         };
 
-        this.isReady = function(controllerData, deltaTime) {
-            var otherModule = this.getOtherModule();
+        this.timer = 0;
 
+        this.headLine = Uuid.NULL;
+        this.handLine = Uuid.NULL;
+
+        this.updateHandLine = function (ctrlrPick) {
+            Vec3.print("ctrlrPickRayPos: ", ctrlrPick.searchRay.origin);
+            if (Uuid.isEqual(this.handLine, Uuid.NULL)) {
+                // We don't have a line yet...
+                this.handLine = Overlays.addOverlay("line3d",
+                    {
+                        name: "headLine",
+                        color: EXP3_LINE3D_COLOR,
+                        alpha: 1.0,
+                        isSolid: true,
+                        visible: true,
+                        position: ctrlrPick.searchRay.position
+                    });
+            }
+            var lineProps = {};
+            if (ctrlrPick.intersects) {
+                // We have an endpoint
+                Overlays.editOverlay(this.handLine, {
+                    position: ctrlrPick.searchRay.origin,
+                    endPoint: ctrlrPick.intersection,
+                    color: EXP3_LINE3D_COLOR
+                });
+            } else {
+                // No endpoint
+                Overlays.editOverlay(this.handLine, {
+                    position: ctrlrPick.searchRay.origin,
+                    endPoint: Vec3.sum(ctrlrPick.searchRay.origin, Vec3.multiply(10, ctrlrPick.searchRay.direction)),
+                    color: EXP3_LINE3D_NO_INTERSECTION
+                });
+            }
+        };
+
+        this.updateHeadLine = function (headPick) {
+            Vec3.print("headPickRayPos: ", headPick.searchRay.origin);
+            if (Uuid.isEqual(this.headLine, Uuid.NULL)) {
+                // We don't have a line yet...
+                this.headLine = Overlays.addOverlay("line3d",
+                    {
+                        name: "headLine",
+                        color: EXP3_LINE3D_COLOR,
+                        alpha: 1.0,
+                        isSolid: true,
+                        visible: true,
+                        position: headPick.searchRay.position
+                    });
+            }
+            var lineProps = {};
+            if (headPick.intersects) {
+                // We have an endpoint
+                Overlays.editOverlay(this.headLine, {
+                    position: headPick.searchRay.origin,
+                    endPoint: headPick.intersection,
+                    color: EXP3_LINE3D_COLOR
+                });
+            } else {
+                // No endpoint
+                Overlays.editOverlay(this.headLine, {
+                    position: headPick.searchRay.origin,
+                    endPoint: Vec3.sum(headPick.searchRay.origin, Vec3.multiply(10, headPick.searchRay.direction)),
+                    color: EXP3_LINE3D_NO_INTERSECTION
+                });
+            }
+        };
+
+        this.setHeadLineVisibility = function (viz) {
+            Overlays.editOverlay(this.headLine, { visible: viz });
+        };
+
+        this.setHandLineVisibility = function (viz) {
+            Overlays.editOverlay(this.handLine, { visible: viz });
+        };
+
+        this.isReady = function(controllerData, deltaTime) {
             var otherModule = this.getOtherModule();
             //print("Running teleport.js isReady() function...");
             // Controller Exp3 activation criteria.
             var headPick = controllerData.rayPicks[AVATAR_HEAD];
             var ctrlrPick = controllerData.rayPicks[this.hand];
             if (ctrlrPick.intersects && !otherModule.active) {
-                var ctrlrVec = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.position);
-                var headVec = Vec3.subtract(headPick.intersection, headPick.searchRay.position);
+                var ctrlrVec = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin);
+                var headVec = Vec3.subtract(headPick.intersection, headPick.searchRay.origin);
 
                 var headDist = vecInDirWithMagOf(headVec, ctrlrVec);
 
                 //print("Timer is at: " + this.timer + " seconds");
 
                 var distance = Vec3.length(Vec3.subtract(headDist, ctrlrVec));
-                if (distance <= EXP3_MAX_DISTANCE) {
+                if (distance <= (ctrlrPick.distance * EXP3_DISTANCE_RATIO)) {
+                    this.setHeadLineVisibility(true);
+                    this.setHandLineVisibility(true);
+                    this.updateHeadLine(headPick);
+                    this.updateHandLine(ctrlrPick);
                     if (this.timer >= EXP3_STARE_THRESHOLD) {
                         print("Timer hit activation threshold: " + EXP3_STARE_THRESHOLD + " seconds, entering teleport.");
                         this.active = true;
@@ -231,13 +311,13 @@ Script.include("/~/system/libraries/controllers.js");
                         return makeRunningValues(true, [], []);
                     } else {
                         // Increment the timer.
-                        print("Incrementing timer...");
+                        print("Incrementing timer...: " + this.timer);
                         this.timer += deltaTime;
                         return makeRunningValues(false, [], []);
                     }
-                } else {
-                    timer = 0;
                 }
+                this.setHeadLineVisibility(false);
+                this.setHandLineVisibility(false);
             }
 
             /*if (!this.disabled && this.buttonValue !== 0 && !otherModule.active) {
@@ -246,11 +326,14 @@ Script.include("/~/system/libraries/controllers.js");
                 return makeRunningValues(true, [], []);
             }
             */
+            this.timer = 0;
             return makeRunningValues(false, [], []);
         };
 
         this.run = function(controllerData, deltaTime) {
-
+            this.setHeadLineVisibility(true);
+            this.setHandLineVisibility(true);
+            this.updateHeadLine(controllerData.rayPicks[AVATAR_HEAD]);
             // Get current hand pose information to see if the pose is valid
             var pose = Controller.getPoseValue(handInfo[(_this.hand === RIGHT_HAND) ? 'right' : 'left'].controllerInput);
             var mode = pose.valid ? _this.hand : 'head';
@@ -307,7 +390,7 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.teleport = function(newResult, target) {
             var result = newResult;
-            if (_this.buttonValue !== 0) {
+            if (_this.buttonValue === 0) {
                 return makeRunningValues(true, [], []);
             }
 
@@ -325,6 +408,8 @@ Script.include("/~/system/libraries/controllers.js");
 
             this.disableLasers();
             this.active = false;
+            this.setHeadLineVisibility(false);
+            this.setHandLineVisibility(false);
             return makeRunningValues(false, [], []);
         };
 

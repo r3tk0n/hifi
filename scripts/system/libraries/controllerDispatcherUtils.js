@@ -89,8 +89,13 @@ BUMPER_ON_VALUE = 0.5;
 PICK_MAX_DISTANCE = 500; // max length of pick-ray
 DEFAULT_SEARCH_SPHERE_DISTANCE = 1000; // how far from camera to search intersection?
 NEAR_GRAB_PICK_RADIUS = 0.25; // radius used for search ray vs object for near grabbing.
+
+// Experiment3 Constants:
 EXP3_MAX_DISTANCE = 0.5;    // distance used between head and hand picks
-EXP3_STARE_THRESHOLD = 1.0; // time, in seconds, user must hold gaze and point before action starts
+EXP3_STARE_THRESHOLD = 2.0; // time, in seconds, user must hold gaze and point before action starts
+EXP3_LINE3D_COLOR = { red: 255, green: 128, blue: 0 };
+EXP3_LINE3D_NO_INTERSECTION = { red: 255, green: 0, blue: 0 };
+EXP3_DISTANCE_RATIO = 0.1;
 
 COLORS_GRAB_SEARCHING_HALF_SQUEEZE = { red: 10, green: 10, blue: 255 };
 COLORS_GRAB_SEARCHING_FULL_SQUEEZE = { red: 250, green: 10, blue: 10 };
