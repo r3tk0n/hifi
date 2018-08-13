@@ -224,7 +224,7 @@ Script.include("/~/system/libraries/controllers.js");
                 this.handLine1 = Overlays.addOverlay("line3d",
                     {
                         name: "handLine1",
-                        color: EXP3_LINE3D_COLOR,
+                        color: EXP3_LOADED_COLOR,
                         alpha: 1.0,
                         isSolid: true,
                         visible: true,
@@ -251,7 +251,7 @@ Script.include("/~/system/libraries/controllers.js");
                 Overlays.editOverlay(this.handLine1, {
                     position: startPos,
                     endPoint: progressPos,
-                    color: EXP3_LINE3D_COLOR
+                    color: EXP3_LOADED_COLOR
                 });
                 Overlays.editOverlay(this.handLine2, {
                     position: progressPos,
@@ -275,7 +275,7 @@ Script.include("/~/system/libraries/controllers.js");
                 this.headLine1 = Overlays.addOverlay("line3d",
                     {
                         name: "headLine",
-                        color: EXP3_LINE3D_COLOR,
+                        color: EXP3_LOADED_COLOR,
                         alpha: 1.0,
                         isSolid: true,
                         visible: true,
@@ -303,7 +303,7 @@ Script.include("/~/system/libraries/controllers.js");
                 Overlays.editOverlay(this.headLine1, {
                     position: startPos,
                     endPoint: progressPos,
-                    color: EXP3_LINE3D_COLOR
+                    color: EXP3_LOADED_COLOR
                 });
                 Overlays.editOverlay(this.headLine2, {
                     position: progressPos,
@@ -320,6 +320,9 @@ Script.include("/~/system/libraries/controllers.js");
             }
         };
 
+        // Switches for laser visibility and rotation-based activation.
+        this.ROTATION_ENABLED = false;          // Whether we activate based on rotation.
+        this.HEAD_LASER_ENABLED = false;
 
         // Utility function to hide the two segments of the head laser.
         this.setHeadLineVisibility = function (viz) {
@@ -336,7 +339,7 @@ Script.include("/~/system/libraries/controllers.js");
         // Lazy utility function for disabling both lasers.
         this.setLasersVisibility = function (viz) {
             this.setHandLineVisibility(viz);
-            this.setHeadLineVisibility(false);
+            this.setHeadLineVisibility(this.HEAD_LASER_ENABLED ? viz : false);
         }
 
         this.isReady = function(controllerData, deltaTime) {
@@ -346,7 +349,8 @@ Script.include("/~/system/libraries/controllers.js");
             var headPick = controllerData.rayPicks[AVATAR_HEAD];        // Head raypick.
             var ctrlrPick = controllerData.rayPicks[this.hand];         // Raypick for this hand.
             var handRotation = controllerData.controllerRotAngles[this.hand];
-            var correctRotation = (handRotation > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
+            var correctRotation = (this.ROTATION_ENABLED) ? (handRotation > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE) : true;    // Strip out the ternary operator for final version.
+            
             if (ctrlrPick.intersects && !otherModule.active && correctRotation) {
                 // Get the vectors for head and hand controller.
                 var ctrlrVec = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin);
