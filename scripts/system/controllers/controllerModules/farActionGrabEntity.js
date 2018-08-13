@@ -634,7 +634,6 @@ Script.include("/~/system/libraries/Xform.js");
                 if (rayPickInfo.type === Picks.INTERSECTED_ENTITY) {
                     //if (controllerData.triggerClicks[this.hand]) {
                     if (this.buttonValue === 0) {
-                        print("buttonValue: " + this.buttonValue);
                         var entityID = rayPickInfo.objectID;
                         Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                             this.highlightedEntity);
