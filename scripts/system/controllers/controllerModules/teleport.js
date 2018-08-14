@@ -352,6 +352,30 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.goodToStart = false;
 
+        this.showParabola = function () {
+            // Get current hand pose information to see if the pose is valid
+            var pose = Controller.getPoseValue(handInfo[(_this.hand === RIGHT_HAND) ? 'right' : 'left'].controllerInput);
+            var mode = pose.valid ? _this.hand : 'head';
+            if (!pose.valid) {
+                Pointers.disablePointer(_this.teleportParabolaHandVisible);
+                Pointers.disablePointer(_this.teleportParabolaHandInvisible);
+                Pointers.enablePointer(_this.teleportParabolaHeadVisible);
+                Pointers.enablePointer(_this.teleportParabolaHeadInvisible);
+            } else {
+                Pointers.enablePointer(_this.teleportParabolaHandVisible);
+                Pointers.enablePointer(_this.teleportParabolaHandInvisible);
+                Pointers.disablePointer(_this.teleportParabolaHeadVisible);
+                Pointers.disablePointer(_this.teleportParabolaHeadInvisible);
+            }
+        }
+
+        this.hideParabola = function () {
+            Pointers.disablePointer(_this.teleportParabolaHandVisible);
+            Pointers.disablePointer(_this.teleportParabolaHandInvisible);
+            Pointers.disablePointer(_this.teleportParabolaHeadVisible);
+            Pointers.disablePointer(_this.teleportParabolaHeadInvisible);
+        }
+
         this.isReady = function(controllerData, deltaTime) {
             var otherModule = this.getOtherModule();
 
@@ -362,6 +386,13 @@ Script.include("/~/system/libraries/controllers.js");
             var correctRotation = (this.ROTATION_ENABLED) ? (handRotation > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE) : true;    // Strip out the ternary operator for final version.
 
             if (!this.goodToStart) {
+                // Check fargrab isn't showing...
+                var farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
+                if (farGrab) {
+                    if (farGrab.goodToStart) {
+                        return makeRunningValues(false, [], []);
+                    }
+                }
                 if (ctrlrPick.intersects && !otherModule.active && correctRotation) {
                     // Get the vectors for head and hand controller.
                     var ctrlrVec = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin);
@@ -382,16 +413,18 @@ Script.include("/~/system/libraries/controllers.js");
                 var ctrlrDir = ctrlrPick.searchRay.direction;
 
                 var degrees = toDegrees(Vec3.getAngle(headDir, ctrlrDir));
-                if (degrees >= EXP3_DISABLE_LASER_ANGLE) {
+                if (degrees >= EXP3_DISABLE_TELEPORT_ANGLE) {
                     this.goodToStart = false;
                     this.timer = 0.0;
+                    this.hideParabola();
                     this.setLasersVisibility(false);
                     return makeRunningValues(false, [], []);
                 }
 
-                this.setLasersVisibility(true);
-                if (this.HEAD_LASER_ENABLED) { this.updateHeadLine(headPick); }
-                this.updateHandLine(ctrlrPick);
+                //this.setLasersVisibility(true);
+                this.showParabola();
+                //if (this.HEAD_LASER_ENABLED) { this.updateHeadLine(headPick); }
+                //this.updateHandLine(ctrlrPick);
                 // If the timer is at or exceeds the amount of time we should gaze to activate...
                 if (this.timer < EXP3_STARE_THRESHOLD) {
                     // Increment the timer.
@@ -404,8 +437,9 @@ Script.include("/~/system/libraries/controllers.js");
                     this.enterTeleport();                   // Activate teleport.
                     otherModule.timer = 0.0;                // Reset the other module's timer.
                     this.timer = 0.0;                       // Reset the timer.
-                    this.setLasersVisibility(false);        // Hide the lasers. Maybe destroy instead?
+                    //this.setLasersVisibility(false);        // Hide the lasers. Maybe destroy instead?
                     this.goodToStart = false;
+                    this.hideParabola();                    // ???
                     return makeRunningValues(true, [], []);
                 } else {
                     return makeRunningValues(false, [], []);

@@ -404,32 +404,32 @@ Script.include("/~/system/libraries/Xform.js");
                     });
 
                 // This is the segment that originates from the LERP between overall line's start and end, and the endpoint.
-                this.handLine2 = Overlays.addOverlay("line3d",
-                    {
-                        name: "handLine2",
-                        color: EXP3_FARGRAB_LOADING_COLOR,
-                        alpha: 1.0,
-                        isSolid: true,
-                        visible: true,
-                        position: ctrlrPick.searchRay.position
-                    });
+                //this.handLine2 = Overlays.addOverlay("line3d",
+                //    {
+                //        name: "handLine2",
+                //        color: EXP3_FARGRAB_LOADING_COLOR,
+                //        alpha: 1.0,
+                //        isSolid: true,
+                //        visible: true,
+                //        position: ctrlrPick.searchRay.position
+                //    });
             }
             if (ctrlrPick.intersects) {
                 var startPos = ctrlrPick.searchRay.origin;
                 var endPos = ctrlrPick.intersection;
                 var localT = normalizeRange(0, EXP3_STARE_THRESHOLD, this.timer);
-                var progressPos = lerp(startPos, endPos, localT);
+                //var progressPos = lerp(startPos, endPos, localT);
                 // We have an endpoint
                 Overlays.editOverlay(this.handLine1, {
                     position: startPos,
-                    endPoint: progressPos,
+                    endPoint: endPos,
                     color: EXP3_FARGRAB_LOADED_COLOR
                 });
-                Overlays.editOverlay(this.handLine2, {
-                    position: progressPos,
-                    endPoint: endPos,
-                    color: EXP3_FARGRAB_LOADING_COLOR
-                });
+                //Overlays.editOverlay(this.handLine2, {
+                //    position: progressPos,
+                //    endPoint: endPos,
+                //    color: EXP3_FARGRAB_LOADING_COLOR
+                //});
             } else {
                 // No endpoint
                 Overlays.editOverlay(this.handLine1, {
@@ -552,6 +552,13 @@ Script.include("/~/system/libraries/Xform.js");
                 var correctRotation = (this.ROTATION_ENABLED) ? (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE) : true;    // Strip out the ternary operator for final version.
 
                 if (!this.goodToStart) {
+                    // Check teleport isn't showing...
+                    var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
+                    if (teleport) {
+                        if (teleport.goodToStart) {
+                            return makeRunningValues(false, [], []);
+                        }
+                    }
                     if (ctrlrPick.intersects && correctRotation) {
                         var ctrlrVec = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin);
                         var headVec = Vec3.subtract(headPick.intersection, headPick.searchRay.origin);
@@ -588,7 +595,7 @@ Script.include("/~/system/libraries/Xform.js");
                     if (controllerData.triggerClicks[this.hand]) {
                         //otherModule.timer = 0.0;
                         this.timer = 0.0;
-                        this.setLasersVisibility(false);
+                        //this.setLasersVisibility(false);
                         this.prepareDistanceRotatingData(controllerData);
                         this.goodToStart = false;
                         return makeRunningValues(true, [], []);
@@ -608,6 +615,7 @@ Script.include("/~/system/libraries/Xform.js");
         };
 
         this.run = function (controllerData) {
+            this.updateHandLine(controllerData.rayPicks[this.hand]);
             var handRotation = controllerData.controllerRotAngles[this.hand];
             var correctRotation = (this.ROTATION_ENABLED) ? (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE) : true;    // Strip out the ternary operator for final version.
             if (controllerData.triggerValues[this.hand] < TRIGGER_OFF_VALUE || !correctRotation ||
@@ -616,6 +624,7 @@ Script.include("/~/system/libraries/Xform.js");
                 Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                     this.highlightedEntity);
                 this.highlightedEntity = null;
+                this.setLasersVisibility(false);
                 return makeRunningValues(false, [], []);
             }
             this.intersectionDistance = controllerData.rayPicks[this.hand].distance;
