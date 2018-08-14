@@ -96,9 +96,10 @@ EXP3_STARE_THRESHOLD = 3.0; // time, in seconds, user must hold gaze and point b
 EXP3_LOADED_COLOR = { red: 0, green: 0, blue: 255 };
 EXP3_LINE3D_NO_INTERSECTION = { red: 255, green: 0, blue: 0 };
 EXP3_LOADING_COLOR = { red: 255, green: 255, blue: 0 };
-EXP3_DISTANCE_RATIO = 0.1;
+EXP3_DISTANCE_RATIO = 0.125;
 EXP3_FARGRAB_LOADED_COLOR = { red: 255, green: 0, blue: 0 };
 EXP3_FARGRAB_LOADING_COLOR = { red: 0, green: 0, blue: 255 };
+EXP3_DISABLE_LASER_ANGLE = 45;
 
 // Controller Experiment 3 Rotation Angles:
 CONTROLLER_EXP3_FARGRAB_MIN_ANGLE = 0;

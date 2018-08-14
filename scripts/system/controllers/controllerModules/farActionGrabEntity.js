@@ -525,6 +525,14 @@ Script.include("/~/system/libraries/Xform.js");
             _this.buttonValue = value;
         };
 
+        this.isLaserVisible = function () {
+            var props = Overlays.getProperties(this.handLine1, ["visible"]);
+            if (props.hasOwnProperty("visible")) {
+                return props.visible;
+            }
+            return false;
+        }
+
         this.goodToStart = false;
 
         this.isReady = function (controllerData, deltaTime) {
@@ -558,6 +566,18 @@ Script.include("/~/system/libraries/Xform.js");
                         }
                     }
                 } else if (this.goodToStart) {
+                    // Do we kill the laser?
+                    var headDir = headPick.searchRay.direction;
+                    var ctrlrDir = ctrlrPick.searchRay.direction;
+                    
+                    var degrees = toDegrees(Vec3.getAngle(headDir, ctrlrDir));
+                    if (degrees >= EXP3_DISABLE_LASER_ANGLE) {
+                        this.goodToStart = false;
+                        this.timer = 0.0;
+                        this.setLasersVisibility(false);
+                        return makeRunningValues(false, [], []);
+                    }
+
                     this.setLasersVisibility(true);
                     if (this.HEAD_LASER_ENABLED) { this.updateHeadLine(headPick); }
                     this.updateHandLine(ctrlrPick);
