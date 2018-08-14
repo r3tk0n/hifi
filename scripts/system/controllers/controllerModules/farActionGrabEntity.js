@@ -400,7 +400,9 @@ Script.include("/~/system/libraries/Xform.js");
                         alpha: 1.0,
                         isSolid: true,
                         visible: true,
-                        position: ctrlrPick.searchRay.position
+                        position: ctrlrPick.searchRay.position,
+                        glow: 1,
+                        lineWidth: 0.02
                     });
 
                 // This is the segment that originates from the LERP between overall line's start and end, and the endpoint.
@@ -412,6 +414,8 @@ Script.include("/~/system/libraries/Xform.js");
                 //        isSolid: true,
                 //        visible: true,
                 //        position: ctrlrPick.searchRay.position
+                        //glow: 1,
+                        //lineWidth: 0.02
                 //    });
             }
             if (ctrlrPick.intersects) {
@@ -563,10 +567,13 @@ Script.include("/~/system/libraries/Xform.js");
                         var ctrlrVec = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin);
                         var headVec = Vec3.subtract(headPick.intersection, headPick.searchRay.origin);
 
-                        // headDist is the distance between intersection and the avatar's look vector.
-                        var headDist = vecInDirWithMagOf(headVec, ctrlrVec);
+                        var headVec2 = projectToHorizontal(headVec);
+                        var ctrlrVec2 = projectToHorizontal(ctrlrVec);
 
-                        var distance = Vec3.length(Vec3.subtract(headDist, ctrlrVec));
+                        // headDist is the distance between intersection and the avatar's look vector.
+                        var headDist = vecInDirWithMagOf(headVec2, ctrlrVec2);
+
+                        var distance = Vec3.length(Vec3.subtract(headDist, ctrlrVec2));
                         if (distance <= (ctrlrPick.distance * EXP3_DISTANCE_RATIO)) {
                             this.goodToStart = true;
                             return makeRunningValues(false, [], []);
@@ -576,7 +583,7 @@ Script.include("/~/system/libraries/Xform.js");
                     // Do we kill the laser?
                     var headDir = headPick.searchRay.direction;
                     var ctrlrDir = ctrlrPick.searchRay.direction;
-                    
+
                     var degrees = toDegrees(Vec3.getAngle(headDir, ctrlrDir));
                     if (degrees >= EXP3_DISABLE_LASER_ANGLE) {
                         this.goodToStart = false;
@@ -597,7 +604,7 @@ Script.include("/~/system/libraries/Xform.js");
                         this.timer = 0.0;
                         //this.setLasersVisibility(false);
                         this.prepareDistanceRotatingData(controllerData);
-                        this.goodToStart = false;
+                        //this.goodToStart = false;
                         return makeRunningValues(true, [], []);
                     } else {
                         return makeRunningValues(false, [], []);
@@ -618,13 +625,14 @@ Script.include("/~/system/libraries/Xform.js");
             this.updateHandLine(controllerData.rayPicks[this.hand]);
             var handRotation = controllerData.controllerRotAngles[this.hand];
             var correctRotation = (this.ROTATION_ENABLED) ? (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE) : true;    // Strip out the ternary operator for final version.
-            if (controllerData.triggerValues[this.hand] < TRIGGER_OFF_VALUE || !correctRotation ||
+            if (controllerData.triggerValues[this.hand] < TRIGGER_OFF_VALUE || 
                 this.notPointingAtEntity(controllerData) || this.targetIsNull() || this.buttonValue !== 0) {
                 this.endFarGrabAction();
                 Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                     this.highlightedEntity);
                 this.highlightedEntity = null;
                 this.setLasersVisibility(false);
+                this.goodToStart = false;
                 return makeRunningValues(false, [], []);
             }
             this.intersectionDistance = controllerData.rayPicks[this.hand].distance;

@@ -398,10 +398,13 @@ Script.include("/~/system/libraries/controllers.js");
                     var ctrlrVec = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin);
                     var headVec = Vec3.subtract(headPick.intersection, headPick.searchRay.origin);
 
-                    // headDist is the distance between intersection and the avatar's look vector.
-                    var headDist = vecInDirWithMagOf(headVec, ctrlrVec);
+                    var headVec2 = projectToHorizontal(headVec);
+                    var ctrlrVec2 = projectToHorizontal(ctrlrVec);
 
-                    var distance = Vec3.length(Vec3.subtract(headDist, ctrlrVec));
+                    // headDist is the distance between intersection and the avatar's look vector.
+                    var headDist = vecInDirWithMagOf(headVec2, ctrlrVec2);
+
+                    var distance = Vec3.length(Vec3.subtract(headDist, ctrlrVec2));
                     if (distance <= (ctrlrPick.distance * EXP3_DISTANCE_RATIO)) {
                         this.goodToStart = true;
                         return makeRunningValues(false, [], []);

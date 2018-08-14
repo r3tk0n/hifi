@@ -91,21 +91,21 @@ DEFAULT_SEARCH_SPHERE_DISTANCE = 1000; // how far from camera to search intersec
 NEAR_GRAB_PICK_RADIUS = 0.25; // radius used for search ray vs object for near grabbing.
 
 // Experiment3 Constants:
-EXP3_MAX_DISTANCE = 0.5;    // distance used between head and hand picks
+EXP3_MAX_DISTANCE = 0.4;    // distance used between head and hand picks
 EXP3_STARE_THRESHOLD = 3.0; // time, in seconds, user must hold gaze and point before action starts
 EXP3_LOADED_COLOR = { red: 0, green: 0, blue: 255 };
 EXP3_LINE3D_NO_INTERSECTION = { red: 255, green: 0, blue: 0 };
 EXP3_LOADING_COLOR = { red: 255, green: 255, blue: 0 };
-EXP3_DISTANCE_RATIO = 0.125;
+EXP3_DISTANCE_RATIO = 0.1;
 EXP3_FARGRAB_LOADED_COLOR = { red: 0, green: 0, blue: 255 };
 EXP3_FARGRAB_LOADING_COLOR = { red: 255, green: 0, blue: 0 };
 EXP3_DISABLE_LASER_ANGLE = 45;
-EXP3_DISABLE_TELEPORT_ANGLE = 60;           // Angle from look to hand vector, used to hide teleport parabola.
+EXP3_DISABLE_TELEPORT_ANGLE = 45;           // Angle from look to hand vector, used to hide teleport parabola.
 
 // Controller Experiment 3 Rotation Angles:
 CONTROLLER_EXP3_FARGRAB_MIN_ANGLE = 0;
-CONTROLLER_EXP3_FARGRAB_MAX_ANGLE = 90;
-CONTROLLER_EXP3_TELEPORT_MIN_ANGLE = 90;
+CONTROLLER_EXP3_FARGRAB_MAX_ANGLE = 60;
+CONTROLLER_EXP3_TELEPORT_MIN_ANGLE = 120;
 CONTROLLER_EXP3_TELEPORT_MAX_ANGLE = 180;
 
 COLORS_GRAB_SEARCHING_HALF_SQUEEZE = { red: 10, green: 10, blue: 255 };
@@ -554,6 +554,12 @@ projectVontoW = function (v, w) {
     // Denominator should be mag(w)^2
     denominator *= denominator;
     return Vec3.multiply((Vec3.dot(v, w) / denominator), w);
+}
+
+projectToHorizontal = function (u) {
+    var n = Vec3.multiplyQbyV(MyAvatar.rotation, Vec3.UNIT_Y);  // Get the avatar's notion of "up" in worldspace.
+    var proj = projectVontoW(u, n);
+    return Vec3.subtract(u, proj);
 }
 
 if (typeof module !== 'undefined') {
