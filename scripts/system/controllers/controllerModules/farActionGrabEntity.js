@@ -402,7 +402,7 @@ Script.include("/~/system/libraries/Xform.js");
                         visible: true,
                         position: ctrlrPick.searchRay.position,
                         glow: 1,
-                        lineWidth: 0.02
+                        lineWidth: 0.04
                     });
 
                 // This is the segment that originates from the LERP between overall line's start and end, and the endpoint.
@@ -541,9 +541,9 @@ Script.include("/~/system/libraries/Xform.js");
 
         this.isReady = function (controllerData, deltaTime) {
             if (HMD.active) {
-                if (this.notPointingAtEntity(controllerData)) {
-                    return makeRunningValues(false, [], []);
-                }
+                //if (this.notPointingAtEntity(controllerData)) {
+                //    return makeRunningValues(false, [], []);
+                //}
                 this.distanceHolding = false;
                 this.distanceRotating = false;
 
