@@ -92,13 +92,13 @@ NEAR_GRAB_PICK_RADIUS = 0.25; // radius used for search ray vs object for near g
 
 // Experiment3 Constants:
 EXP3_MAX_DISTANCE = 0.5;    // distance used between head and hand picks
-EXP3_STARE_THRESHOLD = 2.0; // time, in seconds, user must hold gaze and point before action starts
+EXP3_STARE_THRESHOLD = 3.0; // time, in seconds, user must hold gaze and point before action starts
 EXP3_LOADED_COLOR = { red: 0, green: 0, blue: 255 };
 EXP3_LINE3D_NO_INTERSECTION = { red: 255, green: 0, blue: 0 };
 EXP3_LOADING_COLOR = { red: 255, green: 255, blue: 0 };
 EXP3_DISTANCE_RATIO = 0.1;
-EXP3_FARGRAB_LOADED_COLOR = { red: 0, green: 0, blue: 255 };
-EXP3_FARGRAB_LOADING_COLOR = { red: 255, green: 0, blue: 0 };
+EXP3_FARGRAB_LOADED_COLOR = { red: 255, green: 0, blue: 0 };
+EXP3_FARGRAB_LOADING_COLOR = { red: 0, green: 0, blue: 255 };
 
 // Controller Experiment 3 Rotation Angles:
 CONTROLLER_EXP3_FARGRAB_MIN_ANGLE = 0;

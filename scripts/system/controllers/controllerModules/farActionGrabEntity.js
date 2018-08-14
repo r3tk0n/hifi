@@ -121,8 +121,8 @@ Script.include("/~/system/libraries/Xform.js");
             550,
             this.hand === RIGHT_HAND ? ["rightHand"] : ["leftHand"],
             [],
-            100,
-            makeLaserParams(this.hand, false));
+            100);
+            //makeLaserParams(this.hand, false));
 
 
         this.handToController = function() {
@@ -493,7 +493,7 @@ Script.include("/~/system/libraries/Xform.js");
         };
 
         // Switches for laser visibility and rotation-based activation.
-        this.ROTATION_ENABLED = false;          // Whether we activate based on rotation.
+        this.ROTATION_ENABLED = true;          // Whether we activate based on rotation.
         this.HEAD_LASER_ENABLED = false;
 
         // Utility function to hide the two segments of the head laser.
@@ -525,6 +525,8 @@ Script.include("/~/system/libraries/Xform.js");
             _this.buttonValue = value;
         };
 
+        this.goodToStart = false;
+
         this.isReady = function (controllerData, deltaTime) {
             if (HMD.active) {
                 if (this.notPointingAtEntity(controllerData)) {
@@ -541,32 +543,37 @@ Script.include("/~/system/libraries/Xform.js");
                 var handRotation = controllerData.controllerRotAngles[this.hand];
                 var correctRotation = (this.ROTATION_ENABLED) ? (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE) : true;    // Strip out the ternary operator for final version.
 
-                if (ctrlrPick.intersects && correctRotation) {
-                    var ctrlrVec = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin);
-                    var headVec = Vec3.subtract(headPick.intersection, headPick.searchRay.origin);
+                if (!this.goodToStart) {
+                    if (ctrlrPick.intersects && correctRotation) {
+                        var ctrlrVec = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin);
+                        var headVec = Vec3.subtract(headPick.intersection, headPick.searchRay.origin);
 
-                    // headDist is the distance between intersection and the avatar's look vector.
-                    var headDist = vecInDirWithMagOf(headVec, ctrlrVec);
+                        // headDist is the distance between intersection and the avatar's look vector.
+                        var headDist = vecInDirWithMagOf(headVec, ctrlrVec);
 
-                    var distance = Vec3.length(Vec3.subtract(headDist, ctrlrVec));
-
-                    if (distance <= (ctrlrPick.distance * EXP3_DISTANCE_RATIO)) {
-                        this.setLasersVisibility(true);
-                        if (this.HEAD_LASER_ENABLED) { this.updateHeadLine(headPick); }
-                        this.updateHandLine(ctrlrPick);
-                        if (this.timer < EXP3_STARE_THRESHOLD) {
-                            this.timer += (this.time >= EXP3_STARE_THRESHOLD) ? 0 : deltaTime;
-                            //return makeRunningValues(false, [], []);
-                        }
-                        if (controllerData.triggerClicks[this.hand]) {
-                            //otherModule.timer = 0.0;
-                            this.timer = 0.0;
-                            this.setLasersVisibility(false);
-                            this.prepareDistanceRotatingData(controllerData);
-                            return makeRunningValues(true, [], []);
-                        } else {
+                        var distance = Vec3.length(Vec3.subtract(headDist, ctrlrVec));
+                        if (distance <= (ctrlrPick.distance * EXP3_DISTANCE_RATIO)) {
+                            this.goodToStart = true;
                             return makeRunningValues(false, [], []);
                         }
+                    }
+                } else if (this.goodToStart) {
+                    this.setLasersVisibility(true);
+                    if (this.HEAD_LASER_ENABLED) { this.updateHeadLine(headPick); }
+                    this.updateHandLine(ctrlrPick);
+                    if (this.timer < EXP3_STARE_THRESHOLD) {
+                        this.timer += (this.time >= EXP3_STARE_THRESHOLD) ? 0 : deltaTime;
+                        //return makeRunningValues(false, [], []);
+                    }
+                    if (controllerData.triggerClicks[this.hand]) {
+                        //otherModule.timer = 0.0;
+                        this.timer = 0.0;
+                        this.setLasersVisibility(false);
+                        this.prepareDistanceRotatingData(controllerData);
+                        this.goodToStart = false;
+                        return makeRunningValues(true, [], []);
+                    } else {
+                        return makeRunningValues(false, [], []);
                     }
                 } else {
                     this.destroyContextOverlay();
@@ -581,6 +588,7 @@ Script.include("/~/system/libraries/Xform.js");
         };
 
         this.run = function (controllerData) {
+            var handRotation = controllerData.controllerRotAngles[this.hand];
             var correctRotation = (this.ROTATION_ENABLED) ? (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE) : true;    // Strip out the ternary operator for final version.
             if (controllerData.triggerValues[this.hand] < TRIGGER_OFF_VALUE || !correctRotation ||
                 this.notPointingAtEntity(controllerData) || this.targetIsNull() || this.buttonValue !== 0) {

@@ -342,6 +342,8 @@ Script.include("/~/system/libraries/controllers.js");
             this.setHeadLineVisibility(this.HEAD_LASER_ENABLED ? viz : false);
         }
 
+        this.goodToStart = false;
+
         this.isReady = function(controllerData, deltaTime) {
             var otherModule = this.getOtherModule();
 
@@ -350,34 +352,43 @@ Script.include("/~/system/libraries/controllers.js");
             var ctrlrPick = controllerData.rayPicks[this.hand];         // Raypick for this hand.
             var handRotation = controllerData.controllerRotAngles[this.hand];
             var correctRotation = (this.ROTATION_ENABLED) ? (handRotation > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE) : true;    // Strip out the ternary operator for final version.
-            
-            if (ctrlrPick.intersects && !otherModule.active && correctRotation) {
-                // Get the vectors for head and hand controller.
-                var ctrlrVec = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin);
-                var headVec = Vec3.subtract(headPick.intersection, headPick.searchRay.origin);
 
-                // headDist is the distance between intersection and the avatar's look vector.
-                var headDist = vecInDirWithMagOf(headVec, ctrlrVec);
+            if (!this.goodToStart) {
+                if (ctrlrPick.intersects && !otherModule.active && correctRotation) {
+                    // Get the vectors for head and hand controller.
+                    var ctrlrVec = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin);
+                    var headVec = Vec3.subtract(headPick.intersection, headPick.searchRay.origin);
 
-                var distance = Vec3.length(Vec3.subtract(headDist, ctrlrVec));
-                if (distance <= (ctrlrPick.distance * EXP3_DISTANCE_RATIO)) {
-                    this.setLasersVisibility(true);
-                    if (this.HEAD_LASER_ENABLED) { this.updateHeadLine(headPick); }
-                    this.updateHandLine(ctrlrPick);
-                    // If the timer is at or exceeds the amount of time we should gaze to activate...
-                    if (this.timer >= EXP3_STARE_THRESHOLD) {
-                        // Activate the module.
-                        this.active = true;                     // Set the module to active.
-                        this.enterTeleport();                   // Activate teleport.
-                        otherModule.timer = 0.0;                // Reset the other module's timer.
-                        this.timer = 0.0;                       // Reset the timer.
-                        this.setLasersVisibility(false);        // Hide the lasers. Maybe destroy instead?
-                        return makeRunningValues(true, [], []);
-                    } else {
-                        // Increment the timer.
-                        this.timer += deltaTime;
+                    // headDist is the distance between intersection and the avatar's look vector.
+                    var headDist = vecInDirWithMagOf(headVec, ctrlrVec);
+
+                    var distance = Vec3.length(Vec3.subtract(headDist, ctrlrVec));
+                    if (distance <= (ctrlrPick.distance * EXP3_DISTANCE_RATIO)) {
+                        this.goodToStart = true;
                         return makeRunningValues(false, [], []);
                     }
+                }
+            } else {
+                this.setLasersVisibility(true);
+                if (this.HEAD_LASER_ENABLED) { this.updateHeadLine(headPick); }
+                this.updateHandLine(ctrlrPick);
+                // If the timer is at or exceeds the amount of time we should gaze to activate...
+                if (this.timer < EXP3_STARE_THRESHOLD) {
+                    // Increment the timer.
+                    this.timer += deltaTime;
+                    //return makeRunningValues(false, [], []);
+                }
+                if (controllerData.triggerClicks[this.hand]) {
+                    // Activate the module.
+                    this.active = true;                     // Set the module to active.
+                    this.enterTeleport();                   // Activate teleport.
+                    otherModule.timer = 0.0;                // Reset the other module's timer.
+                    this.timer = 0.0;                       // Reset the timer.
+                    this.setLasersVisibility(false);        // Hide the lasers. Maybe destroy instead?
+                    this.goodToStart = false;
+                    return makeRunningValues(true, [], []);
+                } else {
+                    return makeRunningValues(false, [], []);
                 }
             }
 
@@ -444,12 +455,12 @@ Script.include("/~/system/libraries/controllers.js");
             } else if (teleportLocationType === TARGET.SEAT) {
                 this.setTeleportState(mode, "", "seat");
             }
-            return this.teleport(result, teleportLocationType);
+            return this.teleport(result, teleportLocationType, controllerData);
         };
 
-        this.teleport = function(newResult, target) {
+        this.teleport = function(newResult, target, controllerData) {
             var result = newResult;
-            if (_this.buttonValue === 0) {
+            if (controllerData.triggerClicks[this.hand]) {
                 return makeRunningValues(true, [], []);
             }
 
