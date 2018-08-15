@@ -204,11 +204,6 @@ Script.include("/~/system/libraries/controllers.js");
             this.state = TELEPORTER_STATES.TARGETTING;
         };
 
-        this.timer = 0;
-
-        // Switches for laser visibility and rotation-based activation.
-        this.ROTATION_ENABLED = true;          // Whether we activate based on rotation.
-
         this.goodToStart = false;
 
         this.showParabola = function () {
@@ -235,6 +230,10 @@ Script.include("/~/system/libraries/controllers.js");
             Pointers.disablePointer(_this.teleportParabolaHeadInvisible);
         }
 
+        this.lastRotation = Quat.IDENTITY;
+        this.headAngularVelocity = 0;
+        this.lastHMDOrientation = Quat.IDENTITY;
+
         this.isReady = function(controllerData, deltaTime) {
             var otherModule = this.getOtherModule();
 
@@ -242,17 +241,28 @@ Script.include("/~/system/libraries/controllers.js");
             var headPick = controllerData.rayPicks[AVATAR_HEAD];        // Head raypick.
             var ctrlrPick = controllerData.rayPicks[this.hand];         // Raypick for this hand.
             var handRotation = controllerData.controllerRotAngles[this.hand];
-            var correctRotation = (this.ROTATION_ENABLED) ? (handRotation > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE) : true;    // Strip out the ternary operator for final version.
+            //print("Handrotation: " + handRotation);
+            var correctRotation = (handRotation > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
 
-            if (!this.goodToStart) {
+            //print("angularVelocity: " + this.headAngularVelocity);
+
+
+            if (!this.goodToStart && correctRotation) {
                 // Check fargrab isn't showing...
                 var farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
                 if (farGrab) {
                     if (farGrab.goodToStart) {
-                        return makeRunningValues(false, [], []);
+                        farGrab.goodToStart = false;
+                        farGrab.setLasersVisibility(false);
+                        //return makeRunningValues(false, [], []);
                     }
                 }
-                if (ctrlrPick.intersects && !otherModule.active && correctRotation) {
+
+                var thisVelocity = Quat.angle(Quat.multiply(HMD.orientation, Quat.inverse(this.lastHMDOrientation))) / deltaTime;
+                this.headAngularVelocity = EXP3_DELTA * this.headAngularVelocity + (1.0 - EXP3_DELTA) * thisVelocity;
+                this.lastHMDOrientation = HMD.orientation;
+
+                if (ctrlrPick.intersects && !otherModule.active && (this.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY)) {
                     // Get the vectors for head and hand controller.
                     var ctrlrVec = projectToHorizontal(Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin));
                     var headVec = projectToHorizontal(Vec3.subtract(headPick.intersection, headPick.searchRay.origin));
@@ -272,25 +282,24 @@ Script.include("/~/system/libraries/controllers.js");
                 var ctrlrDir = ctrlrPick.searchRay.direction;
 
                 var degrees = toDegrees(Vec3.getAngle(headDir, ctrlrDir));
-                if (degrees >= EXP3_DISABLE_TELEPORT_ANGLE) {
+                var down = Vec3.multiply(-1, Vec3.UNIT_Y);
+
+                var headDegreesDown = toDegrees(Vec3.getAngle(headDir, down));
+                var ctrlrDegreesDown = toDegrees(Vec3.getAngle(ctrlrDir, down));
+
+                if (degrees >= EXP3_DISABLE_TELEPORT_ANGLE || !this.goodToStart
+                    || (headDegreesDown >= EXP3_LOOK_DOWN_THRESHOLD && ctrlrDegreesDown <= 15)) {
                     this.goodToStart = false;
-                    this.timer = 0.0;
                     this.hideParabola();
                     return makeRunningValues(false, [], []);
                 }
 
                 //this.setLasersVisibility(true);
                 this.showParabola();
-                if (this.timer < EXP3_STARE_THRESHOLD) {
-                    // Increment the timer.
-                    this.timer += deltaTime;
-                }
                 if (controllerData.triggerClicks[this.hand]) {
                     // Activate the module.
                     this.active = true;                     // Set the module to active.
                     this.enterTeleport();                   // Activate teleport.
-                    otherModule.timer = 0.0;                // Reset the other module's timer.
-                    this.timer = 0.0;                       // Reset the timer.
                     this.goodToStart = false;
                     this.hideParabola();                    // ???
                     return makeRunningValues(true, [], []);
@@ -298,8 +307,6 @@ Script.include("/~/system/libraries/controllers.js");
                     return makeRunningValues(false, [], []);
                 }
             }
-
-            this.timer = 0;
             return makeRunningValues(false, [], []);
         };
 

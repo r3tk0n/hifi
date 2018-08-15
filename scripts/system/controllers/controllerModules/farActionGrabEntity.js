@@ -417,9 +417,6 @@ Script.include("/~/system/libraries/Xform.js");
             }
         };
 
-        // Switches for laser visibility and rotation-based activation.
-        this.ROTATION_ENABLED = true;          // Whether we activate based on rotation.
-
         // Lazy utility function for disabling both lasers.
         this.setLasersVisibility = function (viz) {
             Overlays.editOverlay(this.handLine1, { visible: viz });
@@ -431,6 +428,9 @@ Script.include("/~/system/libraries/Xform.js");
         };
 
         this.goodToStart = false;
+
+        this.headAngularVelocity = 0;
+        this.lastHMDOrientation = Quat.IDENTITY;
 
         this.isReady = function (controllerData, deltaTime) {
             if (HMD.active) {
@@ -446,18 +446,24 @@ Script.include("/~/system/libraries/Xform.js");
                 var headPick = controllerData.rayPicks[AVATAR_HEAD];        // Head raypick.
                 var ctrlrPick = controllerData.rayPicks[this.hand];         // Raypick for this hand.
                 var handRotation = controllerData.controllerRotAngles[this.hand];
-                var correctRotation = (this.ROTATION_ENABLED) ? (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE) : true;    // Strip out the ternary operator for final version.
+                var correctRotation = (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE);    // Strip out the ternary operator for final version.
 
-                if (!this.goodToStart) {
+                if (!this.goodToStart && correctRotation) {
                     // Check teleport isn't showing...
                     var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
                     if (teleport) {
                         if (teleport.goodToStart) {
-                            return makeRunningValues(false, [], []);
+                            teleport.goodToStart = false;
+                            //return makeRunningValues(false, [], []);
                         }
                     }
+
+                    var thisVelocity = Quat.angle(Quat.multiply(HMD.orientation, Quat.inverse(this.lastHMDOrientation))) / deltaTime;
+                    this.headAngularVelocity = EXP3_DELTA * this.headAngularVelocity + (1.0 - EXP3_DELTA) * thisVelocity;
+                    this.lastHMDOrientation = HMD.orientation;
+
                     // If we're intersecting and in the right rotation...
-                    if (ctrlrPick.intersects && correctRotation) {
+                    if (ctrlrPick.intersects && (this.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY)) {
                         var ctrlrVec = projectToHorizontal(Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin));
                         var headVec = projectToHorizontal(Vec3.subtract(headPick.intersection, headPick.searchRay.origin));
 
@@ -484,12 +490,7 @@ Script.include("/~/system/libraries/Xform.js");
                     }
 
                     this.setLasersVisibility(true);
-                    if (this.HEAD_LASER_ENABLED) { this.updateHeadLine(headPick); }
                     this.updateHandLine(ctrlrPick);
-                    //if (this.timer < EXP3_STARE_THRESHOLD) {
-                    //    this.timer += (this.time >= EXP3_STARE_THRESHOLD) ? 0 : deltaTime;
-                    //    //return makeRunningValues(false, [], []);
-                    //}
 
                     // If the trigger's pulled, start the action. If not, don't.
                     if (controllerData.triggerClicks[this.hand]) {

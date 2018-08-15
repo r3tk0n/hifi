@@ -89,6 +89,8 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             }
         };
 
+
+
         this.runningPluginNames = {};
         this.leftTriggerValue = 0;
         this.leftTriggerClicked = 0;
