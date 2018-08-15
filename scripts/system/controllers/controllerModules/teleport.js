@@ -188,10 +188,6 @@ Script.include("/~/system/libraries/controllers.js");
             Pointers.removePointer(this.teleportParabolaHandInvisible);
             Pointers.removePointer(this.teleportParabolaHeadVisible);
             Pointers.removePointer(this.teleportParabolaHeadInvisible);
-            Overlays.deleteOverlay(this.headLaser1);
-            Overlays.deleteOverlay(this.headLaser2);
-            Overlays.deleteOverlay(this.handLaser1);
-            Overlays.deleteOverlay(this.handLaser2);
         };
 
         this.buttonPress = function(value) {
@@ -209,146 +205,9 @@ Script.include("/~/system/libraries/controllers.js");
         };
 
         this.timer = 0;
-        
-        // Two lines per head and hand, each a segment, showing progress of wait time for action.
-        this.headLine1 = Uuid.NULL;
-        this.handLine1 = Uuid.NULL;
-
-        this.headLine2 = Uuid.NULL;
-        this.handline2 = Uuid.NULL;
-
-        this.updateHandLine = function (ctrlrPick) {
-            if (Uuid.isEqual(this.handLine1, Uuid.NULL)) {
-                // We don't have a line yet...
-                // This is the segment that originates from the hand controller and ends at the LERP between start and end.
-                this.handLine1 = Overlays.addOverlay("line3d",
-                    {
-                        name: "handLine1",
-                        color: EXP3_LOADED_COLOR,
-                        alpha: 1.0,
-                        isSolid: true,
-                        visible: true,
-                        position: ctrlrPick.searchRay.position
-                    });
-
-                // This is the segment that originates from the LERP between overall line's start and end, and the endpoint.
-                this.handLine2 = Overlays.addOverlay("line3d",
-                    {
-                        name: "handLine2",
-                        color: EXP3_LOADING_COLOR,
-                        alpha: 1.0,
-                        isSolid: true,
-                        visible: true,
-                        position: ctrlrPick.searchRay.position
-                    });
-            }
-            if (ctrlrPick.intersects) {
-                var startPos = ctrlrPick.searchRay.origin;
-                var endPos = ctrlrPick.intersection;
-                var localT = normalizeRange(0, EXP3_STARE_THRESHOLD, this.timer);
-                var progressPos = lerp(startPos, endPos, localT);
-                // We have an endpoint
-                Overlays.editOverlay(this.handLine1, {
-                    position: startPos,
-                    endPoint: progressPos,
-                    color: EXP3_LOADED_COLOR
-                });
-                Overlays.editOverlay(this.handLine2, {
-                    position: progressPos,
-                    endPoint: endPos,
-                    color: EXP3_LOADING_COLOR
-                });
-            } else {
-                // No endpoint
-                Overlays.editOverlay(this.handLine1, {
-                    position: ctrlrPick.searchRay.origin,
-                    endPoint: Vec3.sum(ctrlrPick.searchRay.origin, Vec3.multiply(10, ctrlrPick.searchRay.direction)),
-                    color: EXP3_LINE3D_NO_INTERSECTION
-                });
-            }
-        };
-
-        this.updateHeadLine = function (headPick) {
-            if (Uuid.isEqual(this.headLine1, Uuid.NULL)) {
-                // We don't have a line yet...
-                // This is the segment that originates from the "head" and ends at the LERP between start and end.
-                this.headLine1 = Overlays.addOverlay("line3d",
-                    {
-                        name: "headLine",
-                        color: EXP3_LOADED_COLOR,
-                        alpha: 1.0,
-                        isSolid: true,
-                        visible: true,
-                        position: headPick.searchRay.position
-                    });
-
-                // This is the segment that originates from the LERP between overall line's start and end, and the endpoint.
-                this.headLine2 = Overlays.addOverlay("line3d",
-                    {
-                        name: "headLine2",
-                        color: EXP3_LOADING_COLOR,
-                        alpha: 1.0,
-                        isSolid: true,
-                        visible: true,
-                        position: headPick.searchRay.position
-                    })
-            }
-            // If we've got an intersection from the head, we know we've got an endpoint.
-            if (headPick.intersects) {
-                var startPos = headPick.searchRay.origin;
-                var endPos = headPick.intersection;
-                var localT = normalizeRange(0, EXP3_STARE_THRESHOLD, this.timer);
-                var progressPos = lerp(startPos, endPos, localT);
-                // We have an endpoint
-                Overlays.editOverlay(this.headLine1, {
-                    position: startPos,
-                    endPoint: progressPos,
-                    color: EXP3_LOADED_COLOR
-                });
-                Overlays.editOverlay(this.headLine2, {
-                    position: progressPos,
-                    endPoint: endPos,
-                    color: EXP3_LOADING_COLOR
-                });
-            } else {
-                // No endpoint
-                Overlays.editOverlay(this.headLine1, {
-                    position: headPick.searchRay.origin,
-                    endPoint: Vec3.sum(headPick.searchRay.origin, Vec3.multiply(10, headPick.searchRay.direction)),
-                    color: EXP3_LINE3D_NO_INTERSECTION
-                });
-            }
-        };
 
         // Switches for laser visibility and rotation-based activation.
         this.ROTATION_ENABLED = true;          // Whether we activate based on rotation.
-        this.HEAD_LASER_ENABLED = false;
-
-        // Utility function to hide the two segments of the head laser.
-        this.setHeadLineVisibility = function (viz) {
-            Overlays.editOverlay(this.headLine1, { visible: viz });
-            Overlays.editOverlay(this.headLine2, { visible: viz });
-        };
-
-        // Utility function to hide the two segments of the hand laser.
-        this.setHandLineVisibility = function (viz) {
-            Overlays.editOverlay(this.handLine1, { visible: viz });
-            Overlays.editOverlay(this.handLine2, { visible: viz });
-        };
-
-        // Lazy utility function for disabling both lasers.
-        this.setLasersVisibility = function (viz) {
-            this.setHandLineVisibility(viz);
-            this.setHeadLineVisibility(this.HEAD_LASER_ENABLED ? viz : false);
-        }
-
-        this.isLaserVisible = function () {
-            var props = Overlays.getProperties(this.handLine1, ["visible"]);
-            if (props.hasOwnProperty("visible")) {
-                return props.visible;
-            }
-            return false;
-        }
 
         this.goodToStart = false;
 
@@ -395,16 +254,13 @@ Script.include("/~/system/libraries/controllers.js");
                 }
                 if (ctrlrPick.intersects && !otherModule.active && correctRotation) {
                     // Get the vectors for head and hand controller.
-                    var ctrlrVec = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin);
-                    var headVec = Vec3.subtract(headPick.intersection, headPick.searchRay.origin);
-
-                    var headVec2 = projectToHorizontal(headVec);
-                    var ctrlrVec2 = projectToHorizontal(ctrlrVec);
+                    var ctrlrVec = projectToHorizontal(Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin));
+                    var headVec = projectToHorizontal(Vec3.subtract(headPick.intersection, headPick.searchRay.origin));
 
                     // headDist is the distance between intersection and the avatar's look vector.
-                    var headDist = vecInDirWithMagOf(headVec2, ctrlrVec2);
+                    var headDist = vecInDirWithMagOf(headVec, ctrlrVec);
 
-                    var distance = Vec3.length(Vec3.subtract(headDist, ctrlrVec2));
+                    var distance = Vec3.length(Vec3.subtract(headDist, ctrlrVec));
                     if (distance <= (ctrlrPick.distance * EXP3_DISTANCE_RATIO)) {
                         this.goodToStart = true;
                         return makeRunningValues(false, [], []);
@@ -420,19 +276,14 @@ Script.include("/~/system/libraries/controllers.js");
                     this.goodToStart = false;
                     this.timer = 0.0;
                     this.hideParabola();
-                    this.setLasersVisibility(false);
                     return makeRunningValues(false, [], []);
                 }
 
                 //this.setLasersVisibility(true);
                 this.showParabola();
-                //if (this.HEAD_LASER_ENABLED) { this.updateHeadLine(headPick); }
-                //this.updateHandLine(ctrlrPick);
-                // If the timer is at or exceeds the amount of time we should gaze to activate...
                 if (this.timer < EXP3_STARE_THRESHOLD) {
                     // Increment the timer.
                     this.timer += deltaTime;
-                    //return makeRunningValues(false, [], []);
                 }
                 if (controllerData.triggerClicks[this.hand]) {
                     // Activate the module.
@@ -440,7 +291,6 @@ Script.include("/~/system/libraries/controllers.js");
                     this.enterTeleport();                   // Activate teleport.
                     otherModule.timer = 0.0;                // Reset the other module's timer.
                     this.timer = 0.0;                       // Reset the timer.
-                    //this.setLasersVisibility(false);        // Hide the lasers. Maybe destroy instead?
                     this.goodToStart = false;
                     this.hideParabola();                    // ???
                     return makeRunningValues(true, [], []);
@@ -449,13 +299,6 @@ Script.include("/~/system/libraries/controllers.js");
                 }
             }
 
-            /*if (!this.disabled && this.buttonValue !== 0 && !otherModule.active) {
-                this.active = true;
-                this.enterTeleport();
-                return makeRunningValues(true, [], []);
-            }
-            */
-            this.setLasersVisibility(false);
             this.timer = 0;
             return makeRunningValues(false, [], []);
         };

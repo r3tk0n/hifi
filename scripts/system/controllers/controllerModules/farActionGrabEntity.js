@@ -380,14 +380,7 @@ Script.include("/~/system/libraries/Xform.js");
             return false;
         };
 
-        this.timer = 0;
-
-        // Two lines per head and hand, each a segment, showing progress of wait time for action.
-        this.headLine1 = Uuid.NULL;
         this.handLine1 = Uuid.NULL;
-
-        this.headLine2 = Uuid.NULL;
-        this.handline2 = Uuid.NULL;
 
         this.updateHandLine = function (ctrlrPick) {
             if (Uuid.isEqual(this.handLine1, Uuid.NULL)) {
@@ -404,36 +397,16 @@ Script.include("/~/system/libraries/Xform.js");
                         glow: 1,
                         lineWidth: 0.04
                     });
-
-                // This is the segment that originates from the LERP between overall line's start and end, and the endpoint.
-                //this.handLine2 = Overlays.addOverlay("line3d",
-                //    {
-                //        name: "handLine2",
-                //        color: EXP3_FARGRAB_LOADING_COLOR,
-                //        alpha: 1.0,
-                //        isSolid: true,
-                //        visible: true,
-                //        position: ctrlrPick.searchRay.position
-                        //glow: 1,
-                        //lineWidth: 0.02
-                //    });
             }
             if (ctrlrPick.intersects) {
                 var startPos = ctrlrPick.searchRay.origin;
                 var endPos = ctrlrPick.intersection;
-                var localT = normalizeRange(0, EXP3_STARE_THRESHOLD, this.timer);
-                //var progressPos = lerp(startPos, endPos, localT);
                 // We have an endpoint
                 Overlays.editOverlay(this.handLine1, {
                     position: startPos,
                     endPoint: endPos,
                     color: EXP3_FARGRAB_LOADED_COLOR
                 });
-                //Overlays.editOverlay(this.handLine2, {
-                //    position: progressPos,
-                //    endPoint: endPos,
-                //    color: EXP3_FARGRAB_LOADING_COLOR
-                //});
             } else {
                 // No endpoint
                 Overlays.editOverlay(this.handLine1, {
@@ -444,98 +417,18 @@ Script.include("/~/system/libraries/Xform.js");
             }
         };
 
-        this.updateHeadLine = function (headPick) {
-            if (Uuid.isEqual(this.headLine1, Uuid.NULL)) {
-                // We don't have a line yet...
-                // This is the segment that originates from the "head" and ends at the LERP between start and end.
-                this.headLine1 = Overlays.addOverlay("line3d",
-                    {
-                        name: "headLine",
-                        color: EXP3_FARGRAB_LOADED_COLOR,
-                        alpha: 1.0,
-                        isSolid: true,
-                        visible: true,
-                        position: headPick.searchRay.position
-                    });
-
-                // This is the segment that originates from the LERP between overall line's start and end, and the endpoint.
-                this.headLine2 = Overlays.addOverlay("line3d",
-                    {
-                        name: "headLine2",
-                        color: EXP3_FARGRAB_LOADING_COLOR,
-                        alpha: 1.0,
-                        isSolid: true,
-                        visible: true,
-                        position: headPick.searchRay.position
-                    })
-            }
-            // If we've got an intersection from the head, we know we've got an endpoint.
-            if (headPick.intersects) {
-                var startPos = headPick.searchRay.origin;
-                var endPos = headPick.intersection;
-                var localT = normalizeRange(0, EXP3_STARE_THRESHOLD, this.timer);
-                var progressPos = lerp(startPos, endPos, localT);
-                // We have an endpoint
-                Overlays.editOverlay(this.headLine1, {
-                    position: startPos,
-                    endPoint: progressPos,
-                    color: EXP3_FARGRAB_LOADED_COLOR
-                });
-                Overlays.editOverlay(this.headLine2, {
-                    position: progressPos,
-                    endPoint: endPos,
-                    color: EXP3_FARGRAB_LOADING_COLOR
-                });
-            } else {
-                // No endpoint
-                Overlays.editOverlay(this.headLine1, {
-                    position: headPick.searchRay.origin,
-                    endPoint: Vec3.sum(headPick.searchRay.origin, Vec3.multiply(10, headPick.searchRay.direction)),
-                    color: EXP3_LINE3D_NO_INTERSECTION
-                });
-            }
-        };
-
         // Switches for laser visibility and rotation-based activation.
         this.ROTATION_ENABLED = true;          // Whether we activate based on rotation.
-        this.HEAD_LASER_ENABLED = false;
-
-        // Utility function to hide the two segments of the head laser.
-        this.setHeadLineVisibility = function (viz) {
-            Overlays.editOverlay(this.headLine1, { visible: viz });
-            Overlays.editOverlay(this.headLine2, { visible: viz });
-        };
-
-        // Utility function to hide the two segments of the hand laser.
-        this.setHandLineVisibility = function (viz) {
-            Overlays.editOverlay(this.handLine1, { visible: viz });
-            Overlays.editOverlay(this.handLine2, { visible: viz });
-        };
 
         // Lazy utility function for disabling both lasers.
         this.setLasersVisibility = function (viz) {
-            this.setHandLineVisibility(viz);
-            this.setHeadLineVisibility(this.HEAD_LASER_ENABLED ? viz : false);
+            Overlays.editOverlay(this.handLine1, { visible: viz });
         }
 
         this.getOtherModule = function () {
             var otherModule = this.hand === RIGHT_HAND ? leftFarActionGrabEntity : rightFarActionGrabEntity;
             return otherModule;
         };
-
-        this.buttonValue = 0;
-
-        this.buttonPress = function (value) {
-            _this.buttonValue = value;
-        };
-
-        this.isLaserVisible = function () {
-            var props = Overlays.getProperties(this.handLine1, ["visible"]);
-            if (props.hasOwnProperty("visible")) {
-                return props.visible;
-            }
-            return false;
-        }
 
         this.goodToStart = false;
 
@@ -563,17 +456,16 @@ Script.include("/~/system/libraries/Xform.js");
                             return makeRunningValues(false, [], []);
                         }
                     }
+                    // If we're intersecting and in the right rotation...
                     if (ctrlrPick.intersects && correctRotation) {
-                        var ctrlrVec = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin);
-                        var headVec = Vec3.subtract(headPick.intersection, headPick.searchRay.origin);
-
-                        var headVec2 = projectToHorizontal(headVec);
-                        var ctrlrVec2 = projectToHorizontal(ctrlrVec);
+                        var ctrlrVec = projectToHorizontal(Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin));
+                        var headVec = projectToHorizontal(Vec3.subtract(headPick.intersection, headPick.searchRay.origin));
 
                         // headDist is the distance between intersection and the avatar's look vector.
-                        var headDist = vecInDirWithMagOf(headVec2, ctrlrVec2);
+                        var headDist = vecInDirWithMagOf(headVec, ctrlrVec);
 
-                        var distance = Vec3.length(Vec3.subtract(headDist, ctrlrVec2));
+                        // Check if distance is acceptable to start showing the beams.
+                        var distance = Vec3.length(Vec3.subtract(headDist, ctrlrVec));
                         if (distance <= (ctrlrPick.distance * EXP3_DISTANCE_RATIO)) {
                             this.goodToStart = true;
                             return makeRunningValues(false, [], []);
@@ -587,7 +479,6 @@ Script.include("/~/system/libraries/Xform.js");
                     var degrees = toDegrees(Vec3.getAngle(headDir, ctrlrDir));
                     if (degrees >= EXP3_DISABLE_LASER_ANGLE) {
                         this.goodToStart = false;
-                        this.timer = 0.0;
                         this.setLasersVisibility(false);
                         return makeRunningValues(false, [], []);
                     }
@@ -595,16 +486,14 @@ Script.include("/~/system/libraries/Xform.js");
                     this.setLasersVisibility(true);
                     if (this.HEAD_LASER_ENABLED) { this.updateHeadLine(headPick); }
                     this.updateHandLine(ctrlrPick);
-                    if (this.timer < EXP3_STARE_THRESHOLD) {
-                        this.timer += (this.time >= EXP3_STARE_THRESHOLD) ? 0 : deltaTime;
-                        //return makeRunningValues(false, [], []);
-                    }
+                    //if (this.timer < EXP3_STARE_THRESHOLD) {
+                    //    this.timer += (this.time >= EXP3_STARE_THRESHOLD) ? 0 : deltaTime;
+                    //    //return makeRunningValues(false, [], []);
+                    //}
+
+                    // If the trigger's pulled, start the action. If not, don't.
                     if (controllerData.triggerClicks[this.hand]) {
-                        //otherModule.timer = 0.0;
-                        this.timer = 0.0;
-                        //this.setLasersVisibility(false);
                         this.prepareDistanceRotatingData(controllerData);
-                        //this.goodToStart = false;
                         return makeRunningValues(true, [], []);
                     } else {
                         return makeRunningValues(false, [], []);
@@ -612,12 +501,10 @@ Script.include("/~/system/libraries/Xform.js");
                 } else {
                     this.destroyContextOverlay();
                     this.setLasersVisibility(false);
-                    this.timer = 0;
                     return makeRunningValues(false, [], []);
                 }
             }
             this.setLasersVisibility(false);
-            this.timer = 0;
             return makeRunningValues(false, [], []);
         };
 
@@ -838,26 +725,13 @@ Script.include("/~/system/libraries/Xform.js");
         };
     }
 
-    var mappingName, farGrabMapping;
-
-    function registerMappings() {
-        mappingName = 'Hifi-FarActionGrabEntity-Dev-' + Math.random();
-        farGrabMapping = Controller.newMapping(mappingName);
-
-        farGrabMapping.from(Controller.Standard.RightPrimaryThumb).peek().to(rightFarActionGrabEntity.buttonPress);
-        farGrabMapping.from(Controller.Standard.LeftPrimaryThumb).peek().to(leftFarActionGrabEntity.buttonPress);
-    }
-
     var leftFarActionGrabEntity = new FarActionGrabEntity(LEFT_HAND);
     var rightFarActionGrabEntity = new FarActionGrabEntity(RIGHT_HAND);
 
     enableDispatcherModule("LeftFarActionGrabEntity", leftFarActionGrabEntity);
     enableDispatcherModule("RightFarActionGrabEntity", rightFarActionGrabEntity);
-    registerMappings();
-    Controller.enableMapping(mappingName);
 
     function cleanup() {
-        farGrabMapping.disable();
         disableDispatcherModule("LeftFarActionGrabEntity");
         disableDispatcherModule("RightFarActionGrabEntity");
 
