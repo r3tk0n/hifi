@@ -233,6 +233,7 @@ Script.include("/~/system/libraries/controllers.js");
         this.lastRotation = Quat.IDENTITY;
         this.headAngularVelocity = 0;
         this.lastHMDOrientation = Quat.IDENTITY;
+        this.wasPointing = false;
 
         this.isReady = function(controllerData, deltaTime) {
             var otherModule = this.getOtherModule();
@@ -241,13 +242,24 @@ Script.include("/~/system/libraries/controllers.js");
             var headPick = controllerData.rayPicks[AVATAR_HEAD];        // Head raypick.
             var ctrlrPick = controllerData.rayPicks[this.hand];         // Raypick for this hand.
             var handRotation = controllerData.controllerRotAngles[this.hand];
-            //print("Handrotation: " + handRotation);
             var correctRotation = (handRotation > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
+            var pointing = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
 
-            //print("angularVelocity: " + this.headAngularVelocity);
-
-
-            if (!this.goodToStart && correctRotation) {
+            if (!this.goodToStart && correctRotation && pointing) {
+                // Check fargrab isn't showing...
+                var farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
+                if (farGrab) {
+                    if (farGrab.goodToStart) {
+                        farGrab.goodToStart = false;
+                        farGrab.setLasersVisibility(false);
+                        //return makeRunningValues(false, [], []);
+                    }
+                }
+                this.goodToStart = true;
+                this.wasPointing = true;
+                return makeRunningValues(false, [], []);
+            }
+            if (!this.goodToStart && correctRotation && EXP3_USE_DISTANCE) {
                 // Check fargrab isn't showing...
                 var farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
                 if (farGrab) {
@@ -296,6 +308,57 @@ Script.include("/~/system/libraries/controllers.js");
 
                 //this.setLasersVisibility(true);
                 this.showParabola();
+                // Get current hand pose information to see if the pose is valid
+                var pose = Controller.getPoseValue(handInfo[(_this.hand === RIGHT_HAND) ? 'right' : 'left'].controllerInput);
+                var mode = pose.valid ? _this.hand : 'head';
+                if (!pose.valid) {
+                    Pointers.disablePointer(_this.teleportParabolaHandVisible);
+                    Pointers.disablePointer(_this.teleportParabolaHandInvisible);
+                    Pointers.enablePointer(_this.teleportParabolaHeadVisible);
+                    Pointers.enablePointer(_this.teleportParabolaHeadInvisible);
+                } else {
+                    Pointers.enablePointer(_this.teleportParabolaHandVisible);
+                    Pointers.enablePointer(_this.teleportParabolaHandInvisible);
+                    Pointers.disablePointer(_this.teleportParabolaHeadVisible);
+                    Pointers.disablePointer(_this.teleportParabolaHeadInvisible);
+                }
+
+                // We do up to 2 picks to find a teleport location.
+                // There are 2 types of teleport locations we are interested in:
+                //   1. A visible floor. This can be any entity surface that points within some degree of "up"
+                //   2. A seat. The seat can be visible or invisible.
+                //
+                //  * In the first pass we pick against visible and invisible entities so that we can find invisible seats.
+                //    We might hit an invisible entity that is not a seat, so we need to do a second pass.
+                //  * In the second pass we pick against visible entities only.
+                //
+                var result;
+                if (mode === 'head') {
+                    result = Pointers.getPrevPickResult(_this.teleportParabolaHeadInvisible);
+                } else {
+                    result = Pointers.getPrevPickResult(_this.teleportParabolaHandInvisible);
+                }
+
+                var teleportLocationType = getTeleportTargetType(result);
+                if (teleportLocationType === TARGET.INVISIBLE) {
+                    if (mode === 'head') {
+                        result = Pointers.getPrevPickResult(_this.teleportParabolaHeadVisible);
+                    } else {
+                        result = Pointers.getPrevPickResult(_this.teleportParabolaHandVisible);
+                    }
+                    teleportLocationType = getTeleportTargetType(result);
+                }
+
+                if (teleportLocationType === TARGET.NONE) {
+                    // Use the cancel default state
+                    this.setTeleportState(mode, "cancel", "");
+                } else if (teleportLocationType === TARGET.INVALID || teleportLocationType === TARGET.INVISIBLE) {
+                    this.setTeleportState(mode, "", "cancel");
+                } else if (teleportLocationType === TARGET.SURFACE) {
+                    this.setTeleportState(mode, "teleport", "");
+                } else if (teleportLocationType === TARGET.SEAT) {
+                    this.setTeleportState(mode, "", "seat");
+                }
                 if (controllerData.triggerClicks[this.hand]) {
                     // Activate the module.
                     this.active = true;                     // Set the module to active.

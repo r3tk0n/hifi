@@ -432,6 +432,8 @@ Script.include("/~/system/libraries/Xform.js");
         this.headAngularVelocity = 0;
         this.lastHMDOrientation = Quat.IDENTITY;
 
+        this.wasPointing = false;
+
         this.isReady = function (controllerData, deltaTime) {
             if (HMD.active) {
                 //if (this.notPointingAtEntity(controllerData)) {
@@ -447,8 +449,24 @@ Script.include("/~/system/libraries/Xform.js");
                 var ctrlrPick = controllerData.rayPicks[this.hand];         // Raypick for this hand.
                 var handRotation = controllerData.controllerRotAngles[this.hand];
                 var correctRotation = (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE);    // Strip out the ternary operator for final version.
+                var pointing = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
 
-                if (!this.goodToStart && correctRotation) {
+                var thisVelocity = Quat.angle(Quat.multiply(HMD.orientation, Quat.inverse(this.lastHMDOrientation))) / deltaTime;
+                this.headAngularVelocity = EXP3_DELTA * this.headAngularVelocity + (1.0 - EXP3_DELTA) * thisVelocity;
+                this.lastHMDOrientation = HMD.orientation;
+
+                if (!this.goodToStart && pointing && correctRotation && (this.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY)) {
+                    var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
+                    if (teleport) {
+                        if (teleport.goodToStart) {
+                            teleport.goodToStart = false;
+                            //return makeRunningValues(false, [], []);
+                        }
+                    }
+                    this.goodToStart = true;
+                    this.wasPointing = true;
+                    return makeRunningValues(false, [], []);
+                } else if (!this.goodToStart && correctRotation && EXP3_USE_DISTANCE) {
                     // Check teleport isn't showing...
                     var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
                     if (teleport) {
@@ -458,12 +476,8 @@ Script.include("/~/system/libraries/Xform.js");
                         }
                     }
 
-                    var thisVelocity = Quat.angle(Quat.multiply(HMD.orientation, Quat.inverse(this.lastHMDOrientation))) / deltaTime;
-                    this.headAngularVelocity = EXP3_DELTA * this.headAngularVelocity + (1.0 - EXP3_DELTA) * thisVelocity;
-                    this.lastHMDOrientation = HMD.orientation;
-
                     // If we're intersecting and in the right rotation...
-                    if (ctrlrPick.intersects && (this.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY)) {
+                    if (ctrlrPick.intersects && (this.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY)) {// && (this.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY)) {
                         var ctrlrVec = projectToHorizontal(Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin));
                         var headVec = projectToHorizontal(Vec3.subtract(headPick.intersection, headPick.searchRay.origin));
 
@@ -484,6 +498,7 @@ Script.include("/~/system/libraries/Xform.js");
 
                     var degrees = toDegrees(Vec3.getAngle(headDir, ctrlrDir));
                     if (degrees >= EXP3_DISABLE_LASER_ANGLE) {
+                        this.wasPointing = false;
                         this.goodToStart = false;
                         this.setLasersVisibility(false);
                         return makeRunningValues(false, [], []);
@@ -513,8 +528,8 @@ Script.include("/~/system/libraries/Xform.js");
             this.updateHandLine(controllerData.rayPicks[this.hand]);
             var handRotation = controllerData.controllerRotAngles[this.hand];
             var correctRotation = (this.ROTATION_ENABLED) ? (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE) : true;    // Strip out the ternary operator for final version.
-            if (controllerData.triggerValues[this.hand] < TRIGGER_OFF_VALUE || 
-                this.notPointingAtEntity(controllerData) || this.targetIsNull() || this.buttonValue !== 0) {
+            if (controllerData.triggerValues[this.hand] < TRIGGER_OFF_VALUE ||
+                this.notPointingAtEntity(controllerData) || this.targetIsNull()) {
                 this.endFarGrabAction();
                 Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                     this.highlightedEntity);
@@ -551,6 +566,7 @@ Script.include("/~/system/libraries/Xform.js");
                     if (nearGrabReadiness[k].active && (nearGrabReadiness[k].targets[0] === this.grabbedThingID
                         || HMD.tabletID && nearGrabReadiness[k].targets[0] === HMD.tabletID)) {
                         this.endFarGrabAction();
+                        this.setLasersVisibility(false);
                         return makeRunningValues(false, [], []);
                     }
                 }

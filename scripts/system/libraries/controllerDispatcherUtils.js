@@ -96,11 +96,12 @@ EXP3_STARE_THRESHOLD = 3.0; // time, in seconds, user must hold gaze and point b
 EXP3_LOADED_COLOR = { red: 0, green: 0, blue: 255 };
 EXP3_LINE3D_NO_INTERSECTION = { red: 255, green: 0, blue: 0 };
 EXP3_LOADING_COLOR = { red: 255, green: 255, blue: 0 };
-EXP3_DISTANCE_RATIO = 0.1;
+EXP3_DISTANCE_RATIO = 0.075;
 EXP3_FARGRAB_LOADED_COLOR = { red: 0, green: 0, blue: 255 };
 EXP3_FARGRAB_LOADING_COLOR = { red: 255, green: 0, blue: 0 };
-EXP3_DISABLE_LASER_ANGLE = 80;
-EXP3_DISABLE_TELEPORT_ANGLE = 80;           // Angle from look to hand vector, used to hide teleport parabola.
+EXP3_DISABLE_LASER_ANGLE = 70;
+EXP3_DISABLE_TELEPORT_ANGLE = 70;           // Angle from look to hand vector, used to hide teleport parabola.
+EXP3_USE_DISTANCE = true;
 
 // Controller Experiment 3 Rotation Angles:
 CONTROLLER_EXP3_FARGRAB_MIN_ANGLE = 0;
@@ -112,7 +113,7 @@ EXP3_LOOK_DOWN_THRESHOLD = 15;
 // Controller Experiment 3 Angular Velocity Constants
 EXP3_HEAD_MAX_ANGULAR_VELOCITY = 0.07;
 EXP3_HAND_MAX_ANGULAR_VELOCITY = 0.1;
-EXP3_DELTA = 0.5;                           // Delta for trailing average
+EXP3_DELTA = 0.15;                           // Delta for trailing average
 
 COLORS_GRAB_SEARCHING_HALF_SQUEEZE = { red: 10, green: 10, blue: 255 };
 COLORS_GRAB_SEARCHING_FULL_SQUEEZE = { red: 250, green: 10, blue: 10 };
