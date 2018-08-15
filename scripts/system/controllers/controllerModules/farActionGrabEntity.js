@@ -121,8 +121,8 @@ Script.include("/~/system/libraries/Xform.js");
             550,
             this.hand === RIGHT_HAND ? ["rightHand"] : ["leftHand"],
             [],
-            100);
-            //makeLaserParams(this.hand, false));
+            100,
+            makeLaserParams(this.hand, false));
 
 
         this.handToController = function() {
@@ -447,58 +447,14 @@ Script.include("/~/system/libraries/Xform.js");
                 var ctrlrPick = controllerData.rayPicks[this.hand];         // Raypick for this hand.
                 var handRotation = controllerData.controllerRotAngles[this.hand];
                 var correctRotation = (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE);    // Strip out the ternary operator for final version.
+                var pointing = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
+                var thumbUp = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightThumbUp : Controller.Standard.LeftThumbUp);
 
-                if (!this.goodToStart && correctRotation) {
-                    // Check teleport isn't showing...
-                    var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
-                    if (teleport) {
-                        if (teleport.goodToStart) {
-                            teleport.goodToStart = false;
-                            //return makeRunningValues(false, [], []);
-                        }
-                    }
-
-                    var thisVelocity = Quat.angle(Quat.multiply(HMD.orientation, Quat.inverse(this.lastHMDOrientation))) / deltaTime;
-                    this.headAngularVelocity = EXP3_DELTA * this.headAngularVelocity + (1.0 - EXP3_DELTA) * thisVelocity;
-                    this.lastHMDOrientation = HMD.orientation;
-
-                    // If we're intersecting and in the right rotation...
-                    if (ctrlrPick.intersects && (this.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY)) {
-                        var ctrlrVec = projectToHorizontal(Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin));
-                        var headVec = projectToHorizontal(Vec3.subtract(headPick.intersection, headPick.searchRay.origin));
-
-                        // headDist is the distance between intersection and the avatar's look vector.
-                        var headDist = vecInDirWithMagOf(headVec, ctrlrVec);
-
-                        // Check if distance is acceptable to start showing the beams.
-                        var distance = Vec3.length(Vec3.subtract(headDist, ctrlrVec));
-                        if (distance <= (ctrlrPick.distance * EXP3_DISTANCE_RATIO)) {
-                            this.goodToStart = true;
-                            return makeRunningValues(false, [], []);
-                        }
-                    }
-                } else if (this.goodToStart) {
-                    // Do we kill the laser?
-                    var headDir = headPick.searchRay.direction;
-                    var ctrlrDir = ctrlrPick.searchRay.direction;
-
-                    var degrees = toDegrees(Vec3.getAngle(headDir, ctrlrDir));
-                    if (degrees >= EXP3_DISABLE_LASER_ANGLE) {
-                        this.goodToStart = false;
-                        this.setLasersVisibility(false);
-                        return makeRunningValues(false, [], []);
-                    }
-
+                if (correctRotation && pointing && thumbUp) {
                     this.setLasersVisibility(true);
                     this.updateHandLine(ctrlrPick);
-
-                    // If the trigger's pulled, start the action. If not, don't.
-                    if (controllerData.triggerClicks[this.hand]) {
-                        this.prepareDistanceRotatingData(controllerData);
-                        return makeRunningValues(true, [], []);
-                    } else {
-                        return makeRunningValues(false, [], []);
-                    }
+                    this.prepareDistanceRotatingData(controllerData);
+                    return makeRunningValues(true, [], []);
                 } else {
                     this.destroyContextOverlay();
                     this.setLasersVisibility(false);
@@ -512,9 +468,10 @@ Script.include("/~/system/libraries/Xform.js");
         this.run = function (controllerData) {
             this.updateHandLine(controllerData.rayPicks[this.hand]);
             var handRotation = controllerData.controllerRotAngles[this.hand];
+            var pointing = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
+            var thumbUp = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightThumbUp : Controller.Standard.LeftThumbUp);
             var correctRotation = (this.ROTATION_ENABLED) ? (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE) : true;    // Strip out the ternary operator for final version.
-            if (controllerData.triggerValues[this.hand] < TRIGGER_OFF_VALUE || 
-                this.notPointingAtEntity(controllerData) || this.targetIsNull() || this.buttonValue !== 0) {
+            if (this.notPointingAtEntity(controllerData) || this.targetIsNull() || !pointing || !thumbUp) {
                 this.endFarGrabAction();
                 Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                     this.highlightedEntity);
@@ -568,7 +525,7 @@ Script.include("/~/system/libraries/Xform.js");
 
                 var rayPickInfo = controllerData.rayPicks[this.hand];
                 if (rayPickInfo.type === Picks.INTERSECTED_ENTITY) {
-                    if (controllerData.triggerClicks[this.hand]) {
+                    if (pointing) {
                     //if (this.buttonValue === 0) {
                         var entityID = rayPickInfo.objectID;
                         Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
