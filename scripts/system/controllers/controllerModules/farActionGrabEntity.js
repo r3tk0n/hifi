@@ -434,6 +434,8 @@ Script.include("/~/system/libraries/Xform.js");
 
         this.wasPointing = false;
 
+        this.delay = 0;
+
         this.isReady = function (controllerData, deltaTime) {
             if (HMD.active) {
                 //if (this.notPointingAtEntity(controllerData)) {
@@ -455,7 +457,7 @@ Script.include("/~/system/libraries/Xform.js");
                 this.headAngularVelocity = EXP3_DELTA * this.headAngularVelocity + (1.0 - EXP3_DELTA) * thisVelocity;
                 this.lastHMDOrientation = HMD.orientation;
 
-                if (!this.goodToStart && pointing && correctRotation && (this.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY)) {
+                if (!this.goodToStart && pointing && correctRotation && (this.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY) && EXP3_USE_POINTING) {
                     var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
                     if (teleport) {
                         if (teleport.goodToStart) {
@@ -502,6 +504,17 @@ Script.include("/~/system/libraries/Xform.js");
                         this.goodToStart = false;
                         this.setLasersVisibility(false);
                         return makeRunningValues(false, [], []);
+                    }
+
+                    if (this.wasPointing && !pointing) {
+                        this.delay += deltaTime;
+                        if (this.delay >= EXP3_NOT_POINTING_TIMEOUT) {
+                            this.wasPointing = false;
+                            this.setLasersVisibility(false);
+                            this.delay = 0;
+                            this.goodToStart = false;
+                            makeRunningValues(false, [], []);
+                        }
                     }
 
                     this.setLasersVisibility(true);

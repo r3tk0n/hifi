@@ -102,6 +102,8 @@ EXP3_FARGRAB_LOADING_COLOR = { red: 255, green: 0, blue: 0 };
 EXP3_DISABLE_LASER_ANGLE = 70;
 EXP3_DISABLE_TELEPORT_ANGLE = 70;           // Angle from look to hand vector, used to hide teleport parabola.
 EXP3_USE_DISTANCE = true;
+EXP3_USE_POINTING = false;
+EXP3_NOT_POINTING_TIMEOUT = 0.2;        // Seconds
 
 // Controller Experiment 3 Rotation Angles:
 CONTROLLER_EXP3_FARGRAB_MIN_ANGLE = 0;

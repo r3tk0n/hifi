@@ -245,7 +245,7 @@ Script.include("/~/system/libraries/controllers.js");
             var correctRotation = (handRotation > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
             var pointing = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
 
-            if (!this.goodToStart && correctRotation && pointing) {
+            if (!this.goodToStart && correctRotation && pointing && EXP3_USE_POINTING && !otherModule.goodToStart) {
                 // Check fargrab isn't showing...
                 var farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
                 if (farGrab) {
@@ -258,8 +258,7 @@ Script.include("/~/system/libraries/controllers.js");
                 this.goodToStart = true;
                 this.wasPointing = true;
                 return makeRunningValues(false, [], []);
-            }
-            if (!this.goodToStart && correctRotation && EXP3_USE_DISTANCE) {
+            } else if (!this.goodToStart && correctRotation && EXP3_USE_DISTANCE && !otherModule.goodToStart) {
                 // Check fargrab isn't showing...
                 var farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
                 if (farGrab) {
@@ -274,7 +273,7 @@ Script.include("/~/system/libraries/controllers.js");
                 this.headAngularVelocity = EXP3_DELTA * this.headAngularVelocity + (1.0 - EXP3_DELTA) * thisVelocity;
                 this.lastHMDOrientation = HMD.orientation;
 
-                if (ctrlrPick.intersects && !otherModule.active && (this.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY)) {
+                if ((this.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY)) {
                     // Get the vectors for head and hand controller.
                     var ctrlrVec = projectToHorizontal(Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin));
                     var headVec = projectToHorizontal(Vec3.subtract(headPick.intersection, headPick.searchRay.origin));
@@ -303,7 +302,19 @@ Script.include("/~/system/libraries/controllers.js");
                     || (headDegreesDown >= EXP3_LOOK_DOWN_THRESHOLD && ctrlrDegreesDown <= 15)) {
                     this.goodToStart = false;
                     this.hideParabola();
+                    this.wasPointing = false;
                     return makeRunningValues(false, [], []);
+                }
+
+                if (this.wasPointing && !pointing && EXP3_USE_POINTING) {
+                    this.delay += deltaTime;
+                    if (this.delay >= EXP3_NOT_POINTING_TIMEOUT) {
+                        this.wasPointing = false;
+                        this.hideParabola();
+                        this.delay = 0;
+                        this.goodToStart = false;
+                        makeRunningValues(false, [], []);
+                    }
                 }
 
                 //this.setLasersVisibility(true);
@@ -366,14 +377,16 @@ Script.include("/~/system/libraries/controllers.js");
                     this.goodToStart = false;
                     this.hideParabola();                    // ???
                     return makeRunningValues(true, [], []);
-                } else {
-                    return makeRunningValues(false, [], []);
                 }
             }
             return makeRunningValues(false, [], []);
         };
 
-        this.run = function(controllerData, deltaTime) {
+        this.delay = 0;
+
+        this.run = function (controllerData, deltaTime) {
+            //var pointing = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
+
             // Get current hand pose information to see if the pose is valid
             var pose = Controller.getPoseValue(handInfo[(_this.hand === RIGHT_HAND) ? 'right' : 'left'].controllerInput);
             var mode = pose.valid ? _this.hand : 'head';
