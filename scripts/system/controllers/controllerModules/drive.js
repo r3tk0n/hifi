@@ -28,12 +28,6 @@ Script.include("/~/system/libraries/controllers.js");
             if (!EXP3_USE_DRIVE) {
                 return makeRunningValues(false, [], []);
             }
-            
-            //var farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
-            //var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
-            //if (teleport.wasPointing || farGrab.wasPointing || teleport.active || farGrab.active) {
-            //    return makeRunningValues(false, [], []);
-            //}
 
             var rot = controllerData.controllerRotAngles[this.hand];
             var triggerPress = controllerData.triggerValues[this.hand];
