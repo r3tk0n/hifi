@@ -2387,7 +2387,7 @@ void MyAvatar::updateActionMotor(float deltaTime) {
 
     // normalize direction
     if (_isPushing) {
-        direction /= directionLength;
+        //direction /= directionLength;             // Controller exp3, disable normalizing input direction.
     } else {
         direction = Vectors::ZERO;
     }

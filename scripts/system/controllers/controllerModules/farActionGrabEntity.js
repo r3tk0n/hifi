@@ -436,6 +436,8 @@ Script.include("/~/system/libraries/Xform.js");
 
         this.delay = 0;
 
+        this.active = false;
+
         this.isReady = function (controllerData, deltaTime) {
             if (HMD.active) {
                 //if (this.notPointingAtEntity(controllerData)) {
@@ -523,6 +525,7 @@ Script.include("/~/system/libraries/Xform.js");
                     // If the trigger's pulled, start the action. If not, don't.
                     if (controllerData.triggerClicks[this.hand]) {
                         this.prepareDistanceRotatingData(controllerData);
+                        this.active = true;
                         return makeRunningValues(true, [], []);
                     } else {
                         return makeRunningValues(false, [], []);
@@ -549,6 +552,8 @@ Script.include("/~/system/libraries/Xform.js");
                 this.highlightedEntity = null;
                 this.setLasersVisibility(false);
                 this.goodToStart = false;
+                this.wasPointing = false;
+                this.active = false;
                 return makeRunningValues(false, [], []);
             }
             this.intersectionDistance = controllerData.rayPicks[this.hand].distance;
@@ -580,6 +585,8 @@ Script.include("/~/system/libraries/Xform.js");
                         || HMD.tabletID && nearGrabReadiness[k].targets[0] === HMD.tabletID)) {
                         this.endFarGrabAction();
                         this.setLasersVisibility(false);
+                        this.wasPointing = false;
+                        this.active = false;
                         return makeRunningValues(false, [], []);
                     }
                 }
@@ -591,6 +598,8 @@ Script.include("/~/system/libraries/Xform.js");
                 for (var j = 0; j < nearGrabReadiness.length; j++) {
                     if (nearGrabReadiness[j].active) {
                         this.endFarGrabAction();
+                        this.wasPointing = false;
+                        this.active = false;
                         return makeRunningValues(false, [], []);
                     }
                 }
@@ -610,6 +619,8 @@ Script.include("/~/system/libraries/Xform.js");
                         ]);
                         if (targetProps.href !== "") {
                             AddressManager.handleLookupString(targetProps.href);
+                            this.wasPointing = false;
+                            this.active = false;
                             return makeRunningValues(false, [], []);
                         }
 
@@ -727,6 +738,8 @@ Script.include("/~/system/libraries/Xform.js");
                     Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                         this.highlightedEntity);
                     this.highlightedEntity = null;
+                    this.active = false;
+                    this.wasPointing = false;
                     return makeRunningValues(false, [], []);
                 }
             }
