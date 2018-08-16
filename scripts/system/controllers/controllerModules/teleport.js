@@ -246,6 +246,11 @@ Script.include("/~/system/libraries/controllers.js");
             var pointing = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
 
             if (!this.goodToStart && correctRotation && pointing && EXP3_USE_POINTING && !otherModule.goodToStart) {
+                this.delay += deltaTime;
+                if (this.delay <= EXP3_START_POINTING_TIMEOUT) {
+                    return makeRunningValues(false, [], []);
+                }
+                this.delay = 0;
                 // Check fargrab isn't showing...
                 var farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
                 if (farGrab) {

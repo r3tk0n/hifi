@@ -460,6 +460,11 @@ Script.include("/~/system/libraries/Xform.js");
                 this.lastHMDOrientation = HMD.orientation;
 
                 if (!this.goodToStart && pointing && correctRotation && (this.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY) && EXP3_USE_POINTING) {
+                    this.delay += deltaTime;
+                    if (this.delay <= EXP3_START_POINTING_TIMEOUT) {
+                        return makeRunningValues(false, [], []);
+                    }
+                    this.delay = 0;
                     var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
                     if (teleport) {
                         if (teleport.goodToStart) {
