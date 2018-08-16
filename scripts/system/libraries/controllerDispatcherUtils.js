@@ -106,6 +106,7 @@ EXP3_USE_POINTING = true;
 EXP3_USE_DRIVE = true;
 EXP3_NOT_POINTING_TIMEOUT = 1.5;        // Seconds
 EXP3_START_POINTING_TIMEOUT = 0.4;      // Seconds
+EXP3_START_DRIVING_TIMEOUT = 0.4;       // Seconds
 
 // Controller Experiment 3 Rotation Angles:
 CONTROLLER_EXP3_TELEPORT_MIN_ANGLE = 0;

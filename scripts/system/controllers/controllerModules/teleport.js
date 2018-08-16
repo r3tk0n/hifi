@@ -391,7 +391,6 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.run = function (controllerData, deltaTime) {
             //var pointing = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
-
             // Get current hand pose information to see if the pose is valid
             var pose = Controller.getPoseValue(handInfo[(_this.hand === RIGHT_HAND) ? 'right' : 'left'].controllerInput);
             var mode = pose.valid ? _this.hand : 'head';

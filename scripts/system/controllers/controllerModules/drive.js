@@ -18,11 +18,10 @@ Script.include("/~/system/libraries/controllers.js");
     this.isGrabbing = false;
     this.canTurn = true;
     this.previousSensorPosition;
-    this.previousPose;
     this.startWristRotation;
-    this.wristRotationVelocity;
     this.wristRotation;
     this.lastSnapTurnAngle;
+    this.delay = 0.0;
 
     function Driver(hand) {
         //print("Loaded Driver...");
@@ -42,16 +41,27 @@ Script.include("/~/system/libraries/controllers.js");
                 return makeRunningValues(false, [], []);
             }
 
+            var farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
+            var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
+
+            if (teleport.goodToStart || farGrab.goodToStart || teleport.active || farGrab.active) {
+                return makeRunningValues(false, [], []);
+            }
+
             var gripValue = Controller.getValue((hand == 1) ? Controller.Standard.RT : Controller.Standard.LT);
             var squeezed = gripValue > TRIGGER_ON;
             var released = gripValue < TRIGGER_OFF;
             var pose = Controller.getPoseValue((hand == 1) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
 
             if (squeezed & !this.isGrabbing) {
+                this.delay += deltaTime;
+                if (this.delay <= EXP3_START_DRIVING_TIMEOUT) {
+                    return makeRunningValues(false, [], []);
+                }
+                this.delay = 0;
                 this.isGrabbing = true;
                 this.smoothedRotation = Quat.angleAxis(0, Quat.getUp(MyAvatar.orientation));
                 this.startWristRotation = Vec3.orientedAngle(Quat.getFront(pose.rotation), Vec3.UNIT_Y, Vec3.UNIT_Y);
-                this.wristRotationVelocity = 0;
                 this.wristRotation = 0;
                 this.lastSnapTurnAngle = 0;
                 this.active = true;
@@ -76,14 +86,9 @@ Script.include("/~/system/libraries/controllers.js");
             }
             if (squeezed) {
                 var pose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
-                var sensorToWorldMatrix = MyAvatar.getSensorToWorldMatrix();
-                var worldToSensorMatrix = Mat4.inverse(sensorToWorldMatrix);
-                var avatarToWorldMatrix = Mat4.createFromRotAndTrans(MyAvatar.orientation, MyAvatar.position);
-                var sensorPosition = Mat4.transformPoint(worldToSensorMatrix, Mat4.transformPoint(avatarToWorldMatrix, pose.translation));
 
                 var newWristRotation = Vec3.orientedAngle(Quat.getFront(pose.rotation), Vec3.UNIT_Y, Vec3.UNIT_Y) - this.startWristRotation;
                 newWristRotation *= ((this.hand === LEFT_HAND) ? 1 : -1);
-                this.wristRotationVelocity = newWristRotation - this.wristRotation;
                 this.wristRotation = newWristRotation;
 
                 if (this.wristRotation - this.lastSnapTurnAngle > SNAP_TURN_WRIST_ANGLE) {
@@ -94,9 +99,6 @@ Script.include("/~/system/libraries/controllers.js");
                     this.lastSnapTurnAngle = this.wristRotation;
                     MyAvatar.orientation = Quat.multiply(MyAvatar.orientation, Quat.angleAxis(-SNAP_TURN_ANGLE, Vec3.UNIT_Y));
                 }
-
-                this.previousPose = pose;
-                this.previousSensorPosition = sensorPosition;
             }
 
             return makeRunningValues(true, [], []);
