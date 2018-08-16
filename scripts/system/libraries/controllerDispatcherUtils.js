@@ -119,6 +119,15 @@ CONTROLLER_EXP3_DRIVE_MIN_ANGLE = 135;
 CONTROLLER_EXP3_DRIVE_MAX_ANGLE = 180;
 EXP3_LOOK_DOWN_THRESHOLD = 15;
 
+SNAP_TURN_WRIST_ANGLE = 22.5;       //  How far must you turn wrist to snap turn?
+SNAP_TURN_ANGLE = 22.5;             //  Degrees to snap turn 
+MAX_SPEED = 3.0;                    //  Max walking speed in m/sec, both hands = 2X
+MIN_GRIP_MOVE = 0.2;                //  Smallest pressure that will cause movement, to allow snap turn below
+TRIGGER_ON = 0.1;
+TRIGGER_OFF = 0.05;
+
+var MAX_SENSOR_CHANGE = 0.10;
+
 // Controller Experiment 3 Angular Velocity Constants
 EXP3_HEAD_MAX_ANGULAR_VELOCITY = 0.07;
 EXP3_HAND_MAX_ANGULAR_VELOCITY = 0.1;

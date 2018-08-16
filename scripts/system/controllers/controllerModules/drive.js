@@ -15,50 +15,90 @@ Script.include("/~/system/libraries/controllers.js");
 
 (function () {// BEGIN LOCAL_SCOPE
 
-    var mappingName, driverMapping;
+    this.isGrabbing = false;
+    this.canTurn = true;
+    this.previousSensorPosition;
+    this.previousPose;
+    this.startWristRotation;
+    this.wristRotationVelocity;
+    this.wristRotation;
+    this.lastSnapTurnAngle;
 
     function Driver(hand) {
         //print("Loaded Driver...");
         var _this = this;
         this.hand = hand;
         this.active = false;
-        this.triggerClicked = 0;
+
+        var mappingName, driverMapping;
+
+        this.getOtherModule = function() {
+            return (this.hand === RIGHT_HAND) ? leftDriver : rightDriver;
+        }
 
         this.isReady = function (controllerData, deltaTime) {
-            if (!EXP3_USE_DRIVE) {
+            var otherModule = this.getOtherModule();
+            if (!EXP3_USE_DRIVE || otherModule.active) {
                 return makeRunningValues(false, [], []);
             }
 
-            var rot = controllerData.controllerRotAngles[this.hand];
-            var triggerPress = controllerData.triggerValues[this.hand];
-            var pressedEnough = (triggerPress >= TRIGGER_ON_VALUE && triggerPress <= 0.9);
-            var correctRotation = (rot >= CONTROLLER_EXP3_DRIVE_MIN_ANGLE && rot <= CONTROLLER_EXP3_DRIVE_MAX_ANGLE);
-            if (pressedEnough && correctRotation) {
-                //print("We're in the correct rotation and it's pulled enough.");
+            var gripValue = Controller.getValue((hand == 1) ? Controller.Standard.RT : Controller.Standard.LT);
+            var squeezed = gripValue > TRIGGER_ON;
+            var released = gripValue < TRIGGER_OFF;
+            var pose = Controller.getPoseValue((hand == 1) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+
+            if (squeezed & !this.isGrabbing) {
+                this.isGrabbing = true;
+                this.smoothedRotation = Quat.angleAxis(0, Quat.getUp(MyAvatar.orientation));
+                this.startWristRotation = Vec3.orientedAngle(Quat.getFront(pose.rotation), Vec3.UNIT_Y, Vec3.UNIT_Y);
+                this.wristRotationVelocity = 0;
+                this.wristRotation = 0;
+                this.lastSnapTurnAngle = 0;
                 this.active = true;
-                this.registerMappings();
                 Controller.enableMapping(mappingName);
-                this.triggerClicked = 0;
-                return makeRunningValues(true, [{ laserInfo: makeLaserParams(this.hand, false) }], []);
+                return makeRunningValues(true, [], []);
             }
-            this.triggerClicked = controllerData.triggerClicks[this.hand];
+
             return makeRunningValues(false, [], []);
         };
 
         this.run = function (controllerData, deltaTime) {
-            //if (this.triggerClicked && !controllerData.triggerClicks[this.hand]) {
-                //print("Trigger clicked prior and not clicked now for test...");
-                var triggerPress = controllerData.triggerValues[this.hand];
-                var pressedEnough = (triggerPress >= TRIGGER_OFF_VALUE);
-                if (!pressedEnough) {
-                    driverMapping.disable();
-                    this.triggerClicked = 0;
-                    this.active = false;
-                    return makeRunningValues(false, [], []);
+            var gripValue = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT);
+            var squeezed = gripValue > TRIGGER_ON;
+            var released = gripValue < TRIGGER_OFF;
+
+            if (this.isGrabbing && released) {
+                this.active = false;
+                this.isGrabbing = false;
+                driverMapping.disable();
+                print("Release!");
+                return makeRunningValues(false, [], []);
+            }
+            if (squeezed) {
+                var pose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+                var sensorToWorldMatrix = MyAvatar.getSensorToWorldMatrix();
+                var worldToSensorMatrix = Mat4.inverse(sensorToWorldMatrix);
+                var avatarToWorldMatrix = Mat4.createFromRotAndTrans(MyAvatar.orientation, MyAvatar.position);
+                var sensorPosition = Mat4.transformPoint(worldToSensorMatrix, Mat4.transformPoint(avatarToWorldMatrix, pose.translation));
+
+                var newWristRotation = Vec3.orientedAngle(Quat.getFront(pose.rotation), Vec3.UNIT_Y, Vec3.UNIT_Y) - this.startWristRotation;
+                newWristRotation *= ((this.hand === LEFT_HAND) ? 1 : -1);
+                this.wristRotationVelocity = newWristRotation - this.wristRotation;
+                this.wristRotation = newWristRotation;
+
+                if (this.wristRotation - this.lastSnapTurnAngle > SNAP_TURN_WRIST_ANGLE) {
+                    this.lastSnapTurnAngle = this.wristRotation;
+                    MyAvatar.orientation = Quat.multiply(MyAvatar.orientation, Quat.angleAxis(SNAP_TURN_ANGLE, Vec3.UNIT_Y));
                 }
-                return makeRunningValues(true, [], []);
-            //}
-            //this.triggerClicked = controllerData.triggerClicks[this.hand];
+                if (this.lastSnapTurnAngle - this.wristRotation > SNAP_TURN_WRIST_ANGLE) {
+                    this.lastSnapTurnAngle = this.wristRotation;
+                    MyAvatar.orientation = Quat.multiply(MyAvatar.orientation, Quat.angleAxis(-SNAP_TURN_ANGLE, Vec3.UNIT_Y));
+                }
+
+                this.previousPose = pose;
+                this.previousSensorPosition = sensorPosition;
+            }
+
             return makeRunningValues(true, [], []);
         };
 
@@ -106,6 +146,8 @@ Script.include("/~/system/libraries/controllers.js");
 
     var leftDriver = new Driver(LEFT_HAND);
     var rightDriver = new Driver(RIGHT_HAND);
+    leftDriver.registerMappings();
+    rightDriver.registerMappings();
 
     enableDispatcherModule("LeftDriver", leftDriver);
     enableDispatcherModule("RightDriver", rightDriver);
