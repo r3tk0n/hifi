@@ -432,6 +432,9 @@ Script.include("/~/system/libraries/Xform.js");
         this.headAngularVelocity = 0;
         this.lastHMDOrientation = Quat.IDENTITY;
 
+        this.delay = 0;
+        this.wasPointing = 0;
+
         this.isReady = function (controllerData, deltaTime) {
             if (HMD.active) {
                 //if (this.notPointingAtEntity(controllerData)) {
@@ -450,8 +453,9 @@ Script.include("/~/system/libraries/Xform.js");
                 var pointing = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
                 var thumbUp = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightThumbUp : Controller.Standard.LeftThumbUp);
 
-                if (correctRotation && pointing && thumbUp) {
+                if (correctRotation && pointing) {
                     this.setLasersVisibility(true);
+                    this.wasPointing = true;
                     this.updateHandLine(ctrlrPick);
                     this.prepareDistanceRotatingData(controllerData);
                     return makeRunningValues(true, [], []);
@@ -465,13 +469,22 @@ Script.include("/~/system/libraries/Xform.js");
             return makeRunningValues(false, [], []);
         };
 
-        this.run = function (controllerData) {
+        this.run = function (controllerData, deltaTime) {
             this.updateHandLine(controllerData.rayPicks[this.hand]);
             var handRotation = controllerData.controllerRotAngles[this.hand];
             var pointing = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
             var thumbUp = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightThumbUp : Controller.Standard.LeftThumbUp);
             var correctRotation = (this.ROTATION_ENABLED) ? (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE) : true;    // Strip out the ternary operator for final version.
-            if (this.notPointingAtEntity(controllerData) || this.targetIsNull() || !pointing || !thumbUp) {
+            if (this.wasPointing && !pointing) {
+                this.delay += deltaTime;
+                if (this.delay >= EXP3_NOT_POINTING_TIMEOUT) {
+                    this.wasPointing = false;
+                    this.setLasersVisibility(false);
+                    this.delay = 0;
+                    makeRunningValues(false, [], []);
+                }
+            }
+            if (this.notPointingAtEntity(controllerData) || this.targetIsNull() || !pointing) {
                 this.endFarGrabAction();
                 Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                     this.highlightedEntity);

@@ -234,23 +234,37 @@ Script.include("/~/system/libraries/controllers.js");
         this.headAngularVelocity = 0;
         this.lastHMDOrientation = Quat.IDENTITY;
 
+        this.delay = 0;
+        this.wasPointing = false;
+
         this.isReady = function(controllerData, deltaTime) {
             var otherModule = this.getOtherModule();
             if (HMD.active) {
                 var handRotation = controllerData.controllerRotAngles[this.hand];
                 var correctRotation = (handRotation > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
                 var pointing = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
-                var thumbUp = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightThumbUp : Controller.Standard.LeftThumbUp);
-                if (correctRotation && pointing && thumbUp) {
+                if (correctRotation && pointing) {
                     this.active = true;
                     this.enterTeleport();
+                    this.wasPointing = true;
                     return makeRunningValues(true, [], []);
                 }
             }
             return makeRunningValues(false, [], []);
         };
 
-        this.run = function(controllerData, deltaTime) {
+        this.run = function (controllerData, deltaTime) {
+            var pointing = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
+            if (this.wasPointing && !pointing) {
+                this.delay += deltaTime;
+                if (this.delay >= EXP3_NOT_POINTING_TIMEOUT) {
+                    this.wasPointing = false;
+                    this.delay = 0;
+                    this.disableLasers();
+                    this.active = false;
+                    return makeRunningValues(false, [], []);
+                }
+            }
             // Get current hand pose information to see if the pose is valid
             var pose = Controller.getPoseValue(handInfo[(_this.hand === RIGHT_HAND) ? 'right' : 'left'].controllerInput);
             var mode = pose.valid ? _this.hand : 'head';
@@ -307,17 +321,9 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.teleport = function (newResult, target, controllerData) {
             var pointing = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
-            var thumbUp = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightThumbUp : Controller.Standard.LeftThumbUp);
-
-            if (!thumbUp) {
-                // Cancel if thumb down.
-                this.disableLasers();
-                this.active = false;
-                return makeRunningValues(false, [], []);
-            }
 
             var result = newResult;
-            if (pointing) {
+            if (controllerData.triggerClicks[this.hand] === 0) {
                 return makeRunningValues(true, [], []);
             }
 
