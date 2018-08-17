@@ -235,7 +235,7 @@ Script.include("/~/system/libraries/controllers.js");
         this.lastHMDOrientation = Quat.IDENTITY;
         this.wasPointing = false;
 
-
+        this.delay = 0;
 
         this.isReady = function (controllerData, deltaTime) {
             if (!EXP3_USE_TELEPORT || !HMD.active) {
@@ -282,7 +282,36 @@ Script.include("/~/system/libraries/controllers.js");
                 this.showParabola();
                 return makeRunningValues(false, [], []);
             } else if (this.goodToStart) {
-                // Do we kill the laser?
+                // Non-timer kill conditions:
+
+                // Down vector, look vector, and controller pointing vector.
+                var down = Vec3.multiply(-1, Vec3.multiplyQbyV(Quat.getUp(MyAvatar.orientation), Vec3.UNIT_Y));
+                var ctrlrDir = controllerData.rayPicks[this.hand].searchRay.direction;
+
+                // Point down...
+                var angleWithDown = toDegrees(Vec3.getAngle(down, ctrlrDir));
+                var notPointingDown = (EXP3_USE_POINTING_DOWN_FOR_OFF) ? (angleWithDown >= EXP3_POINT_DOWN_RANGE) : true;
+
+                // Angle between look dir and ctrlr dir is too far...
+                var lookDir = controllerData.rayPicks[AVATAR_HEAD].searchRay.direction;
+                var lookAndPointAngle = toDegrees(Vec3.getAngle(lookDir, ctrlrDir));
+                var lookingAndPointing = (EXP3_USE_LOOK_HAND_ANGLE) ? (lookAndPointAngle <= EXP3_POINT_AWAY_FROM_LOOK) : true;
+                
+
+                // Angle between look dir and head-to-hand vector....
+                var headToHand = Vec3.subtract(controllerData.rayPicks[this.hand].searchRay.origin, controllerData.rayPicks[AVATAR_HEAD].searchRay.origin);
+                var headToHandAngleWithHead = toDegrees(Vec3.getAngle(lookDir, headToHand));
+                var handInView = (EXP3_USE_LOOK_HAND_POS) ? (headToHandAngleWithHead <= EXP3_POINT_AWAY_FROM_LOOK) : true;
+
+                if (!lookingAndPointing || !handInView || !notPointingDown) {
+                    this.wasPointing = false;
+                    this.hideParabola();
+                    this.delay = 0;
+                    this.goodToStart = 0;
+                    return makeRunningValues(false, [], []);
+                }
+
+                // Timed kill conditions.
                 if (this.wasPointing && !pointing) {
                     this.delay += deltaTime;
                     if (this.delay >= EXP3_NOT_POINTING_TIMEOUT) {
@@ -293,6 +322,8 @@ Script.include("/~/system/libraries/controllers.js");
                         return makeRunningValues(false, [], []);
                     }
                 }
+
+                // Update the parabola pointer:
 
                 // We do up to 2 picks to find a teleport location.
                 // There are 2 types of teleport locations we are interested in:
@@ -334,8 +365,6 @@ Script.include("/~/system/libraries/controllers.js");
             }
             return makeRunningValues(false, [], []);
         };
-
-        this.delay = 0;
 
         this.run = function (controllerData, deltaTime) {
             //var pointing = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);

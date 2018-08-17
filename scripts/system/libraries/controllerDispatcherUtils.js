@@ -126,8 +126,9 @@ EXP3_USE_DISTANCE = false;
 EXP3_ALLOW_TWO_TELEPORTERS = true;
 
 // Deactivation Flags
-EXP3_USE_NOSE_HAND_ANGLE = true;
-EXP3_USE_HOLSTER = true;
+EXP3_USE_LOOK_HAND_ANGLE = false;
+EXP3_USE_LOOK_HAND_POS = true;
+EXP3_USE_POINTING_DOWN_FOR_OFF = false;
 
 // Controller Experiment 3 Rotation Angles:
 CONTROLLER_EXP3_TELEPORT_MIN_ANGLE = 0;
@@ -137,6 +138,8 @@ CONTROLLER_EXP3_FARGRAB_MAX_ANGLE = 135;
 CONTROLLER_EXP3_DRIVE_MIN_ANGLE = 135;
 CONTROLLER_EXP3_DRIVE_MAX_ANGLE = 180;
 EXP3_LOOK_DOWN_THRESHOLD = 15;
+EXP3_POINT_AWAY_FROM_LOOK = 25;
+EXP3_POINT_DOWN_RANGE = 10;
 
 // Controller Experiment 3 Head Angular Velocity Constants
 EXP3_HEAD_MAX_ANGULAR_VELOCITY = 0.1;
@@ -145,9 +148,6 @@ EXP3_DELTA = 0.9;                           // Delta for trailing average
 
 // Controller Experiment 3 Controller Linear Velocity Constants
 EXP3_MAX_CTRLR_VELOCITY = 0.025;        // m/s
-
-// Controller Experiment 3 Holster Constants
-EXP3_MAX_HOLSTER_DIST = 0.2;           // meters
 
 // Drive snap-turn constants.
 SNAP_TURN_WRIST_ANGLE = 22.5;       //  How far must you turn wrist to snap turn?
