@@ -100,6 +100,10 @@ EXP3_LINE3D_NO_INTERSECTION = { red: 255, green: 0, blue: 0 };
 EXP3_LOADING_COLOR = { red: 255, green: 255, blue: 0 };
 EXP3_FARGRAB_LOADED_COLOR = { red: 0, green: 0, blue: 255 };
 EXP3_FARGRAB_LOADING_COLOR = { red: 255, green: 0, blue: 0 };
+LIGHT_TEAL = { red: 0, green: 128, blue: 128 };
+BRIGHT_TEAL = { red: 0, green: 255, blue: 255 };
+RED = { red: 255, green: 0, blue: 0 };
+YELLOW = { red: 255, green: 255, blue: 0 };
 
 // Distance activation constants
 EXP3_DISTANCE_RATIO = 0.075;
@@ -112,7 +116,7 @@ EXP3_USE_TELEPORT = true;
 EXP3_USE_DRIVE = true;
 
 // Timer control constants.
-EXP3_NOT_POINTING_TIMEOUT = 0.2;        // Seconds
+EXP3_NOT_POINTING_TIMEOUT = 4;        // Seconds
 EXP3_START_POINTING_TIMEOUT = 0.025;      // Seconds
 EXP3_START_DRIVING_TIMEOUT = 0.5;       // Seconds
 
@@ -140,12 +144,14 @@ CONTROLLER_EXP3_DRIVE_MIN_ANGLE = 135;
 CONTROLLER_EXP3_DRIVE_MAX_ANGLE = 180;
 EXP3_LOOK_DOWN_THRESHOLD = 15;
 EXP3_POINT_AWAY_FROM_LOOK = 25;
+EXP3_BEAM_ON_ANGLE = 18;
+EXP3_BEAM_OFF_ANGLE = 22;
 EXP3_POINT_DOWN_RANGE = 10;
 
 // Controller Experiment 3 Head Angular Velocity Constants
 EXP3_HEAD_MAX_ANGULAR_VELOCITY = 0.1;
 EXP3_HAND_MAX_ANGULAR_VELOCITY = 0.1;
-EXP3_DELTA = 0.9;                           // Delta for trailing average
+EXP3_DELTA = 0.5;                           // Delta for trailing average
 
 // Controller Experiment 3 Controller Linear Velocity Constants
 EXP3_MAX_CTRLR_VELOCITY = 0.025;        // m/s

@@ -381,8 +381,10 @@ Script.include("/~/system/libraries/Xform.js");
         };
 
         this.handLine1 = Uuid.NULL;
+        this.handLine2 = Uuid.NULL;
 
         this.updateHandLine = function (ctrlrPick) {
+            var triggerVal = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT);
             if (Uuid.isEqual(this.handLine1, Uuid.NULL)) {
                 // We don't have a line yet...
                 // This is the segment that originates from the hand controller and ends at the LERP between start and end.
@@ -392,27 +394,66 @@ Script.include("/~/system/libraries/Xform.js");
                         color: EXP3_FARGRAB_LOADED_COLOR,
                         alpha: 1.0,
                         isSolid: true,
-                        visible: true,
+                        visible: false,
                         position: ctrlrPick.searchRay.position,
                         glow: 1,
                         lineWidth: 0.04
                     });
             }
-            if (ctrlrPick.intersects) {
+            if (Uuid.isEqual(this.handLine2, Uuid.NULL)) {
+                // This is the segment that originates from the LERP between overall line's start and end, and the endpoint
+                this.handLine2 = Overlays.addOverlay("line3d",
+                    {
+                        name: "handLine2",
+                        color: EXP3_FARGRAB_LOADING_COLOR,
+                        alpha: 1.0,
+                        isSolid: true,
+                        visible: false,
+                        position: ctrlrPick.searchRay.position
+                    });
+            }
+
+            if (this.grabbedThingID) {
+                var props = Entities.getEntityProperties(this.grabbedThingID, ["position"]);
+                Overlays.editOverlay(this.handLine1, {
+                    position: ctrlrPick.searchRay.origin,
+                    endParentID: this.grabbedThingID,
+                    endPoint: props.position,
+                    color: BRIGHT_TEAL,                 // Color for actually having grabbed something.
+                    visible: true
+                });
+                Overlays.editOverlay(this.handLine2, {
+                    visible: false
+                });
+            } else if (ctrlrPick.intersects) {
                 var startPos = ctrlrPick.searchRay.origin;
                 var endPos = ctrlrPick.intersection;
+                var progressPos = lerp(startPos, endPos, triggerVal);
                 // We have an endpoint
                 Overlays.editOverlay(this.handLine1, {
                     position: startPos,
+                    endParentID: null,
+                    endPoint: progressPos,
+                    color: YELLOW,                      // Color that slowly fills line.
+                    visible: true
+                });
+                Overlays.editOverlay(this.handLine2, {
+                    position: progressPos,
                     endPoint: endPos,
-                    color: EXP3_FARGRAB_LOADED_COLOR
+                    color: BRIGHT_TEAL,                 // Color the recedes in line.
+                    visible: true
                 });
             } else {
-                // No endpoint
                 Overlays.editOverlay(this.handLine1, {
                     position: ctrlrPick.searchRay.origin,
                     endPoint: Vec3.sum(ctrlrPick.searchRay.origin, Vec3.multiply(10, ctrlrPick.searchRay.direction)),
-                    color: EXP3_LINE3D_NO_INTERSECTION
+                    endParentID: null,
+                    color: LIGHT_TEAL,                  // Color for no intersection.
+                    visible: true
+                });
+
+                Overlays.editOverlay(this.handLine2, {
+                    visible: false
                 });
             }
         };
@@ -420,6 +461,7 @@ Script.include("/~/system/libraries/Xform.js");
         // Lazy utility function for disabling both lasers.
         this.setLasersVisibility = function (viz) {
             Overlays.editOverlay(this.handLine1, { visible: viz });
+            Overlays.editOverlay(this.handLine2, { visible: viz });
         }
 
         this.getOtherModule = function () {
@@ -452,12 +494,13 @@ Script.include("/~/system/libraries/Xform.js");
             // Controller Exp3 activation criteria.
             var headPick = controllerData.rayPicks[AVATAR_HEAD];        // Head raypick.
             var ctrlrPick = controllerData.rayPicks[this.hand];         // Raypick for this hand.
-            var handRotation = controllerData.controllerRotAngles[this.hand];   // Rotation of wrist relative to controller's Z-axis
-                
+            var rot = controllerData.controllerRotAngles[this.hand];   // Rotation of wrist relative to controller's Z-axis
+            
+            // Is the index finger pointing?
             var pointing = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
 
             // Use correct rotation.
-            var correctRotation = (EXP3_USE_CTRLR_ROTATION) ? (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE) : true;
+            var correctRotation = (EXP3_USE_CTRLR_ROTATION) ? (rot > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && rot <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE) : true;
 
             // Head stability requirement (rotational velocity)
             var correctHeadAngularVelocity = (EXP3_USE_HEAD_VELOCITY) ? (controllerData.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY) : true;
@@ -465,31 +508,15 @@ Script.include("/~/system/libraries/Xform.js");
             // Hand stability requirement (linear velocity)
             var correctControllerLinearVelocity = (EXP3_USE_CTRLR_VELOCITY) ? (Vec3.length(controllerData.handLinearVelocity[this.hand]) <= EXP3_MAX_CTRLR_VELOCITY) : true;
 
-            // Non-timer kill conditions:
+            // Pointing vector vs hand controller rotation
+            var handPose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+            var handRotation = Quat.multiply(MyAvatar.orientation, (this.hand == LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
+            var angleBetween = toDegrees(Quat.angle((Quat.rotationBetween(Quat.getFront(Camera.orientation), Quat.getUp(handRotation)))));
+            var outOfBounds = angleBetween >= EXP3_BEAM_OFF_ANGLE;
+            var inBounds = angleBetween <= EXP3_BEAM_ON_ANGLE;
 
-            // Down vector, look vector, and controller pointing vector.
-            var down = Vec3.multiply(-1, Vec3.multiplyQbyV(Quat.getUp(MyAvatar.orientation), Vec3.UNIT_Y));
-            var ctrlrDir = controllerData.rayPicks[this.hand].searchRay.direction;
-
-            // Point down...
-            var angleWithDown = toDegrees(Vec3.getAngle(down, ctrlrDir));
-            var notPointingDown = (EXP3_USE_POINTING_DOWN_FOR_OFF) ? (angleWithDown >= EXP3_POINT_DOWN_RANGE) : true;
-
-            // Angle between look dir and ctrlr dir is too far...
-            var lookDir = controllerData.rayPicks[AVATAR_HEAD].searchRay.direction;
-            var lookAndPointAngle = toDegrees(Vec3.getAngle(lookDir, ctrlrDir));
-            var lookingAndPointing = (EXP3_USE_LOOK_HAND_ANGLE) ? (lookAndPointAngle <= EXP3_POINT_AWAY_FROM_LOOK) : true;
-
-
-            // Angle between look dir and head-to-hand vector....
-            var headToHand = Vec3.subtract(controllerData.rayPicks[this.hand].searchRay.origin, controllerData.rayPicks[AVATAR_HEAD].searchRay.origin);
-            var headToHandAngleWithHead = toDegrees(Vec3.getAngle(lookDir, headToHand));
-            var handInView = (EXP3_USE_LOOK_HAND_POS) ? (headToHandAngleWithHead <= EXP3_POINT_AWAY_FROM_LOOK) : true;
-
-            // Thumb up...
-            var thumbUp = (EXP3_USE_THUMB_UP) ? Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightThumbUp : Controller.Standard.LeftThumbUp) : false;
-
-            if (!lookingAndPointing || !handInView || !notPointingDown | thumbUp) {
+            // Kill the beam if the controller pointing vector is too far from the look vector.
+            if (outOfBounds) {
                 this.wasPointing = false;
                 this.setLasersVisibility(false);
                 this.delay = 0;
@@ -497,14 +524,7 @@ Script.include("/~/system/libraries/Xform.js");
                 return makeRunningValues(false, [], []);
             }
 
-            if (!this.goodToStart && pointing && correctRotation && correctHeadAngularVelocity && correctControllerLinearVelocity) {
-                // Timer for beams to become active...
-                this.delay += deltaTime;
-                if (this.delay <= EXP3_START_POINTING_TIMEOUT) {
-                    return makeRunningValues(false, [], []);
-                }
-                this.delay = 0;
-
+            if (!this.goodToStart && pointing && correctRotation && correctHeadAngularVelocity && correctControllerLinearVelocity && inBounds) {
                 // Check that teleport isn't active...
                 var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
                 if (teleport) {
@@ -790,7 +810,8 @@ Script.include("/~/system/libraries/Xform.js");
     function cleanup() {
         disableDispatcherModule("LeftFarActionGrabEntity");
         disableDispatcherModule("RightFarActionGrabEntity");
-
+        Overlays.deleteOverlay(this.handLine1);
+        Overlays.deleteOverlay(this.handLine2);
     }
     Script.scriptEnding.connect(cleanup);
 }());
