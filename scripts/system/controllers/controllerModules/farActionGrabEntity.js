@@ -490,7 +490,10 @@ Script.include("/~/system/libraries/Xform.js");
             var thumbUp = (EXP3_USE_THUMB_UP) ? Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightThumbUp : Controller.Standard.LeftThumbUp) : false;
 
             if (!lookingAndPointing || !handInView || !notPointingDown | thumbUp) {
+                this.wasPointing = false;
                 this.setLasersVisibility(false);
+                this.delay = 0;
+                this.goodToStart = false;
                 return makeRunningValues(false, [], []);
             }
 
@@ -515,14 +518,6 @@ Script.include("/~/system/libraries/Xform.js");
                 this.wasPointing = true;
                 return makeRunningValues(false, [], []);
             } else if (this.goodToStart) {
-                if (!lookingAndPointing || !handInView || !notPointingDown | thumbUp) {
-                    this.wasPointing = false;
-                    this.setLasersVisibility(false);
-                    this.delay = 0;
-                    this.goodToStart = false;
-                    return makeRunningValues(false, [], []);
-                }
-
                 // Timed kill conditions.
                 if (this.wasPointing && !pointing) {
                     this.delay += deltaTime;

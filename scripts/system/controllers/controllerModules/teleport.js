@@ -285,7 +285,10 @@ Script.include("/~/system/libraries/controllers.js");
             var otherTeleportActive = (EXP3_ALLOW_TWO_TELEPORTERS) ? false : otherModule.goodToStart;
 
             if (!lookingAndPointing || !handInView || !notPointingDown | thumbUp) {
+                this.wasPointing = false;
                 this.hideParabola();
+                this.delay = 0;
+                this.goodToStart = 0;
                 return makeRunningValues(false, [], []);
             }
 
@@ -310,14 +313,6 @@ Script.include("/~/system/libraries/controllers.js");
                 this.wasPointing = true;
                 return makeRunningValues(false, [], []);
             } else if (this.goodToStart) {
-                if (!lookingAndPointing || !handInView || !notPointingDown | thumbUp) {
-                    this.wasPointing = false;
-                    this.hideParabola();
-                    this.delay = 0;
-                    this.goodToStart = 0;
-                    return makeRunningValues(false, [], []);
-                }
-
                 // Timed kill conditions.
                 if (this.wasPointing && !pointing) {
                     this.delay += deltaTime;
