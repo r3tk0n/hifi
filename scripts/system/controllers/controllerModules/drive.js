@@ -41,6 +41,12 @@ Script.include("/~/system/libraries/controllers.js");
                 return makeRunningValues(false, [], []);
             }
 
+            // Head stability requirement (rotational velocity)
+            var correctHeadAngularVelocity = (EXP3_USE_HEAD_VELOCITY) ? (controllerData.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY) : true;
+
+            // Hand stability requirement (linear velocity)
+            var correctControllerLinearVelocity = (EXP3_USE_CTRLR_VELOCITY) ? (Vec3.length(controllerData.handLinearVelocity[this.hand]) <= EXP3_MAX_CTRLR_VELOCITY) : true;
+
             var farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
             var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
 
@@ -53,7 +59,7 @@ Script.include("/~/system/libraries/controllers.js");
             var released = gripValue < TRIGGER_OFF;
             var pose = Controller.getPoseValue((hand == 1) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
 
-            if (squeezed & !this.isGrabbing) {
+            if (squeezed & !this.isGrabbing && correctControllerLinearVelocity && correctHeadAngularVelocity) {
                 this.delay += deltaTime;
                 if (this.delay <= EXP3_START_DRIVING_TIMEOUT) {
                     return makeRunningValues(false, [], []);
@@ -68,7 +74,7 @@ Script.include("/~/system/libraries/controllers.js");
                 Controller.enableMapping(mappingName);
                 return makeRunningValues(true, [], []);
             }
-
+            this.delay = 0;
             return makeRunningValues(false, [], []);
         };
 

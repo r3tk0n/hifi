@@ -89,7 +89,10 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             }
         };
 
-
+        // Velocity measurement variables.
+        this.headAngularVelocity = 0;
+        this.lastHMDOrientation = Quat.IDENTITY;
+        this.handLinearVelocity = Vec3.ZERO;
 
         this.runningPluginNames = {};
         this.leftTriggerValue = 0;
@@ -160,6 +163,20 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
                 Pointers.setIgnoreItems(_this.headPointer, _this.blacklist);
             }
         };
+
+        this.calculateHeadAngularVelocity = function (deltaTime) {
+            var thisHeadVelocity = Quat.angle(Quat.multiply(HMD.orientation, Quat.inverse(this.lastHMDOrientation))) / deltaTime;
+            this.headAngularVelocity = EXP3_DELTA * this.headAngularVelocity + (1.0 - EXP3_DELTA) * thisHeadVelocity;
+            this.lastHMDOrientation = HMD.orientation;
+            return this.headAngularVelocity;
+        }
+
+        this.calculateHandLinearVelocity = function (hand, deltaTime) {
+            var ctrlrPose = Controller.getPoseValue((hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+            var thisHandVelocity = ctrlrPose.velocity;
+            this.handLinearVelocity = Vec3.sum(Vec3.multiply(EXP3_DELTA, this.handLinearVelocity), Vec3.multiply((1.0 - EXP3_DELTA), thisHandVelocity));
+            return this.handLinearVelocity;
+        }
 
         this.update = function () {
             try {
@@ -309,7 +326,9 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
                 nearbyOverlayIDs: nearbyOverlayIDs,
                 rayPicks: rayPicks,
                 hudRayPicks: hudRayPicks,
-                mouseRayPick: mouseRayPick
+                mouseRayPick: mouseRayPick,
+                handLinearVelocity: [this.calculateHandLinearVelocity(LEFT_HAND, deltaTime), this.calculateHandLinearVelocity(RIGHT_HAND, deltaTime)],
+                headAngularVelocity: this.calculateHeadAngularVelocity(deltaTime)
             };
             if (PROFILE) {
                 Script.endProfileRange("dispatch.gather");

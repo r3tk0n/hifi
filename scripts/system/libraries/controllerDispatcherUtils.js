@@ -90,28 +90,44 @@ PICK_MAX_DISTANCE = 500; // max length of pick-ray
 DEFAULT_SEARCH_SPHERE_DISTANCE = 1000; // how far from camera to search intersection?
 NEAR_GRAB_PICK_RADIUS = 0.25; // radius used for search ray vs object for near grabbing.
 
-// Experiment3 Constants:
+// Experiment 3 & 4 Constants:
 EXP3_MAX_DISTANCE = 0.4;    // distance used between head and hand picks
 EXP3_STARE_THRESHOLD = 3.0; // time, in seconds, user must hold gaze and point before action starts
+
+// Colors.
 EXP3_LOADED_COLOR = { red: 0, green: 0, blue: 255 };
 EXP3_LINE3D_NO_INTERSECTION = { red: 255, green: 0, blue: 0 };
 EXP3_LOADING_COLOR = { red: 255, green: 255, blue: 0 };
-EXP3_DISTANCE_RATIO = 0.075;
 EXP3_FARGRAB_LOADED_COLOR = { red: 0, green: 0, blue: 255 };
 EXP3_FARGRAB_LOADING_COLOR = { red: 255, green: 0, blue: 0 };
+
+// Distance activation constants
+EXP3_DISTANCE_RATIO = 0.075;
 EXP3_DISABLE_LASER_ANGLE = 70;
 EXP3_DISABLE_TELEPORT_ANGLE = 70;           // Angle from look to hand vector, used to hide teleport parabola.
-EXP3_USE_DISTANCE = false;
-EXP3_USE_POINTING = true;
+
+// Experimental modules to activate (for debugging, mostly).
+EXP3_USE_FARGRAB = true;
+EXP3_USE_TELEPORT = true;
 EXP3_USE_DRIVE = true;
+
+// Timer control constants.
 EXP3_NOT_POINTING_TIMEOUT = 0.2;        // Seconds
-EXP3_START_POINTING_TIMEOUT = 0.1;      // Seconds
-EXP3_START_DRIVING_TIMEOUT = 0.4;       // Seconds
-EXP3_MAX_CTRLR_VELOCITY = 0.025;
+EXP3_START_POINTING_TIMEOUT = 0.025;      // Seconds
+EXP3_START_DRIVING_TIMEOUT = 0.5;       // Seconds
 
 // Activation Flags
+EXP3_USE_CTRLR_ROTATION = true;
 EXP3_USE_CTRLR_VELOCITY = true;
 EXP3_USE_HEAD_VELOCITY = true;
+EXP3_USE_DISTANCE = false;
+
+// Misc Flags
+EXP3_ALLOW_TWO_TELEPORTERS = true;
+
+// Deactivation Flags
+EXP3_USE_NOSE_HAND_ANGLE = true;
+EXP3_USE_HOLSTER = true;
 
 // Controller Experiment 3 Rotation Angles:
 CONTROLLER_EXP3_TELEPORT_MIN_ANGLE = 0;
@@ -122,19 +138,24 @@ CONTROLLER_EXP3_DRIVE_MIN_ANGLE = 135;
 CONTROLLER_EXP3_DRIVE_MAX_ANGLE = 180;
 EXP3_LOOK_DOWN_THRESHOLD = 15;
 
+// Controller Experiment 3 Head Angular Velocity Constants
+EXP3_HEAD_MAX_ANGULAR_VELOCITY = 0.1;
+EXP3_HAND_MAX_ANGULAR_VELOCITY = 0.1;
+EXP3_DELTA = 0.9;                           // Delta for trailing average
+
+// Controller Experiment 3 Controller Linear Velocity Constants
+EXP3_MAX_CTRLR_VELOCITY = 0.025;        // m/s
+
+// Controller Experiment 3 Holster Constants
+EXP3_MAX_HOLSTER_DIST = 0.2;           // meters
+
+// Drive snap-turn constants.
 SNAP_TURN_WRIST_ANGLE = 22.5;       //  How far must you turn wrist to snap turn?
 SNAP_TURN_ANGLE = 22.5;             //  Degrees to snap turn 
 MAX_SPEED = 3.0;                    //  Max walking speed in m/sec, both hands = 2X
 MIN_GRIP_MOVE = 0.2;                //  Smallest pressure that will cause movement, to allow snap turn below
 TRIGGER_ON = 0.1;
 TRIGGER_OFF = 0.05;
-
-var MAX_SENSOR_CHANGE = 0.10;
-
-// Controller Experiment 3 Angular Velocity Constants
-EXP3_HEAD_MAX_ANGULAR_VELOCITY = 0.07;
-EXP3_HAND_MAX_ANGULAR_VELOCITY = 0.1;
-EXP3_DELTA = 0.9;                           // Delta for trailing average
 
 COLORS_GRAB_SEARCHING_HALF_SQUEEZE = { red: 10, green: 10, blue: 255 };
 COLORS_GRAB_SEARCHING_FULL_SQUEEZE = { red: 250, green: 10, blue: 10 };

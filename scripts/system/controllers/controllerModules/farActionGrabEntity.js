@@ -432,7 +432,6 @@ Script.include("/~/system/libraries/Xform.js");
         this.headAngularVelocity = 0;
         this.handLinearVelocity = Vec3.ZERO;
         this.lastHMDOrientation = Quat.IDENTITY;
-        this.lastCTRLPosition = Vec3.ZERO;
 
         this.wasPointing = false;
 
@@ -441,97 +440,88 @@ Script.include("/~/system/libraries/Xform.js");
         this.active = false;
 
         this.isReady = function (controllerData, deltaTime) {
-            //print("this.goodToStart: " + this.goodToStart);
-            //print("this.active: " + this.active);
-            //print("this.waspointing: " + this.wasPointing);
-            if (HMD.active) {
-                //if (this.notPointingAtEntity(controllerData)) {
-                //    return makeRunningValues(false, [], []);
-                //}
-                this.distanceHolding = false;
-                this.distanceRotating = false;
+            if (!EXP3_USE_FARGRAB || !HMD.active) {
+                this.setLasersVisibility(false);
+                return makeRunningValues(false, [], []);
+            }
 
-                var otherModule = this.getOtherModule();
+            this.distanceHolding = false;
+            this.distanceRotating = false;
+            var otherModule = this.getOtherModule();
 
-                // Controller Exp3 activation criteria.
-                var headPick = controllerData.rayPicks[AVATAR_HEAD];        // Head raypick.
-                var ctrlrPick = controllerData.rayPicks[this.hand];         // Raypick for this hand.
-                var handRotation = controllerData.controllerRotAngles[this.hand];   // Rotation of wrist relative to controller's Z-axis
-                var correctRotation = (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE);
-                var pointing = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
-                var ctrlrPose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+            // Controller Exp3 activation criteria.
+            var headPick = controllerData.rayPicks[AVATAR_HEAD];        // Head raypick.
+            var ctrlrPick = controllerData.rayPicks[this.hand];         // Raypick for this hand.
+            var handRotation = controllerData.controllerRotAngles[this.hand];   // Rotation of wrist relative to controller's Z-axis
+                
+            var pointing = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
 
-                // Head stability requirement (rotational velocity)
-                var thisHeadVelocity = Quat.angle(Quat.multiply(HMD.orientation, Quat.inverse(this.lastHMDOrientation))) / deltaTime;
-                this.headAngularVelocity = EXP3_DELTA * this.headAngularVelocity + (1.0 - EXP3_DELTA) * thisHeadVelocity;
-                this.lastHMDOrientation = HMD.orientation;
-                var correctHeadAngularVelocity = (EXP3_USE_HEAD_VELOCITY) ? (this.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY) : true;
+            // Use correct rotation.
+            var correctRotation = (EXP3_USE_CTRLR_ROTATION) ? (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE) : true;
 
-                // Hand stability requirement (linear velocity)
-                var thisHandVelocity = ctrlrPose.velocity;
-                this.handLinearVelocity = Vec3.sum(Vec3.multiply(EXP3_DELTA, this.handLinearVelocity), Vec3.multiply((1.0 - EXP3_DELTA), thisHandVelocity));
-                var correctControllerLinearVelocity = (EXP3_USE_CTRLR_VELOCITY) ? (Vec3.length(this.handLinearVelocity) <= EXP3_MAX_CTRLR_VELOCITY) : true;
+            // Head stability requirement (rotational velocity)
+            var correctHeadAngularVelocity = (EXP3_USE_HEAD_VELOCITY) ? (controllerData.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY) : true;
 
-                // Pointing Variation...
-                if (!this.goodToStart && pointing && correctRotation && correctHeadAngularVelocity && correctControllerLinearVelocity) {
-                    // Timer for beams to become active...
-                    this.delay += deltaTime;
-                    if (this.delay <= EXP3_START_POINTING_TIMEOUT) {
-                        return makeRunningValues(false, [], []);
-                    }
-                    this.delay = 0;
+            // Hand stability requirement (linear velocity)
+            var correctControllerLinearVelocity = (EXP3_USE_CTRLR_VELOCITY) ? (Vec3.length(controllerData.handLinearVelocity[this.hand]) <= EXP3_MAX_CTRLR_VELOCITY) : true;
 
-                    // Check that teleport isn't active...
-                    var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
-                    if (teleport) {
-                        if (teleport.goodToStart) {
-                            teleport.goodToStart = false;
-                        }
-                    }
-
-                    this.goodToStart = true;
-                    this.wasPointing = true;
-                    return makeRunningValues(false, [], []);
-                } else if (this.goodToStart) {
-                    // Do we kill the laser?
-                    var headDir = headPick.searchRay.direction;
-                    var ctrlrDir = ctrlrPick.searchRay.direction;
-
-                    if (this.wasPointing && !pointing) {
-                        this.delay += deltaTime;
-                        if (this.delay >= EXP3_NOT_POINTING_TIMEOUT) {
-                            this.wasPointing = false;
-                            this.setLasersVisibility(false);
-                            this.delay = 0;
-                            this.goodToStart = false;
-                            makeRunningValues(false, [], []);
-                        }
-                    }
-
-                    this.setLasersVisibility(true);
-                    this.updateHandLine(ctrlrPick);
-
-                    // If the trigger's pulled, start the action. If not, don't.
-                    if (controllerData.triggerClicks[this.hand]) {
-                        this.prepareDistanceRotatingData(controllerData);
-                        this.active = true;
-                        this.delay = 0;
-                        this.wasPointing = false;
-                        return makeRunningValues(true, [], []);
-                    } else {
-                        return makeRunningValues(false, [], []);
-                    }
-                } else {
-                    // If the activation criteria for turning on the beams wasn't met...
-                    this.delay = 0;
-                    this.destroyContextOverlay();
-                    this.setLasersVisibility(false);
+            // Pointing Variation...
+            if (!this.goodToStart && pointing && correctRotation && correctHeadAngularVelocity && correctControllerLinearVelocity) {
+                // Timer for beams to become active...
+                this.delay += deltaTime;
+                if (this.delay <= EXP3_START_POINTING_TIMEOUT) {
                     return makeRunningValues(false, [], []);
                 }
+                this.delay = 0;
+
+                // Check that teleport isn't active...
+                var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
+                if (teleport) {
+                    if (teleport.goodToStart) {
+                        teleport.goodToStart = false;
+                        teleport.hideParabola();
+                    }
+                }
+
+                this.goodToStart = true;
+                this.wasPointing = true;
+                return makeRunningValues(false, [], []);
+            } else if (this.goodToStart) {
+                // Do we kill the laser?
+                var headDir = headPick.searchRay.direction;
+                var ctrlrDir = ctrlrPick.searchRay.direction;
+
+                if (this.wasPointing && !pointing) {
+                    this.delay += deltaTime;
+                    if (this.delay >= EXP3_NOT_POINTING_TIMEOUT) {
+                        this.wasPointing = false;
+                        this.setLasersVisibility(false);
+                        this.delay = 0;
+                        this.goodToStart = false;
+                        return makeRunningValues(false, [], []);
+                    }
+                }
+
+                this.setLasersVisibility(true);
+                this.updateHandLine(ctrlrPick);
+
+                // If the trigger's pulled, start the action. If not, don't.
+                if (controllerData.triggerClicks[this.hand]) {
+                    this.prepareDistanceRotatingData(controllerData);
+                    this.active = true;
+                    this.delay = 0;
+                    this.wasPointing = false;
+                    return makeRunningValues(true, [], []);
+                } else {
+                    return makeRunningValues(false, [], []);
+                }
+            } else {
+                // If the activation criteria for turning on the beams wasn't met...
+                this.delay = 0;
+                this.destroyContextOverlay();
+                this.setLasersVisibility(false);
+                return makeRunningValues(false, [], []);
             }
-            // Below is in case of !HMD.active...
-            this.setLasersVisibility(false);
-            return makeRunningValues(false, [], []);
         };
 
         this.run = function (controllerData) {

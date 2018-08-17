@@ -235,22 +235,37 @@ Script.include("/~/system/libraries/controllers.js");
         this.lastHMDOrientation = Quat.IDENTITY;
         this.wasPointing = false;
 
-        this.isReady = function(controllerData, deltaTime) {
-            var otherModule = this.getOtherModule();
 
+
+        this.isReady = function (controllerData, deltaTime) {
+            if (!EXP3_USE_TELEPORT || !HMD.active) {
+                return makeRunningValues(false, [], []);
+            }
+            var otherModule = this.getOtherModule();
             // Controller Exp3 activation criteria.
             var headPick = controllerData.rayPicks[AVATAR_HEAD];        // Head raypick.
             var ctrlrPick = controllerData.rayPicks[this.hand];         // Raypick for this hand.
             var handRotation = controllerData.controllerRotAngles[this.hand];
-            var correctRotation = (handRotation > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
             var pointing = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
 
-            if (!this.goodToStart && correctRotation && pointing && EXP3_USE_POINTING && !otherModule.goodToStart) {
+            // Use correct rotation.
+            var correctRotation = (handRotation > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
+
+            // Head stability requirement (rotational velocity)
+            var correctHeadAngularVelocity = (EXP3_USE_HEAD_VELOCITY) ? (controllerData.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY) : true;
+
+            // Hand stability requirement (linear velocity)
+            var correctControllerLinearVelocity = (EXP3_USE_CTRLR_VELOCITY) ? (Vec3.length(controllerData.handLinearVelocity[this.hand]) <= EXP3_MAX_CTRLR_VELOCITY) : true;
+
+            // Check other module:
+            var otherTeleportActive = (EXP3_ALLOW_TWO_TELEPORTERS) ? false : otherModule.goodToStart;
+
+            if (!this.goodToStart && correctRotation && pointing && !otherTeleportActive && correctHeadAngularVelocity && correctControllerLinearVelocity) {
                 this.delay += deltaTime;
                 if (this.delay <= EXP3_START_POINTING_TIMEOUT) {
                     return makeRunningValues(false, [], []);
                 }
-                this.delay = 0;
+
                 // Check fargrab isn't showing...
                 var farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
                 if (farGrab) {
@@ -260,83 +275,23 @@ Script.include("/~/system/libraries/controllers.js");
                         //return makeRunningValues(false, [], []);
                     }
                 }
+
+                this.delay = 0;
                 this.goodToStart = true;
                 this.wasPointing = true;
+                this.showParabola();
                 return makeRunningValues(false, [], []);
-            } else if (!this.goodToStart && correctRotation && EXP3_USE_DISTANCE && !otherModule.goodToStart) {
-                // Check fargrab isn't showing...
-                var farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
-                if (farGrab) {
-                    if (farGrab.goodToStart) {
-                        farGrab.goodToStart = false;
-                        farGrab.setLasersVisibility(false);
-                        //return makeRunningValues(false, [], []);
-                    }
-                }
-
-                var thisVelocity = Quat.angle(Quat.multiply(HMD.orientation, Quat.inverse(this.lastHMDOrientation))) / deltaTime;
-                this.headAngularVelocity = EXP3_DELTA * this.headAngularVelocity + (1.0 - EXP3_DELTA) * thisVelocity;
-                this.lastHMDOrientation = HMD.orientation;
-
-                if ((this.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY)) {
-                    // Get the vectors for head and hand controller.
-                    var ctrlrVec = projectToHorizontal(Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin));
-                    var headVec = projectToHorizontal(Vec3.subtract(headPick.intersection, headPick.searchRay.origin));
-
-                    // headDist is the distance between intersection and the avatar's look vector.
-                    var headDist = vecInDirWithMagOf(headVec, ctrlrVec);
-
-                    var distance = Vec3.length(Vec3.subtract(headDist, ctrlrVec));
-                    if (distance <= (ctrlrPick.distance * EXP3_DISTANCE_RATIO)) {
-                        this.goodToStart = true;
-                        return makeRunningValues(false, [], []);
-                    }
-                }
-            } else {
+            } else if (this.goodToStart) {
                 // Do we kill the laser?
-                var headDir = headPick.searchRay.direction;
-                var ctrlrDir = ctrlrPick.searchRay.direction;
-
-                var degrees = toDegrees(Vec3.getAngle(headDir, ctrlrDir));
-                var down = Vec3.multiply(-1, Vec3.UNIT_Y);
-
-                var headDegreesDown = toDegrees(Vec3.getAngle(headDir, down));
-                var ctrlrDegreesDown = toDegrees(Vec3.getAngle(ctrlrDir, down));
-
-                if (degrees >= EXP3_DISABLE_TELEPORT_ANGLE || !this.goodToStart
-                    || (headDegreesDown >= EXP3_LOOK_DOWN_THRESHOLD && ctrlrDegreesDown <= 15)) {
-                    this.goodToStart = false;
-                    this.hideParabola();
-                    this.wasPointing = false;
-                    return makeRunningValues(false, [], []);
-                }
-
-                if (this.wasPointing && !pointing && EXP3_USE_POINTING) {
+                if (this.wasPointing && !pointing) {
                     this.delay += deltaTime;
                     if (this.delay >= EXP3_NOT_POINTING_TIMEOUT) {
                         this.wasPointing = false;
                         this.hideParabola();
                         this.delay = 0;
                         this.goodToStart = false;
-                        makeRunningValues(false, [], []);
+                        return makeRunningValues(false, [], []);
                     }
-                }
-
-                //this.setLasersVisibility(true);
-                this.showParabola();
-                // Get current hand pose information to see if the pose is valid
-                var pose = Controller.getPoseValue(handInfo[(_this.hand === RIGHT_HAND) ? 'right' : 'left'].controllerInput);
-                var mode = pose.valid ? _this.hand : 'head';
-                if (!pose.valid) {
-                    Pointers.disablePointer(_this.teleportParabolaHandVisible);
-                    Pointers.disablePointer(_this.teleportParabolaHandInvisible);
-                    Pointers.enablePointer(_this.teleportParabolaHeadVisible);
-                    Pointers.enablePointer(_this.teleportParabolaHeadInvisible);
-                } else {
-                    Pointers.enablePointer(_this.teleportParabolaHandVisible);
-                    Pointers.enablePointer(_this.teleportParabolaHandInvisible);
-                    Pointers.disablePointer(_this.teleportParabolaHeadVisible);
-                    Pointers.disablePointer(_this.teleportParabolaHeadInvisible);
                 }
 
                 // We do up to 2 picks to find a teleport location.
@@ -349,33 +304,26 @@ Script.include("/~/system/libraries/controllers.js");
                 //  * In the second pass we pick against visible entities only.
                 //
                 var result;
-                if (mode === 'head') {
-                    result = Pointers.getPrevPickResult(_this.teleportParabolaHeadInvisible);
-                } else {
-                    result = Pointers.getPrevPickResult(_this.teleportParabolaHandInvisible);
-                }
+                result = Pointers.getPrevPickResult(_this.teleportParabolaHandInvisible);
 
                 var teleportLocationType = getTeleportTargetType(result);
                 if (teleportLocationType === TARGET.INVISIBLE) {
-                    if (mode === 'head') {
-                        result = Pointers.getPrevPickResult(_this.teleportParabolaHeadVisible);
-                    } else {
-                        result = Pointers.getPrevPickResult(_this.teleportParabolaHandVisible);
-                    }
+                    result = Pointers.getPrevPickResult(_this.teleportParabolaHandVisible);
                     teleportLocationType = getTeleportTargetType(result);
                 }
 
                 if (teleportLocationType === TARGET.NONE) {
                     // Use the cancel default state
-                    this.setTeleportState(mode, "cancel", "");
+                    this.setTeleportState(this.hand, "cancel", "");
                 } else if (teleportLocationType === TARGET.INVALID || teleportLocationType === TARGET.INVISIBLE) {
-                    this.setTeleportState(mode, "", "cancel");
+                    this.setTeleportState(this.hand, "", "cancel");
                 } else if (teleportLocationType === TARGET.SURFACE) {
-                    this.setTeleportState(mode, "teleport", "");
+                    this.setTeleportState(this.hand, "teleport", "");
                 } else if (teleportLocationType === TARGET.SEAT) {
-                    this.setTeleportState(mode, "", "seat");
+                    this.setTeleportState(this.hand, "", "seat");
                 }
-                if (controllerData.triggerClicks[this.hand]) {
+
+                if (controllerData.triggerValues[this.hand] > TRIGGER_ON_VALUE) {
                     // Activate the module.
                     this.active = true;                     // Set the module to active.
                     this.enterTeleport();                   // Activate teleport.
@@ -447,7 +395,7 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.teleport = function(newResult, target, controllerData) {
             var result = newResult;
-            if (controllerData.triggerClicks[this.hand]) {
+            if (controllerData.triggerValues[this.hand] > TRIGGER_OFF_VALUE) {
                 return makeRunningValues(true, [], []);
             }
 
