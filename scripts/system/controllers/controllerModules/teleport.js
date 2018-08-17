@@ -248,6 +248,30 @@ Script.include("/~/system/libraries/controllers.js");
             var handRotation = controllerData.controllerRotAngles[this.hand];
             var pointing = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
 
+            // Non-timer kill conditions:
+
+            // Down vector, look vector, and controller pointing vector.
+            var down = Vec3.multiply(-1, Vec3.multiplyQbyV(Quat.getUp(MyAvatar.orientation), Vec3.UNIT_Y));
+            var ctrlrDir = controllerData.rayPicks[this.hand].searchRay.direction;
+
+            // Point down...
+            var angleWithDown = toDegrees(Vec3.getAngle(down, ctrlrDir));
+            var notPointingDown = (EXP3_USE_POINTING_DOWN_FOR_OFF) ? (angleWithDown >= EXP3_POINT_DOWN_RANGE) : true;
+
+            // Angle between look dir and ctrlr dir is too far...
+            var lookDir = controllerData.rayPicks[AVATAR_HEAD].searchRay.direction;
+            var lookAndPointAngle = toDegrees(Vec3.getAngle(lookDir, ctrlrDir));
+            var lookingAndPointing = (EXP3_USE_LOOK_HAND_ANGLE) ? (lookAndPointAngle <= EXP3_POINT_AWAY_FROM_LOOK) : true;
+
+
+            // Angle between look dir and head-to-hand vector....
+            var headToHand = Vec3.subtract(controllerData.rayPicks[this.hand].searchRay.origin, controllerData.rayPicks[AVATAR_HEAD].searchRay.origin);
+            var headToHandAngleWithHead = toDegrees(Vec3.getAngle(lookDir, headToHand));
+            var handInView = (EXP3_USE_LOOK_HAND_POS) ? (headToHandAngleWithHead <= EXP3_POINT_AWAY_FROM_LOOK) : true;
+
+            // Thumb up...
+            var thumbUp = (EXP3_USE_THUMB_UP) ? Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightThumbUp : Controller.Standard.LeftThumbUp) : true;
+
             // Use correct rotation.
             var correctRotation = (handRotation > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
 
@@ -259,6 +283,11 @@ Script.include("/~/system/libraries/controllers.js");
 
             // Check other module:
             var otherTeleportActive = (EXP3_ALLOW_TWO_TELEPORTERS) ? false : otherModule.goodToStart;
+
+            if (!lookingAndPointing || !handInView || !notPointingDown | thumbUp) {
+                this.hideParabola();
+                return makeRunningValues(false, [], []);
+            }
 
             if (!this.goodToStart && correctRotation && pointing && !otherTeleportActive && correctHeadAngularVelocity && correctControllerLinearVelocity) {
                 this.delay += deltaTime;
@@ -279,31 +308,9 @@ Script.include("/~/system/libraries/controllers.js");
                 this.delay = 0;
                 this.goodToStart = true;
                 this.wasPointing = true;
-                this.showParabola();
                 return makeRunningValues(false, [], []);
             } else if (this.goodToStart) {
-                // Non-timer kill conditions:
-
-                // Down vector, look vector, and controller pointing vector.
-                var down = Vec3.multiply(-1, Vec3.multiplyQbyV(Quat.getUp(MyAvatar.orientation), Vec3.UNIT_Y));
-                var ctrlrDir = controllerData.rayPicks[this.hand].searchRay.direction;
-
-                // Point down...
-                var angleWithDown = toDegrees(Vec3.getAngle(down, ctrlrDir));
-                var notPointingDown = (EXP3_USE_POINTING_DOWN_FOR_OFF) ? (angleWithDown >= EXP3_POINT_DOWN_RANGE) : true;
-
-                // Angle between look dir and ctrlr dir is too far...
-                var lookDir = controllerData.rayPicks[AVATAR_HEAD].searchRay.direction;
-                var lookAndPointAngle = toDegrees(Vec3.getAngle(lookDir, ctrlrDir));
-                var lookingAndPointing = (EXP3_USE_LOOK_HAND_ANGLE) ? (lookAndPointAngle <= EXP3_POINT_AWAY_FROM_LOOK) : true;
-                
-
-                // Angle between look dir and head-to-hand vector....
-                var headToHand = Vec3.subtract(controllerData.rayPicks[this.hand].searchRay.origin, controllerData.rayPicks[AVATAR_HEAD].searchRay.origin);
-                var headToHandAngleWithHead = toDegrees(Vec3.getAngle(lookDir, headToHand));
-                var handInView = (EXP3_USE_LOOK_HAND_POS) ? (headToHandAngleWithHead <= EXP3_POINT_AWAY_FROM_LOOK) : true;
-
-                if (!lookingAndPointing || !handInView || !notPointingDown) {
+                if (!lookingAndPointing || !handInView || !notPointingDown | thumbUp) {
                     this.wasPointing = false;
                     this.hideParabola();
                     this.delay = 0;
@@ -322,6 +329,8 @@ Script.include("/~/system/libraries/controllers.js");
                         return makeRunningValues(false, [], []);
                     }
                 }
+
+                this.showParabola();
 
                 // Update the parabola pointer:
 
