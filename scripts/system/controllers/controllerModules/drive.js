@@ -60,11 +60,11 @@ Script.include("/~/system/libraries/controllers.js");
             var pose = Controller.getPoseValue((hand == 1) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
 
             if (squeezed & !this.isGrabbing && correctControllerLinearVelocity && correctHeadAngularVelocity) {
-                this.delay += deltaTime;
-                if (this.delay <= EXP3_START_DRIVING_TIMEOUT) {
-                    return makeRunningValues(false, [], []);
-                }
-                this.delay = 0;
+                //this.delay += deltaTime;
+                //if (this.delay <= EXP3_START_DRIVING_TIMEOUT) {
+                //    return makeRunningValues(false, [], []);
+                //}
+                //this.delay = 0;
                 this.isGrabbing = true;
                 this.smoothedRotation = Quat.angleAxis(0, Quat.getUp(MyAvatar.orientation));
                 this.startWristRotation = Vec3.orientedAngle(Quat.getFront(pose.rotation), Vec3.UNIT_Y, Vec3.UNIT_Y);
