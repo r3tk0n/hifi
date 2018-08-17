@@ -270,7 +270,7 @@ Script.include("/~/system/libraries/controllers.js");
             var handInView = (EXP3_USE_LOOK_HAND_POS) ? (headToHandAngleWithHead <= EXP3_POINT_AWAY_FROM_LOOK) : true;
 
             // Thumb up...
-            var thumbUp = (EXP3_USE_THUMB_UP) ? Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightThumbUp : Controller.Standard.LeftThumbUp) : true;
+            var thumbUp = (EXP3_USE_THUMB_UP) ? Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightThumbUp : Controller.Standard.LeftThumbUp) : false;
 
             // Use correct rotation.
             var correctRotation = (handRotation > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
