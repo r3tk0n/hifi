@@ -149,6 +149,7 @@ EXP3_POINT_AWAY_FROM_LOOK = 25;
 EXP3_BEAM_ON_ANGLE = 18;
 EXP3_BEAM_OFF_ANGLE = 22;
 EXP3_POINT_DOWN_RANGE = 10;
+SMALL_NUMBER = 0.0001;
 
 // Controller Experiment 3 Head Angular Velocity Constants
 EXP3_HEAD_MAX_ANGULAR_VELOCITY = 0.1;
@@ -165,6 +166,7 @@ MAX_SPEED = 3.0;                    //  Max walking speed in m/sec, both hands =
 MIN_GRIP_MOVE = 0.2;                //  Smallest pressure that will cause movement, to allow snap turn below
 TRIGGER_ON = 0.1;
 TRIGGER_OFF = 0.05;
+
 
 COLORS_GRAB_SEARCHING_HALF_SQUEEZE = { red: 10, green: 10, blue: 255 };
 COLORS_GRAB_SEARCHING_FULL_SQUEEZE = { red: 250, green: 10, blue: 10 };
@@ -572,6 +574,7 @@ vecInDirWithMagOf = function (u, v) {
 }
 
 lerp = function (start, end, t) {
+    if (t === 0) { t = SMALL_NUMBER; }
     return Vec3.sum(Vec3.multiply(t, end), Vec3.multiply((1 - t), start));
 }
 

@@ -394,10 +394,10 @@ Script.include("/~/system/libraries/Xform.js");
                         color: EXP3_FARGRAB_LOADED_COLOR,
                         alpha: 1.0,
                         isSolid: true,
-                        visible: false,
                         position: ctrlrPick.searchRay.position,
                         glow: 1,
-                        lineWidth: 0.04
+                        lineWidth: 0.06,
+                        visible: false
                     });
             }
             if (Uuid.isEqual(this.handLine2, Uuid.NULL)) {
@@ -408,8 +408,10 @@ Script.include("/~/system/libraries/Xform.js");
                         color: EXP3_FARGRAB_LOADING_COLOR,
                         alpha: 1.0,
                         isSolid: true,
-                        visible: false,
-                        position: ctrlrPick.searchRay.position
+                        position: ctrlrPick.searchRay.position,
+                        glow: 1,
+                        lineWidth: 0.06,
+                        visible: false
                     });
             }
 
@@ -428,20 +430,24 @@ Script.include("/~/system/libraries/Xform.js");
             } else if (ctrlrPick.intersects) {
                 var startPos = ctrlrPick.searchRay.origin;
                 var endPos = ctrlrPick.intersection;
-                var progressPos = lerp(startPos, endPos, triggerVal);
+                var progressPos = (triggerVal > 0) ? lerp(startPos, endPos, triggerVal) : startPos;
+                var tmp = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin);
+                var dir = ctrlrPick.searchRay.direction;
+                var angle = toDegrees(Vec3.getAngle(dir, tmp));
                 // We have an endpoint
                 Overlays.editOverlay(this.handLine1, {
                     position: startPos,
                     endParentID: null,
                     endPoint: progressPos,
                     color: YELLOW,                      // Color that slowly fills line.
-                    visible: true
+                    lineWidth: 0.08,
+                    visible: (triggerVal === 0) ? false : true
                 });
                 Overlays.editOverlay(this.handLine2, {
                     position: progressPos,
                     endPoint: endPos,
                     color: BRIGHT_TEAL,                 // Color the recedes in line.
-                    visible: true
+                    visible: (angle < 10)
                 });
             } else {
                 Overlays.editOverlay(this.handLine1, {
@@ -449,6 +455,7 @@ Script.include("/~/system/libraries/Xform.js");
                     endPoint: Vec3.sum(ctrlrPick.searchRay.origin, Vec3.multiply(10, ctrlrPick.searchRay.direction)),
                     endParentID: null,
                     color: LIGHT_TEAL,                  // Color for no intersection.
+                    lineWidth: 0.06,
                     visible: true
                 });
 
@@ -539,16 +546,16 @@ Script.include("/~/system/libraries/Xform.js");
                 return makeRunningValues(false, [], []);
             } else if (this.goodToStart) {
                 // Timed kill conditions.
-                if (this.wasPointing && !pointing) {
-                    this.delay += deltaTime;
-                    if (this.delay >= EXP3_NOT_POINTING_TIMEOUT) {
-                        this.wasPointing = false;
-                        this.setLasersVisibility(false);
-                        this.delay = 0;
-                        this.goodToStart = false;
-                        return makeRunningValues(false, [], []);
-                    }
-                }
+                //if (this.wasPointing && !pointing) {
+                //    this.delay += deltaTime;
+                //    if (this.delay >= EXP3_NOT_POINTING_TIMEOUT) {
+                //        this.wasPointing = false;
+                //        this.setLasersVisibility(false);
+                //        this.delay = 0;
+                //        this.goodToStart = false;
+                //        return makeRunningValues(false, [], []);
+                //    }
+                //}
 
                 this.setLasersVisibility(true);
                 this.updateHandLine(ctrlrPick);
