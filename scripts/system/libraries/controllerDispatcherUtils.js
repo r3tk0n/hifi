@@ -123,7 +123,7 @@ EXP3_START_DRIVING_TIMEOUT = 0.5;       // Seconds
 // Activation Flags
 EXP3_USE_CTRLR_ROTATION = true;
 EXP3_USE_CTRLR_VELOCITY = true;
-EXP3_USE_HEAD_VELOCITY = true;
+EXP3_USE_HEAD_VELOCITY = false;
 EXP3_USE_DISTANCE = false;
 
 // Misc Flags

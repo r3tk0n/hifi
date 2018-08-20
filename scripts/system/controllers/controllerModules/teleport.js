@@ -408,9 +408,9 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.teleport = function(newResult, target, controllerData) {
             var result = newResult;
-            if (controllerData.triggerValues[this.hand] > TRIGGER_OFF_VALUE) {
-                return makeRunningValues(true, [], []);
-            }
+            //if (controllerData.triggerValues[this.hand] > TRIGGER_OFF_VALUE) {
+            //    return makeRunningValues(true, [], []);
+            //}
 
             if (target === TARGET.NONE || target === TARGET.INVALID) {
                 // Do nothing

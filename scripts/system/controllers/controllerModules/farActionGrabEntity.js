@@ -441,7 +441,7 @@ Script.include("/~/system/libraries/Xform.js");
                     endPoint: progressPos,
                     color: YELLOW,                      // Color that slowly fills line.
                     lineWidth: 0.08,
-                    visible: (triggerVal < TRIGGER_OFF_VALUE) ? false : true
+                    visible: (triggerVal < 0.01) ? false : true
                 });
                 Overlays.editOverlay(this.handLine2, {
                     position: progressPos,
