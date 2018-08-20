@@ -255,6 +255,8 @@ Script.include("/~/system/libraries/controllers.js");
             var outOfBounds = angleBetween >= EXP3_BEAM_OFF_ANGLE;
             var inBounds = angleBetween <= EXP3_BEAM_ON_ANGLE;
 
+            print("angleBetween " + (this.hand === RIGHT_HAND ? "RIGHT_HAND" : "LEFT_HAND") + ": " + angleBetween);
+
             // Use correct rotation.
             var rot = controllerData.controllerRotAngles[this.hand];
             var correctRotation = (rot > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && rot <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
