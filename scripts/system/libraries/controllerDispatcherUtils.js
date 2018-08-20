@@ -167,6 +167,9 @@ MIN_GRIP_MOVE = 0.2;                //  Smallest pressure that will cause moveme
 TRIGGER_ON = 0.1;
 TRIGGER_OFF = 0.05;
 
+// Drive misc
+EXP3_NO_DRIVE_TIMER = 0.5;            // Seconds.
+
 
 COLORS_GRAB_SEARCHING_HALF_SQUEEZE = { red: 10, green: 10, blue: 255 };
 COLORS_GRAB_SEARCHING_FULL_SQUEEZE = { red: 250, green: 10, blue: 10 };

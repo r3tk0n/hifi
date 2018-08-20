@@ -35,6 +35,9 @@ Script.include("/~/system/libraries/controllers.js");
             return (this.hand === RIGHT_HAND) ? leftDriver : rightDriver;
         }
 
+        this.noMoveAfterTeleport = false;
+        this.timer = 0;
+
         this.isReady = function (controllerData, deltaTime) {
             var otherModule = this.getOtherModule();
             if (!EXP3_USE_DRIVE || otherModule.active) {
@@ -51,6 +54,16 @@ Script.include("/~/system/libraries/controllers.js");
             var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
 
             if (teleport.goodToStart || farGrab.goodToStart || teleport.active || farGrab.active) {
+                if (teleport.active || teleport.goodToStart) { this.noMoveAfterTeleport = true; }
+                return makeRunningValues(false, [], []);
+            }
+
+            if (this.noMoveAfterTeleport) {
+                timer += deltaTime;
+                if (timer > EXP3_NO_DRIVE_TIMER) {
+                    timer = 0;
+                    this.noMoveAfterTeleport = false;
+                }
                 return makeRunningValues(false, [], []);
             }
 
