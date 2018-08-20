@@ -168,7 +168,7 @@ TRIGGER_ON = 0.1;
 TRIGGER_OFF = 0.05;
 
 // Drive misc
-EXP3_NO_DRIVE_TIMER = 0.5;            // Seconds.
+EXP3_NO_DRIVE_TIMER = 0.25;            // Seconds.
 
 
 COLORS_GRAB_SEARCHING_HALF_SQUEEZE = { red: 10, green: 10, blue: 255 };

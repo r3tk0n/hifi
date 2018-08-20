@@ -59,9 +59,9 @@ Script.include("/~/system/libraries/controllers.js");
             }
 
             if (this.noMoveAfterTeleport) {
-                timer += deltaTime;
-                if (timer > EXP3_NO_DRIVE_TIMER) {
-                    timer = 0;
+                this.timer += deltaTime;
+                if (this.timer > EXP3_NO_DRIVE_TIMER) {
+                    this.timer = 0;
                     this.noMoveAfterTeleport = false;
                 }
                 return makeRunningValues(false, [], []);
@@ -100,7 +100,7 @@ Script.include("/~/system/libraries/controllers.js");
                 this.active = false;
                 this.isGrabbing = false;
                 driverMapping.disable();
-                print("Release!");
+                //print("Release!");
                 return makeRunningValues(false, [], []);
             }
             if (squeezed) {
