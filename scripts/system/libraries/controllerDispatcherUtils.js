@@ -5,7 +5,6 @@
 //  Distributed under the Apache License, Version 2.0.
 //  See the accompanying file LICENSE or http://www.apache.org/licenses/LICENSE-2.0.html
 
-
 /* global module, Camera, HMD, MyAvatar, controllerDispatcherPlugins:true, Quat, Vec3, Overlays, Xform,
    Selection, Uuid,
    MSECS_PER_SEC:true , LEFT_HAND:true, RIGHT_HAND:true, FORBIDDEN_GRAB_TYPES:true,
@@ -137,8 +136,9 @@ EXP3_USE_THUMB_UP = false;
 
 // Controller Experiment 3 Rotation Angles:
 CONTROLLER_EXP3_TELEPORT_MIN_ANGLE = 0;
-CONTROLLER_EXP3_TELEPORT_MAX_ANGLE = 45;
-CONTROLLER_EXP3_FARGRAB_MIN_ANGLE = 45;
+CONTROLLER_EXP3_TELEPORT_MAX_ANGLE = 43.5;
+// Three degree gap
+CONTROLLER_EXP3_FARGRAB_MIN_ANGLE = 46.5;
 CONTROLLER_EXP3_FARGRAB_MAX_ANGLE = 135;
 //CONTROLLER_EXP3_DRIVE_MIN_ANGLE = 135;
 CONTROLLER_EXP3_DRIVE_MIN_ANGLE = 0;
@@ -146,8 +146,16 @@ CONTROLLER_EXP3_DRIVE_MIN_ANGLE = 0;
 CONTROLLER_EXP3_DRIVE_MAX_ANGLE = 45;
 EXP3_LOOK_DOWN_THRESHOLD = 15;
 EXP3_POINT_AWAY_FROM_LOOK = 25;
-EXP3_BEAM_ON_ANGLE = 18;
-EXP3_BEAM_OFF_ANGLE = 22;
+
+EXP3_FARGRAB_HORIZONTAL_BEAM_ON_ANGLE = 18;
+EXP3_FARGRAB_HORIZONTAL_BEAM_OFF_ANGLE = 22;
+
+EXP3_FARGRAB_VERTICAL_BEAM_ON_ANGLE = 18;
+EXP3_FARGRAB_VERTICAL_BEAM_OFF_ANGLE = 22;
+
+EXP3_TELEPORT_BEAM_ON_ANGLE = 18;
+EXP3_TELEPORT_BEAM_OFF_ANGLE = 22;
+
 EXP3_POINT_DOWN_RANGE = 10;
 SMALL_NUMBER = 0.0001;
 
@@ -285,15 +293,15 @@ getEnabledModuleByName = function (moduleName) {
     return null;
 };
 
-getGrabbableData = function (props) {
+getGrabbableData = function (ggdProps) {
     // look in userData for a "grabbable" key, return the value or some defaults
     var grabbableData = {};
     var userDataParsed = null;
     try {
-        if (!props.userDataParsed) {
-            props.userDataParsed = JSON.parse(props.userData);
+        if (!ggdProps.userDataParsed) {
+            ggdProps.userDataParsed = JSON.parse(ggdProps.userData);
         }
-        userDataParsed = props.userDataParsed;
+        userDataParsed = ggdProps.userDataParsed;
     } catch (err) {
         userDataParsed = {};
     }
@@ -319,11 +327,11 @@ getGrabbableData = function (props) {
     return grabbableData;
 };
 
-entityIsGrabbable = function (props) {
-    var grabbable = getGrabbableData(props).grabbable;
+entityIsGrabbable = function (eigProps) {
+    var grabbable = getGrabbableData(eigProps).grabbable;
     if (!grabbable ||
-        props.locked ||
-        FORBIDDEN_GRAB_TYPES.indexOf(props.type) >= 0) {
+        eigProps.locked ||
+        FORBIDDEN_GRAB_TYPES.indexOf(eigProps.type) >= 0) {
         return false;
     }
     return true;
@@ -341,13 +349,13 @@ unhighlightTargetEntity = function (entityID) {
     Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity", entityID);
 };
 
-entityIsDistanceGrabbable = function (props) {
-    if (!entityIsGrabbable(props)) {
+entityIsDistanceGrabbable = function(eidgProps) {
+    if (!entityIsGrabbable(eidgProps)) {
         return false;
     }
 
     // we can't distance-grab non-physical
-    var isPhysical = propsArePhysical(props);
+    var isPhysical = propsArePhysical(eidgProps);
     if (!isPhysical) {
         return false;
     }
@@ -386,11 +394,11 @@ getControllerJointIndex = function (hand) {
     return -1;
 };
 
-propsArePhysical = function (props) {
-    if (!props.dynamic) {
+propsArePhysical = function (papProps) {
+    if (!papProps.dynamic) {
         return false;
     }
-    var isPhysical = (props.shapeType && props.shapeType !== 'none');
+    var isPhysical = (papProps.shapeType && papProps.shapeType !== 'none');
     return isPhysical;
 };
 
@@ -410,8 +418,9 @@ projectOntoXYPlane = function (worldPos, position, rotation, dimensions, registr
     };
 };
 
-projectOntoEntityXYPlane = function (entityID, worldPos, props) {
-    return projectOntoXYPlane(worldPos, props.position, props.rotation, props.dimensions, props.registrationPoint);
+projectOntoEntityXYPlane = function (entityID, worldPos, popProps) {
+    return projectOntoXYPlane(worldPos, popProps.position, popProps.rotation,
+                              popProps.dimensions, popProps.registrationPoint);
 };
 
 projectOntoOverlayXYPlane = function projectOntoOverlayXYPlane(overlayID, worldPos) {
@@ -430,9 +439,9 @@ entityHasActions = function (entityID) {
 ensureDynamic = function (entityID) {
     // if we distance hold something and keep it very still before releasing it, it ends up
     // non-dynamic in bullet.  If it's too still, give it a little bounce so it will fall.
-    var props = Entities.getEntityProperties(entityID, ["velocity", "dynamic", "parentID"]);
-    if (props.dynamic && props.parentID === Uuid.NULL) {
-        var velocity = props.velocity;
+    var edProps = Entities.getEntityProperties(entityID, ["velocity", "dynamic", "parentID"]);
+    if (edProps.dynamic && edProps.parentID === Uuid.NULL) {
+        var velocity = edProps.velocity;
         if (Vec3.length(velocity) < 0.05) { // see EntityMotionState.cpp DYNAMIC_LINEAR_VELOCITY_THRESHOLD
             velocity = { x: 0.0, y: 0.2, z: 0.0 };
             Entities.editEntity(entityID, { velocity: velocity });
