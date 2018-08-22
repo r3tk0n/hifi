@@ -136,8 +136,7 @@ Script.include("/~/system/libraries/controllers.js");
                     return retMe * amountPressed;
                 }
                 return 0;
-            }).
-                to(Controller.Standard.LX);
+            }).to(Controller.Standard.LX);
 
             driverMapping.from(function () {
                 var amountPressed = Controller.getValue((_this.hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT)
@@ -148,8 +147,7 @@ Script.include("/~/system/libraries/controllers.js");
                     return retMe * amountPressed;
                 }
                 return 0;
-            }).
-                to(Controller.Standard.LY);
+            }).to(Controller.Standard.LY);
         };
 
         this.cleanup = function () {
