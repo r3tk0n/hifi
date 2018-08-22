@@ -637,8 +637,15 @@ projectToHorizontal = function (u) {
 
 cancelYawAndRoll = function (q) {
     var eulerAngles = Quat.safeEulerAngles(q);
-    eulerAngles.y = 0;
-    eulerAngles.z = 0;
+    eulerAngles.y = 0;            // Cancel Yaw.
+    eulerAngles.z = 0;            // Cancel roll.
+    return Quat.fromVec3Degrees(eulerAngles);
+}
+
+cancelPitchAndRoll = function (q) {
+    var eulerAngles = Quat.safeEulerAngles(q);
+    eulerAngles.x = 0;            // Cancel pitch.
+    eulerAngles.z = 0;            // Cancel roll.
     return Quat.fromVec3Degrees(eulerAngles);
 }
 

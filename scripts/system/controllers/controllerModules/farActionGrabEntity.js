@@ -518,9 +518,16 @@ Script.include("/~/system/libraries/Xform.js");
             // Pointing vector vs hand controller rotation
             var handPose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
             var handRotation = Quat.multiply(MyAvatar.orientation, (this.hand == LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
-            var angleBetween = toDegrees(Quat.angle((Quat.rotationBetween(Quat.getFront(Camera.orientation), Quat.getUp(handRotation)))));
-            var outOfBounds = angleBetween >= EXP3_FARGRAB_HORIZONTAL_BEAM_OFF_ANGLE;
-            var inBounds = angleBetween <= EXP3_FARGRAB_HORIZONTAL_BEAM_ON_ANGLE;
+            var cameraOrientation = Quat.getFront(Camera.orientation);
+            var handOrientation = Quat.getUp(handRotation);
+            var cameraPitch = cancelYawAndRoll(cameraOrientation);
+            var handPitch = cancelYawAndRoll(handOrientation);
+            var cameraYaw = cancelPitchAndRoll(cameraOrientation);
+            var handYaw = cancelPitchAndRoll(handOrientation);
+            var angleBetweenHorizontal = toDegrees(Quat.angle(Quat.rotationBetween(cameraYaw, handYaw)));
+            var angleBetweenVertical = toDegrees(Quat.angle(Quat.rotationBetween(cameraPitch, handPitch)));
+            var outOfBounds = ((angleBetweenHorizontal >= EXP3_FARGRAB_HORIZONTAL_BEAM_OFF_ANGLE) || (angleBetweenVertical >= EXP3_FARGRAB_VERTICAL_BEAM_OFF_ANGLE));
+            var inBounds = ((angleBetweenHorizontal <= EXP3_FARGRAB_HORIZONTAL_BEAM_ON_ANGLE) || (angleBetweenVertical >= EXP3_FARGRAB_VERTICAL_BEAM_ON_ANGLE));
 
             // Kill the beam if the controller pointing vector is too far from the look vector.
             if (outOfBounds) {
