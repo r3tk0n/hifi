@@ -488,6 +488,36 @@ Script.include("/~/system/libraries/Xform.js");
 
         this.active = false;
 
+        this.updateBoundsChecks = function () {
+            var handPose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+            var handRotation = Quat.multiply(MyAvatar.orientation, (this.hand == LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
+            var cameraOrientation = Quat.getFront(Camera.orientation);
+            var handOrientation = Quat.getUp(handRotation);
+            var rotBetween = Quat.rotationBetween(cameraOrientation, handOrientation);
+            var pitchRotation = cancelYawAndRoll(rotBetween);
+            var yawRotation = cancelPitchAndRoll(rotBetween);
+            var angleBetweenHorizontal = toDegrees(Quat.angle(yawRotation));
+            var angleBetweenVertical = toDegrees(Quat.angle(pitchRotation));
+
+            this.outOfBounds = ((angleBetweenHorizontal >= EXP3_FARGRAB_HORIZONTAL_BEAM_OFF_ANGLE) || (angleBetweenVertical >= EXP3_FARGRAB_VERTICAL_BEAM_OFF_ANGLE));
+            this.inBounds = ((angleBetweenHorizontal <= EXP3_FARGRAB_HORIZONTAL_BEAM_ON_ANGLE) && (angleBetweenVertical <= EXP3_FARGRAB_VERTICAL_BEAM_ON_ANGLE));
+        }
+
+        this.isPointing = function () {
+            return Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
+        }
+
+        this.handSteady = function (controllerData) {
+            return ((EXP3_USE_CTRLR_VELOCITY) ? (Vec3.length(controllerData.handLinearVelocity[this.hand]) <= EXP3_MAX_CTRLR_VELOCITY) : true);
+        }
+
+        this.headSteady = function (controllerData) {
+            return ((EXP3_USE_HEAD_VELOCITY) ? (controllerData.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY) : true);
+        }
+
+        this.inBounds = false;
+        this.outOfBounds = false;
+
         this.isReady = function (controllerData, deltaTime) {
             if (!EXP3_USE_FARGRAB || !HMD.active) {
                 this.setLasersVisibility(false);
@@ -504,33 +534,21 @@ Script.include("/~/system/libraries/Xform.js");
             var rot = controllerData.controllerRotAngles[this.hand];   // Rotation of wrist relative to controller's Z-axis
             
             // Is the index finger pointing?
-            var pointing = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
+            var pointing = this.isPointing();
 
             // Use correct rotation.
             var correctRotation = (EXP3_USE_CTRLR_ROTATION) ? (rot > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && rot <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE) : true;
 
             // Head stability requirement (rotational velocity)
-            var correctHeadAngularVelocity = (EXP3_USE_HEAD_VELOCITY) ? (controllerData.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY) : true;
+            var correctHeadAngularVelocity = this.headSteady(controllerData);
 
             // Hand stability requirement (linear velocity)
-            var correctControllerLinearVelocity = (EXP3_USE_CTRLR_VELOCITY) ? (Vec3.length(controllerData.handLinearVelocity[this.hand]) <= EXP3_MAX_CTRLR_VELOCITY) : true;
+            var correctControllerLinearVelocity = this.handSteady(controllerData);
 
-            // Pointing vector vs hand controller rotation
-            var handPose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
-            var handRotation = Quat.multiply(MyAvatar.orientation, (this.hand == LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
-            var cameraOrientation = Quat.getFront(Camera.orientation);
-            var handOrientation = Quat.getUp(handRotation);
-            var rotBetween = Quat.rotationBetween(cameraOrientation, handOrientation);
-            var pitchRotation = cancelYawAndRoll(rotBetween);
-            var yawRotation = cancelPitchAndRoll(rotBetween);
-            var angleBetweenHorizontal = toDegrees(Quat.angle(yawRotation));
-            var angleBetweenVertical = toDegrees(Quat.angle(pitchRotation));
-
-            var outOfBounds = ((angleBetweenHorizontal >= EXP3_FARGRAB_HORIZONTAL_BEAM_OFF_ANGLE) || (angleBetweenVertical >= EXP3_FARGRAB_VERTICAL_BEAM_OFF_ANGLE));
-            var inBounds = ((angleBetweenHorizontal <= EXP3_FARGRAB_HORIZONTAL_BEAM_ON_ANGLE) && (angleBetweenVertical <= EXP3_FARGRAB_VERTICAL_BEAM_ON_ANGLE));
+            this.updateBoundsChecks();
 
             // Kill the beam if the controller pointing vector is too far from the look vector.
-            if (outOfBounds) {
+            if (this.outOfBounds) {
                 this.wasPointing = false;
                 this.setLasersVisibility(false);
                 this.delay = 0;
@@ -538,7 +556,7 @@ Script.include("/~/system/libraries/Xform.js");
                 return makeRunningValues(false, [], []);
             }
 
-            if (!this.goodToStart && pointing && correctRotation && correctHeadAngularVelocity && correctControllerLinearVelocity && inBounds) {
+            if (!this.goodToStart && pointing && correctRotation && correctHeadAngularVelocity && correctControllerLinearVelocity && this.inBounds) {
                 // Check that teleport isn't active...
                 //var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
                 //if (teleport) {
