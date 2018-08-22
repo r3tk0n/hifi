@@ -257,17 +257,18 @@ Script.include("/~/system/libraries/controllers.js");
             }
         }
 
-        this.hideParabola = function () {
-            Pointers.disablePointer(_this.teleportParabolaHandVisible);
-            Pointers.disablePointer(_this.teleportParabolaHandInvisible);
-            Pointers.disablePointer(_this.teleportParabolaHeadVisible);
-            Pointers.disablePointer(_this.teleportParabolaHeadInvisible);
-        }
-
         this.lastRotation = Quat.IDENTITY;
         this.headAngularVelocity = 0;
         this.lastHMDOrientation = Quat.IDENTITY;
         this.wasPointing = false;
+
+        this.outsideActivationBounds = function () {
+            // Angle for tests as per Phillip's numbers:
+            var handPose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+            var handRotation = Quat.multiply(MyAvatar.orientation, (this.hand == LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
+            var angleBetween = toDegrees(Quat.angle(Quat.cancelOutRollAndPitch((Quat.rotationBetween(Quat.getFront(Camera.orientation), Quat.getUp(handRotation))))));
+            return (angleBetween >= EXP3_TELEPORT_BEAM_OFF_ANGLE);
+        }
 
         this.delay = 0;
 
@@ -303,7 +304,7 @@ Script.include("/~/system/libraries/controllers.js");
 
             if (outOfBounds) {
                 this.wasPointing = false;
-                this.hideParabola();
+                this.disableLasers();
                 this.delay = 0;
                 this.goodToStart = 0;
                 return makeRunningValues(false, [], []);
@@ -326,17 +327,6 @@ Script.include("/~/system/libraries/controllers.js");
                 this.wasPointing = true;
                 return makeRunningValues(false, [], []);
             } else if (this.goodToStart) {
-                // Timed kill conditions.
-                //if (this.wasPointing && !pointing) {
-                //    this.delay += deltaTime;
-                //    if (this.delay >= EXP3_NOT_POINTING_TIMEOUT) {
-                //        this.wasPointing = false;
-                //        this.hideParabola();
-                //        this.delay = 0;
-                //        this.goodToStart = false;
-                //        return makeRunningValues(false, [], []);
-                //    }
-                //}
                 this.showParabola();
 
                 // Update the parabola pointer:
@@ -375,7 +365,7 @@ Script.include("/~/system/libraries/controllers.js");
                     this.active = true;                     // Set the module to active.
                     this.enterTeleport();                   // Activate teleport.
                     this.goodToStart = false;
-                    this.hideParabola();                    // ???
+                    this.disableLasers();                    // ???
                     return makeRunningValues(true, [], []);
                 }
             }
