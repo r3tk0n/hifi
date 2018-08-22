@@ -527,7 +527,7 @@ Script.include("/~/system/libraries/Xform.js");
             var angleBetweenHorizontal = toDegrees(Quat.angle(Quat.rotationBetween(cameraYaw, handYaw)));
             var angleBetweenVertical = toDegrees(Quat.angle(Quat.rotationBetween(cameraPitch, handPitch)));
             var outOfBounds = ((angleBetweenHorizontal >= EXP3_FARGRAB_HORIZONTAL_BEAM_OFF_ANGLE) || (angleBetweenVertical >= EXP3_FARGRAB_VERTICAL_BEAM_OFF_ANGLE));
-            var inBounds = ((angleBetweenHorizontal <= EXP3_FARGRAB_HORIZONTAL_BEAM_ON_ANGLE) || (angleBetweenVertical >= EXP3_FARGRAB_VERTICAL_BEAM_ON_ANGLE));
+            var inBounds = ((angleBetweenHorizontal <= EXP3_FARGRAB_HORIZONTAL_BEAM_ON_ANGLE) && (angleBetweenVertical <= EXP3_FARGRAB_VERTICAL_BEAM_ON_ANGLE));
 
             // Kill the beam if the controller pointing vector is too far from the look vector.
             if (outOfBounds) {
