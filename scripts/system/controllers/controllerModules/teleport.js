@@ -238,8 +238,6 @@ Script.include("/~/system/libraries/controllers.js");
             this.state = TELEPORTER_STATES.TARGETTING;
         };
 
-        this.goodToStart = false;
-
         this.showParabola = function () {
             // Get current hand pose information to see if the pose is valid
             var pose = Controller.getPoseValue(handInfo[(_this.hand === RIGHT_HAND) ? 'right' : 'left'].controllerInput);
@@ -260,7 +258,6 @@ Script.include("/~/system/libraries/controllers.js");
         this.lastRotation = Quat.IDENTITY;
         this.headAngularVelocity = 0;
         this.lastHMDOrientation = Quat.IDENTITY;
-        this.wasPointing = false;
 
         this.outsideDeactivationBounds = function () {
             // Angle for tests as per Phillip's numbers:
@@ -294,8 +291,6 @@ Script.include("/~/system/libraries/controllers.js");
             return ((EXP3_USE_HEAD_VELOCITY) ? (controllerData.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY) : true);
         }
 
-        this.delay = 0;
-
         this.isReady = function (controllerData, deltaTime) {
             if (!HMD.active) {
                 return makeRunningValues(false, [], []);
@@ -306,6 +301,7 @@ Script.include("/~/system/libraries/controllers.js");
             var handRotation = controllerData.controllerRotAngles[this.hand];
             var pointing = this.isPointing();
 
+            // Angle between look and raypick vector must be acceptable for activation.
             var outOfBounds = this.outsideDeactivationBounds();
             var inBounds = this.insideActivationBounds();
 
@@ -319,77 +315,20 @@ Script.include("/~/system/libraries/controllers.js");
             // Hand stability requirement (linear velocity)
             var correctControllerLinearVelocity = this.handSteady(controllerData);
 
-            if (outOfBounds) {
-                this.wasPointing = false;
-                this.disableLasers();
-                this.delay = 0;
-                this.goodToStart = 0;
+            if (!correctRotation || !pointing || !correctHeadAngularVelocity || !correctControllerLinearVelocity || !inBounds) {
                 return makeRunningValues(false, [], []);
             }
 
-            if (!this.goodToStart && correctRotation && pointing && correctHeadAngularVelocity && correctControllerLinearVelocity && inBounds) {
-                this.delay = 0;
-
-                // Check fargrab isn't showing...
-                var farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
-                if (farGrab) {
-                    if (farGrab.goodToStart) {
-                        farGrab.goodToStart = false;
-                        farGrab.setLasersVisibility(false);
-                        //return makeRunningValues(false, [], []);
-                    }
-                }
-
-                this.goodToStart = true;
-                this.wasPointing = true;
-                return makeRunningValues(false, [], []);
-            } else if (this.goodToStart) {
-                this.showParabola();
-
-                // Update the parabola pointer:
-
-                // We do up to 2 picks to find a teleport location.
-                // There are 2 types of teleport locations we are interested in:
-                //   1. A visible floor. This can be any entity surface that points within some degree of "up"
-                //   2. A seat. The seat can be visible or invisible.
-                //
-                //  * In the first pass we pick against visible and invisible entities so that we can find invisible seats.
-                //    We might hit an invisible entity that is not a seat, so we need to do a second pass.
-                //  * In the second pass we pick against visible entities only.
-                //
-                var result;
-                result = Pointers.getPrevPickResult(_this.teleportParabolaHandInvisible);
-
-                var teleportLocationType = getTeleportTargetType(result);
-                if (teleportLocationType === TARGET.INVISIBLE) {
-                    result = Pointers.getPrevPickResult(_this.teleportParabolaHandVisible);
-                    teleportLocationType = getTeleportTargetType(result);
-                }
-
-                if (teleportLocationType === TARGET.NONE) {
-                    // Use the cancel default state
-                    this.setTeleportState(this.hand, "cancel", "");
-                } else if (teleportLocationType === TARGET.INVALID || teleportLocationType === TARGET.INVISIBLE) {
-                    this.setTeleportState(this.hand, "", "cancel");
-                } else if (teleportLocationType === TARGET.SURFACE) {
-                    this.setTeleportState(this.hand, "teleport", "");
-                } else if (teleportLocationType === TARGET.SEAT) {
-                    this.setTeleportState(this.hand, "", "seat");
-                }
-
-                if (controllerData.triggerValues[this.hand] > TRIGGER_ON_VALUE) {
-                    // Activate the module.
-                    this.active = true;                     // Set the module to active.
-                    this.enterTeleport();                   // Activate teleport.
-                    this.goodToStart = false;
-                    this.disableLasers();                    // ???
-                    return makeRunningValues(true, [], []);
-                }
-            }
-            return makeRunningValues(false, [], []);
+            return makeRunningValues(true, [], []);
         };
 
         this.run = function (controllerData, deltaTime) {
+            if (this.outsideDeactivationBounds()) {
+                // If the angle between the look vector and pointing vector is too great, turn off.
+                this.disableLasers();
+                return makeRunningValues(false, [], []);
+            }
+
             // Get current hand pose information to see if the pose is valid
             var pose = Controller.getPoseValue(handInfo[(_this.hand === RIGHT_HAND) ? 'right' : 'left'].controllerInput);
             var mode = pose.valid ? _this.hand : 'head';
@@ -446,9 +385,9 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.teleport = function(newResult, target, controllerData) {
             var result = newResult;
-            //if (controllerData.triggerValues[this.hand] > TRIGGER_OFF_VALUE) {
-            //    return makeRunningValues(true, [], []);
-            //}
+            if (controllerData.triggerValues[this.hand] < TRIGGER_OFF_VALUE) {
+                return makeRunningValues(true, [], []);
+            }
 
             if (target === TARGET.NONE || target === TARGET.INVALID) {
                 // Do nothing

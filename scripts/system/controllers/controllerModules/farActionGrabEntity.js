@@ -540,13 +540,13 @@ Script.include("/~/system/libraries/Xform.js");
 
             if (!this.goodToStart && pointing && correctRotation && correctHeadAngularVelocity && correctControllerLinearVelocity && inBounds) {
                 // Check that teleport isn't active...
-                var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
-                if (teleport) {
-                    if (teleport.goodToStart) {
-                        teleport.goodToStart = false;
-                        teleport.hideParabola();
-                    }
-                }
+                //var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
+                //if (teleport) {
+                //    if (teleport.goodToStart) {
+                //        teleport.goodToStart = false;
+                //        teleport.hideParabola();
+                //    }
+                //}
 
                 this.goodToStart = true;
                 this.wasPointing = true;
