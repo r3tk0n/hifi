@@ -476,15 +476,9 @@ Script.include("/~/system/libraries/Xform.js");
             return otherModule;
         };
 
-        this.goodToStart = false;
-
         this.headAngularVelocity = 0;
         this.handLinearVelocity = Vec3.ZERO;
         this.lastHMDOrientation = Quat.IDENTITY;
-
-        this.wasPointing = false;
-
-        this.delay = 0;
 
         this.active = false;
 
@@ -515,8 +509,15 @@ Script.include("/~/system/libraries/Xform.js");
             return ((EXP3_USE_HEAD_VELOCITY) ? (controllerData.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY) : true);
         }
 
+        this.correctRotation = function (controllerData) {
+            var rot = controllerData.controllerRotAngles[this.hand];
+            var correctRotation = (rot > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && rot <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
+        }
+
         this.inBounds = false;
         this.outOfBounds = false;
+        this.wasClicked = false;
+        this.sameHandTeleportModule = undefined;
 
         this.isReady = function (controllerData, deltaTime) {
             if (!EXP3_USE_FARGRAB || !HMD.active) {
@@ -524,6 +525,8 @@ Script.include("/~/system/libraries/Xform.js");
                 return makeRunningValues(false, [], []);
             }
 
+            this.sameHandTeleportModule = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
+            this.wasClicked = false;
             this.distanceHolding = false;
             this.distanceRotating = false;
             var otherModule = this.getOtherModule();
@@ -536,7 +539,7 @@ Script.include("/~/system/libraries/Xform.js");
             // Is the index finger pointing?
             var pointing = this.isPointing();
 
-            // Use correct rotation.
+            // Use correct rotation of the wrist...
             var correctRotation = (EXP3_USE_CTRLR_ROTATION) ? (rot > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && rot <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE) : true;
 
             // Head stability requirement (rotational velocity)
@@ -545,79 +548,46 @@ Script.include("/~/system/libraries/Xform.js");
             // Hand stability requirement (linear velocity)
             var correctControllerLinearVelocity = this.handSteady(controllerData);
 
+            // Update internal variables checking if we're within bounds to activate...
             this.updateBoundsChecks();
 
-            // Kill the beam if the controller pointing vector is too far from the look vector.
-            if (this.outOfBounds) {
-                this.wasPointing = false;
-                this.setLasersVisibility(false);
-                this.delay = 0;
-                this.goodToStart = false;
-                return makeRunningValues(false, [], []);
-            }
-
-            if (!this.goodToStart && pointing && correctRotation && correctHeadAngularVelocity && correctControllerLinearVelocity && this.inBounds) {
-                // Check that teleport isn't active...
-                //var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
-                //if (teleport) {
-                //    if (teleport.goodToStart) {
-                //        teleport.goodToStart = false;
-                //        teleport.hideParabola();
-                //    }
-                //}
-
-                this.goodToStart = true;
-                this.wasPointing = true;
-                return makeRunningValues(false, [], []);
-            } else if (this.goodToStart) {
-                // Timed kill conditions.
-                //if (this.wasPointing && !pointing) {
-                //    this.delay += deltaTime;
-                //    if (this.delay >= EXP3_NOT_POINTING_TIMEOUT) {
-                //        this.wasPointing = false;
-                //        this.setLasersVisibility(false);
-                //        this.delay = 0;
-                //        this.goodToStart = false;
-                //        return makeRunningValues(false, [], []);
-                //    }
-                //}
-
+            // this.active will only be true if it's been set by another module for context switching...
+            if (pointing && correctRotation && correctHeadAngularVelocity && correctControllerLinearVelocity && this.inBounds || this.active) {
+                this.prepareDistanceRotatingData(controllerData);
+                this.active = true;
                 this.setLasersVisibility(true);
                 this.updateHandLine(ctrlrPick);
-
-                // If the trigger's pulled, start the action. If not, don't.
-                if (controllerData.triggerClicks[this.hand]) {
-                    this.prepareDistanceRotatingData(controllerData);
-                    this.active = true;
-                    this.delay = 0;
-                    this.wasPointing = false;
-                    return makeRunningValues(true, [], []);
-                } else {
-                    return makeRunningValues(false, [], []);
-                }
+                this.wasClicked = true;
+                return makeRunningValues(true, [], []);
             } else {
                 // If the activation criteria for turning on the beams wasn't met...
-                this.delay = 0;
                 this.destroyContextOverlay();
                 this.setLasersVisibility(false);
+                this.active = false;
                 return makeRunningValues(false, [], []);
             }
         };
 
         this.run = function (controllerData) {
-            this.delay = 0;
+            // Update internal variables checking if we're within bounds to keep alive...
+            this.updateBoundsChecks();
+            // Update the laser...
             this.updateHandLine(controllerData.rayPicks[this.hand]);
+            // Get the rotation for comparison...
             var handRotation = controllerData.controllerRotAngles[this.hand];
-            var correctRotation = (this.ROTATION_ENABLED) ? (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE) : true;    // Strip out the ternary operator for final version.
-            if (controllerData.triggerValues[this.hand] < TRIGGER_OFF_VALUE ||
-                this.notPointingAtEntity(controllerData) || this.targetIsNull()) {
+            var correctRotation = (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE);
+            // Do we need to switch to teleport?
+            var contextSwitch = (handRotation > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
+            if (contextSwitch && this.sameHandTeleportModule) { this.sameHandTeleportModule.active = true; }
+            // If the trigger's not clicked but we're grabbing something, we should release...
+            var ending = (!Uuid.isEqual(Uuid.NULL, this.grabbedThingID) && (controllerData.triggerClicks[this.hand] === 0));
+            
+            if (this.notPointingAtEntity(controllerData) || this.targetIsNull() || this.outOfBounds || ending || contextSwitch) {
                 this.endFarGrabAction();
                 Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                     this.highlightedEntity);
                 this.highlightedEntity = null;
                 this.setLasersVisibility(false);
-                this.goodToStart = false;
-                this.wasPointing = false;
                 this.active = false;
                 return makeRunningValues(false, [], []);
             }
@@ -650,7 +620,6 @@ Script.include("/~/system/libraries/Xform.js");
                         || HMD.tabletID && nearGrabReadiness[k].targets[0] === HMD.tabletID)) {
                         this.endFarGrabAction();
                         this.setLasersVisibility(false);
-                        this.wasPointing = false;
                         this.active = false;
                         return makeRunningValues(false, [], []);
                     }
@@ -663,7 +632,6 @@ Script.include("/~/system/libraries/Xform.js");
                 for (var j = 0; j < nearGrabReadiness.length; j++) {
                     if (nearGrabReadiness[j].active) {
                         this.endFarGrabAction();
-                        this.wasPointing = false;
                         this.active = false;
                         return makeRunningValues(false, [], []);
                     }
@@ -672,7 +640,6 @@ Script.include("/~/system/libraries/Xform.js");
                 var rayPickInfo = controllerData.rayPicks[this.hand];
                 if (rayPickInfo.type === Picks.INTERSECTED_ENTITY) {
                     if (controllerData.triggerClicks[this.hand]) {
-                    //if (this.buttonValue === 0) {
                         var entityID = rayPickInfo.objectID;
                         Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                             this.highlightedEntity);
@@ -684,7 +651,6 @@ Script.include("/~/system/libraries/Xform.js");
                         ]);
                         if (targetProps.href !== "") {
                             AddressManager.handleLookupString(targetProps.href);
-                            this.wasPointing = false;
                             this.active = false;
                             return makeRunningValues(false, [], []);
                         }
@@ -804,7 +770,6 @@ Script.include("/~/system/libraries/Xform.js");
                         this.highlightedEntity);
                     this.highlightedEntity = null;
                     this.active = false;
-                    this.wasPointing = false;
                     return makeRunningValues(false, [], []);
                 }
             }

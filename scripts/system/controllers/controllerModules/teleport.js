@@ -291,6 +291,13 @@ Script.include("/~/system/libraries/controllers.js");
             return ((EXP3_USE_HEAD_VELOCITY) ? (controllerData.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY) : true);
         }
 
+        this.correctRotation = function (controllerData) {
+            var rot = controllerData.controllerRotAngles[this.hand];
+            var correctRotation = (rot > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && rot <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
+        }
+
+        this.sameHandFarGrabModule = this.hand === RIGHT_HAND ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity";
+
         this.isReady = function (controllerData, deltaTime) {
             if (!HMD.active) {
                 return makeRunningValues(false, [], []);
@@ -315,17 +322,24 @@ Script.include("/~/system/libraries/controllers.js");
             // Hand stability requirement (linear velocity)
             var correctControllerLinearVelocity = this.handSteady(controllerData);
 
-            if (!correctRotation || !pointing || !correctHeadAngularVelocity || !correctControllerLinearVelocity || !inBounds) {
+            // this.active will only be true if it's been set by another module for context switching...
+            if (!correctRotation || !pointing || !correctHeadAngularVelocity || !correctControllerLinearVelocity || !inBounds && this.active) {
                 return makeRunningValues(false, [], []);
             }
 
+            this.active = true;
             return makeRunningValues(true, [], []);
         };
 
         this.run = function (controllerData, deltaTime) {
-            if (this.outsideDeactivationBounds()) {
+            // Do we need to switch to fargrab?
+            var handRotation = controllerData.controllerRotAngles[this.hand];
+            var contextSwitch = (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE);
+            if (contextSwitch && this.sameHandFarGrabModule) { this.sameHandFarGrabModule.active = true; }
+            if (this.outsideDeactivationBounds() || contextSwitch) {
                 // If the angle between the look vector and pointing vector is too great, turn off.
                 this.disableLasers();
+                this.active = false;
                 return makeRunningValues(false, [], []);
             }
 
