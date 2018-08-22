@@ -238,23 +238,6 @@ Script.include("/~/system/libraries/controllers.js");
             this.state = TELEPORTER_STATES.TARGETTING;
         };
 
-        this.showParabola = function () {
-            // Get current hand pose information to see if the pose is valid
-            var pose = Controller.getPoseValue(handInfo[(_this.hand === RIGHT_HAND) ? 'right' : 'left'].controllerInput);
-            var mode = pose.valid ? _this.hand : 'head';
-            if (!pose.valid) {
-                Pointers.disablePointer(_this.teleportParabolaHandVisible);
-                Pointers.disablePointer(_this.teleportParabolaHandInvisible);
-                Pointers.enablePointer(_this.teleportParabolaHeadVisible);
-                Pointers.enablePointer(_this.teleportParabolaHeadInvisible);
-            } else {
-                Pointers.enablePointer(_this.teleportParabolaHandVisible);
-                Pointers.enablePointer(_this.teleportParabolaHandInvisible);
-                Pointers.disablePointer(_this.teleportParabolaHeadVisible);
-                Pointers.disablePointer(_this.teleportParabolaHeadInvisible);
-            }
-        }
-
         this.lastRotation = Quat.IDENTITY;
         this.headAngularVelocity = 0;
         this.lastHMDOrientation = Quat.IDENTITY;
