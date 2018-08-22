@@ -279,7 +279,7 @@ Script.include("/~/system/libraries/controllers.js");
             var correctRotation = (rot > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && rot <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
         }
 
-        this.sameHandFarGrabModule = this.hand === RIGHT_HAND ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity";
+        this.sameHandFarGrabModule = getEnabledModuleByName(this.hand === RIGHT_HAND ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
 
         this.isReady = function (controllerData, deltaTime) {
             if (!HMD.active) {
@@ -317,7 +317,7 @@ Script.include("/~/system/libraries/controllers.js");
         this.run = function (controllerData, deltaTime) {
             // Do we need to switch to fargrab?
             var handRotation = controllerData.controllerRotAngles[this.hand];
-            var contextSwitch = (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE);
+            var contextSwitch = (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE && this.isPointing());
             if (contextSwitch && this.sameHandFarGrabModule) { this.sameHandFarGrabModule.active = true; }
             if (this.outsideDeactivationBounds() || contextSwitch) {
                 // If the angle between the look vector and pointing vector is too great, turn off.

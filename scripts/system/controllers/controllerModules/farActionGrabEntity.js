@@ -484,7 +484,7 @@ Script.include("/~/system/libraries/Xform.js");
 
         this.updateBoundsChecks = function () {
             var handPose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
-            var handRotation = Quat.multiply(MyAvatar.orientation, (this.hand == LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
+            var handRotation = Quat.multiply(MyAvatar.orientation, (this.hand === LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
             var cameraOrientation = Quat.getFront(Camera.orientation);
             var handOrientation = Quat.getUp(handRotation);
             var rotBetween = Quat.rotationBetween(cameraOrientation, handOrientation);
@@ -577,12 +577,14 @@ Script.include("/~/system/libraries/Xform.js");
             var handRotation = controllerData.controllerRotAngles[this.hand];
             var correctRotation = (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE);
             // Do we need to switch to teleport?
-            var contextSwitch = (handRotation > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
+            var contextSwitch = (handRotation > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE && this.isPointing());
             if (contextSwitch && this.sameHandTeleportModule) { this.sameHandTeleportModule.active = true; }
             // If the trigger's not clicked but we're grabbing something, we should release...
             var ending = (!Uuid.isEqual(Uuid.NULL, this.grabbedThingID) && (controllerData.triggerClicks[this.hand] === 0));
+
+            var angleDeactivation = (this.outOfBounds && Uuid.isEqual(Uuid.NULL, this.grabbedThingID));
             
-            if (this.notPointingAtEntity(controllerData) || this.targetIsNull() || this.outOfBounds || ending || contextSwitch) {
+            if (this.notPointingAtEntity(controllerData) || this.targetIsNull() || angleDeactivation || ending || contextSwitch) {
                 this.endFarGrabAction();
                 Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                     this.highlightedEntity);
@@ -632,6 +634,7 @@ Script.include("/~/system/libraries/Xform.js");
                 for (var j = 0; j < nearGrabReadiness.length; j++) {
                     if (nearGrabReadiness[j].active) {
                         this.endFarGrabAction();
+                        this.setLasersVisibility(false);
                         this.active = false;
                         return makeRunningValues(false, [], []);
                     }
@@ -652,6 +655,7 @@ Script.include("/~/system/libraries/Xform.js");
                         if (targetProps.href !== "") {
                             AddressManager.handleLookupString(targetProps.href);
                             this.active = false;
+                            this.setLasersVisibility(false);
                             return makeRunningValues(false, [], []);
                         }
 
@@ -770,6 +774,7 @@ Script.include("/~/system/libraries/Xform.js");
                         this.highlightedEntity);
                     this.highlightedEntity = null;
                     this.active = false;
+                    this.setLasersVisibility(false);
                     return makeRunningValues(false, [], []);
                 }
             }

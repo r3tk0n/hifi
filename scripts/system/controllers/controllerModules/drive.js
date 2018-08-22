@@ -35,12 +35,31 @@ Script.include("/~/system/libraries/controllers.js");
             return (this.hand === RIGHT_HAND) ? leftDriver : rightDriver;
         }
 
-        this.noMoveAfterTeleport = false;
+        this.noMove = false;
         this.timer = 0;
 
         this.isReady = function (controllerData, deltaTime) {
             var otherModule = this.getOtherModule();
             if (!EXP3_USE_DRIVE || otherModule.active) {
+                return makeRunningValues(false, [], []);
+            }
+
+            var farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
+            var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
+
+            // Don't move if we've just fargrabbed or teleported. Gives user time to release trigger.
+            if (teleport.active || farGrab.active) {
+                this.timer = 0;
+                if (teleport.active || farGrab.goodToStart) { this.noMove = true; }
+                return makeRunningValues(false, [], []);
+            }
+
+            if (this.noMove) {
+                this.timer += deltaTime;
+                if (this.timer > EXP3_NO_DRIVE_TIMER) {
+                    this.timer = 0;
+                    this.noMove = false;
+                }
                 return makeRunningValues(false, [], []);
             }
 
@@ -50,22 +69,7 @@ Script.include("/~/system/libraries/controllers.js");
             // Hand stability requirement (linear velocity)
             var correctControllerLinearVelocity = (EXP3_USE_CTRLR_VELOCITY) ? (Vec3.length(controllerData.handLinearVelocity[this.hand]) <= EXP3_MAX_CTRLR_VELOCITY) : true;
 
-            var farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
-            var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
 
-            if (teleport.goodToStart || farGrab.goodToStart || teleport.active || farGrab.active) {
-                if (teleport.active || teleport.goodToStart) { this.noMoveAfterTeleport = true; }
-                return makeRunningValues(false, [], []);
-            }
-
-            if (this.noMoveAfterTeleport) {
-                this.timer += deltaTime;
-                if (this.timer > EXP3_NO_DRIVE_TIMER) {
-                    this.timer = 0;
-                    this.noMoveAfterTeleport = false;
-                }
-                return makeRunningValues(false, [], []);
-            }
 
             var gripValue = Controller.getValue((hand == RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT);
             var squeezed = gripValue > TRIGGER_ON;
@@ -73,11 +77,6 @@ Script.include("/~/system/libraries/controllers.js");
             var pose = Controller.getPoseValue((hand == RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
 
             if (squeezed & !this.isGrabbing && correctControllerLinearVelocity && correctHeadAngularVelocity) {
-                //this.delay += deltaTime;
-                //if (this.delay <= EXP3_START_DRIVING_TIMEOUT) {
-                //    return makeRunningValues(false, [], []);
-                //}
-                //this.delay = 0;
                 this.isGrabbing = true;
                 this.smoothedRotation = Quat.angleAxis(0, Quat.getUp(MyAvatar.orientation));
                 this.startWristRotation = Vec3.orientedAngle(Quat.getFront(pose.rotation), Vec3.UNIT_Y, Vec3.UNIT_Y);
