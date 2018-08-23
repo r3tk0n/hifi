@@ -78,9 +78,12 @@ Script.include("/~/system/libraries/controllers.js");
 
             if (squeezed & !this.isGrabbing && correctControllerLinearVelocity && correctHeadAngularVelocity) {
                 // TEST AREA
-                this.up = Quat.getUp(cancelPitchAndYaw(pose.rotation));
-                this.right = Quat.getRight(cancelPitchAndYaw(pose.rotation));
-                this.init = cancelPitchAndYaw(pose.rotation);
+                this.init = pose.rotation;
+                this.up = Vec3.normalize(Vec3.multiplyQbyV(this.init, (this.hand === RIGHT_HAND) ? Vec3.UNIT_X : {x:-1, y:0, z:0}));            // Up in avatar space
+                this.right = Vec3.normalize(Vec3.multiplyQbyV(this.init, (this.hand === RIGHT_HAND)?{x: 0, y: 0, z: -1}:Vec3.UNIT_Z));         // Negative Z for right hand, z for left.
+                //this.up = Vec3.UNIT_Y;
+                //this.right = Vec3.UNIT_X;
+                this.norm = { x: 0, y: 0, z: -1 };        // normal to XY plane
                 // END TEST AREA
 
 
@@ -101,6 +104,99 @@ Script.include("/~/system/libraries/controllers.js");
         this.right = Vec3.ZERO;
         this.init = Quat.ZERO;
 
+        this.handLine1 = Uuid.NULL;
+        this.handLine2 = Uuid.NULL;
+        this.handLine3 = Uuid.NULL;
+
+        this.updateHandLine = function (pose) {
+            var startPos = Vec3.sum(Vec3.multiplyQbyV(MyAvatar.orientation, pose.translation), MyAvatar.position);
+            if (Uuid.isEqual(this.handLine1, Uuid.NULL)) {
+                // We don't have a line yet...
+                // This is the segment that originates from the hand controller and ends at the LERP between start and end.
+                this.handLine1 = Overlays.addOverlay("line3d",
+                    {
+                        name: "handLine1",
+                        color: EXP3_FARGRAB_LOADED_COLOR,
+                        alpha: 1.0,
+                        isSolid: true,
+                        position: startPos,
+                        endPoint: Vec3.sum(Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y), startPos),
+                        glow: 1,
+                lineWidth: 0.06,
+                visible: false
+            });
+        }
+        if (Uuid.isEqual(this.handLine2, Uuid.NULL)) {
+            // This is the segment that originates from the LERP between overall line's start and end, and the endpoint
+            this.handLine2 = Overlays.addOverlay("line3d",
+                {
+                    name: "handLine2",
+                    color: EXP3_FARGRAB_LOADING_COLOR,
+                    alpha: 1.0,
+                    isSolid: true,
+                    position: startPos,
+                    endPoint: Vec3.sum(Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Z), startPos),
+                    glow: 1,
+                    lineWidth: 0.06,
+                    visible: false
+                });
+        }
+        if (Uuid.isEqual(this.handLine3, Uuid.NULL)) {
+            // This is the segment that originates from the LERP between overall line's start and end, and the endpoint
+            this.handLine3 = Overlays.addOverlay("line3d",
+                {
+                    name: "handLine3",
+                    color: { red: 255, blue: 0, green: 0 },
+                    alpha: 1.0,
+                    isSolid: true,
+                    position: startPos,
+                    endPoint: Vec3.sum(Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_X), startPos),
+                    glow: 1,
+                    lineWidth: 0.06,
+                    visible: false
+                });
+        }
+
+        //var startPos = ctrlrPick.searchRay.origin;
+        //var endPos = ctrlrPick.intersection;
+        //var progressPos = (triggerVal > 0) ? lerp(startPos, endPos, triggerVal) : startPos;
+        //var tmp = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin);
+        //var dir = ctrlrPick.searchRay.direction;
+        //var angle = toDegrees(Vec3.getAngle(dir, tmp));
+        Overlays.editOverlay(this.handLine1, {
+            position: startPos,
+            endParentID: null,
+            endPoint: Vec3.sum(Vec3.multiplyQbyV(Quat.multiply(MyAvatar.orientation, pose.rotation), Vec3.UNIT_Y), startPos),
+            color: YELLOW,                      // Color that slowly fills line.
+            lineWidth: 0.08,
+            visible: true
+        });
+        Overlays.editOverlay(this.handLine2, {
+            position: startPos,
+            endPoint: Vec3.sum(Vec3.multiplyQbyV(Quat.multiply(MyAvatar.orientation, pose.rotation), Vec3.UNIT_Z), startPos),
+            color: BRIGHT_TEAL,                 // Color the recedes in line.
+            visible: true
+        });
+        Overlays.editOverlay(this.handLine3, {
+            position: startPos,
+            endPoint: Vec3.sum(Vec3.multiplyQbyV(Quat.multiply(MyAvatar.orientation, pose.rotation), Vec3.UNIT_X), startPos),
+            color: { red: 255, blue: 0, green: 0 },                 // Color the recedes in line.
+            visible: true
+        });
+    };
+
+        this.getAngle = function (v1, v2) {
+            var angle = toDegrees(Math.acos(Vec3.dot(Vec3.normalize(v1), Vec3.normalize(v2))));
+            var cross = Vec3.cross(v1, v2);
+            if (Vec3.dot(cross, Vec3.UNIT_Y) < 0) {
+                angle = -angle;
+            }
+            return angle;
+        }
+
+        this.timerLimit = 1;
+        this.timer = 0;
+
         this.run = function (controllerData, deltaTime) {
             var gripValue = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT);
             var squeezed = gripValue > TRIGGER_ON;
@@ -108,17 +204,62 @@ Script.include("/~/system/libraries/controllers.js");
 
             if (this.isGrabbing && released) {
                 this.up = Vec3.ZERO;
+                this.right = Vec3.ZERO;
+                this.normal = Vec3.ZERO;
                 this.active = false;
                 this.isGrabbing = false;
+                this.timer = 0;
+                this.timerLimit = 1;
                 driverMapping.disable();
                 //print("Release!");
                 return makeRunningValues(false, [], []);
             }
             if (squeezed) {
+                // Avatar space...
                 var pose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
-                var temp = Quat.multiply(cancelPitchAndYaw(pose.rotation), Quat.inverse(this.init));
-                var euler = Quat.safeEulerAngles(temp);
-                Vec3.print("euler: ", euler);
+                //this.updateHandLine(pose);
+
+                //controllerTwistAngle2();
+
+                //var temp = Quat.rotationBetween(pose.rotation, this.init);
+                //var newUp = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_X);              // Up in avatar space...
+                var newUp = Vec3.normalize(Vec3.multiplyQbyV(pose.rotation, (this.hand === RIGHT_HAND) ? Vec3.UNIT_X : { x: -1, y: 0, z: 0 }));            // Up in avatar space
+                var newRight = Vec3.normalize(Vec3.multiplyQbyV(pose.rotation, (this.hand === RIGHT_HAND) ? { x: 0, y: 0, z: -1 } : Vec3.UNIT_Z));         // Negative Z for right hand, z for left.
+
+                var projectionOfUp = projectVontoW(newUp, this.normal);
+                var projectionOfRight = projectVontoW(newRight, this.normal);
+
+                var upOnPlane = Vec3.subtract(newUp, projectionOfUp);
+                var rightOnPlane = Vec3.subtract(newRight, projectionOfRight);
+
+                var angle = toDegrees(Vec3.getAngle(Vec3.normalize(upOnPlane), this.up));
+                var angle2 = toDegrees(Vec3.getAngle(Vec3.normalize(rightOnPlane), this.up));
+                if (angle2 > 90) { angle *= -1 };
+                
+                //print("Angle Up: " + angle);
+                var absAngle = Math.abs(angle);
+                if (absAngle < 10) {
+                    return makeRunningValues(true, [], []);
+                } else if (absAngle < 30 && absAngle > 0) {
+                    this.timerLimit = 1;
+                } else if (absAngle < 60 && absAngle >= 30) {
+                    this.timerLimit = 0.5;
+                } else if (absAngle > 60) {
+                    this.timerLimit = 0.25;
+                }
+
+                this.timer += deltaTime;
+                if (this.timer >= this.timerLimit) {
+                    this.timer = 0;
+                    if (angle > 0) {
+                        MyAvatar.orientation = Quat.multiply(MyAvatar.orientation, Quat.angleAxis(SNAP_TURN_ANGLE, Vec3.UNIT_Y));
+                    } else {
+                        MyAvatar.orientation = Quat.multiply(MyAvatar.orientation, Quat.angleAxis(-SNAP_TURN_ANGLE, Vec3.UNIT_Y));
+                    }
+                    
+                }
+
+                //print("Angle Right: " + angle2);
 
                 //// TEST AREA
                 //var temp = Quat.multiply(cancelPitchAndYaw(pose.rotation), Quat.inverse(this.init));
