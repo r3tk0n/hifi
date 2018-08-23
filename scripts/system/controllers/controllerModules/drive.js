@@ -77,6 +77,13 @@ Script.include("/~/system/libraries/controllers.js");
             var pose = Controller.getPoseValue((hand == RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
 
             if (squeezed & !this.isGrabbing && correctControllerLinearVelocity && correctHeadAngularVelocity) {
+                // TEST AREA
+                this.up = Quat.getUp(cancelPitchAndYaw(pose.rotation));
+                this.right = Quat.getRight(cancelPitchAndYaw(pose.rotation));
+                this.init = cancelPitchAndYaw(pose.rotation);
+                // END TEST AREA
+
+
                 this.isGrabbing = true;
                 this.smoothedRotation = Quat.angleAxis(0, Quat.getUp(MyAvatar.orientation));
                 this.startWristRotation = Vec3.orientedAngle(Quat.getFront(pose.rotation), Vec3.UNIT_Y, Vec3.UNIT_Y);
@@ -90,12 +97,17 @@ Script.include("/~/system/libraries/controllers.js");
             return makeRunningValues(false, [], []);
         };
 
+        this.up = Vec3.ZERO;
+        this.right = Vec3.ZERO;
+        this.init = Quat.ZERO;
+
         this.run = function (controllerData, deltaTime) {
             var gripValue = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT);
             var squeezed = gripValue > TRIGGER_ON;
             var released = gripValue < TRIGGER_OFF;
 
             if (this.isGrabbing && released) {
+                this.up = Vec3.ZERO;
                 this.active = false;
                 this.isGrabbing = false;
                 driverMapping.disable();
@@ -104,19 +116,25 @@ Script.include("/~/system/libraries/controllers.js");
             }
             if (squeezed) {
                 var pose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+                var temp = Quat.multiply(cancelPitchAndYaw(pose.rotation), Quat.inverse(this.init));
+                var euler = Quat.safeEulerAngles(temp);
+                Vec3.print("euler: ", euler);
 
-                var newWristRotation = Vec3.orientedAngle(Quat.getFront(pose.rotation), Vec3.UNIT_Y, Vec3.UNIT_Y) - this.startWristRotation;
-                newWristRotation *= ((this.hand === LEFT_HAND) ? 1 : -1);
-                this.wristRotation = newWristRotation;
+                //// TEST AREA
+                //var temp = Quat.multiply(cancelPitchAndYaw(pose.rotation), Quat.inverse(this.init));
 
-                if (this.wristRotation - this.lastSnapTurnAngle > SNAP_TURN_WRIST_ANGLE) {
-                    this.lastSnapTurnAngle = this.wristRotation;
-                    MyAvatar.orientation = Quat.multiply(MyAvatar.orientation, Quat.angleAxis(SNAP_TURN_ANGLE, Vec3.UNIT_Y));
-                }
-                if (this.lastSnapTurnAngle - this.wristRotation > SNAP_TURN_WRIST_ANGLE) {
-                    this.lastSnapTurnAngle = this.wristRotation;
-                    MyAvatar.orientation = Quat.multiply(MyAvatar.orientation, Quat.angleAxis(-SNAP_TURN_ANGLE, Vec3.UNIT_Y));
-                }
+                //var newWristRotation = Vec3.orientedAngle(Quat.getFront(pose.rotation), Vec3.UNIT_Y, Vec3.UNIT_Y) - this.startWristRotation;
+                //newWristRotation *= ((this.hand === LEFT_HAND) ? 1 : -1);
+                //this.wristRotation = newWristRotation;
+
+                //if (this.wristRotation - this.lastSnapTurnAngle > SNAP_TURN_WRIST_ANGLE) {
+                //    this.lastSnapTurnAngle = this.wristRotation;
+                //    MyAvatar.orientation = Quat.multiply(MyAvatar.orientation, Quat.angleAxis(SNAP_TURN_ANGLE, Vec3.UNIT_Y));
+                //}
+                //if (this.lastSnapTurnAngle - this.wristRotation > SNAP_TURN_WRIST_ANGLE) {
+                //    this.lastSnapTurnAngle = this.wristRotation;
+                //    MyAvatar.orientation = Quat.multiply(MyAvatar.orientation, Quat.angleAxis(-SNAP_TURN_ANGLE, Vec3.UNIT_Y));
+                //}
             }
 
             return makeRunningValues(true, [], []);
