@@ -510,8 +510,25 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             }
         };
 
+        this.mappingName;
+        this.viveMapping;
+
+        this.registerMappings = function () {
+            // If the user is in a Vive...
+            if (Controller.Hardware.Vive) {
+                this.mappingName = "Hifi-Vive-Touch-Dev-" + Math.random();
+                this.viveMapping = Controller.newMapping(mappingName);
+                this.viveMapping.from(Controller.Hardware.Vive.LSTouch).to(Controller.Standard.LeftIndexPoint);
+                this.viveMapping.from(Controller.Hardware.Vive.RSTouch).to(Controller.Standard.RightIndexPoint);
+                Controller.enableMapping(this.mappingName);
+            }
+        }
+
         this.cleanup = function () {
             Controller.disableMapping(MAPPING_NAME);
+            if (Controller.Hardware.Vive) {
+                Controller.disableMapping(this.viveMapping);
+            }
             _this.pointerManager.removePointers();
             Pointers.removePointer(this.mouseRayPick);
             Selection.disableListHighlight(DISPATCHER_HOVERING_LIST);
@@ -522,7 +539,6 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             Messages.sendLocalMessage("home", overlayID);
         }
     }
-
     var HAPTIC_STYLUS_STRENGTH = 1.0;
     var HAPTIC_STYLUS_DURATION = 20.0;
     function mousePress(id, event) {
@@ -539,6 +555,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
     Overlays.mousePressOnOverlay.connect(mousePress);
     Entities.mousePressOnEntity.connect(mousePress);
     var controllerDispatcher = new ControllerDispatcher();
+    controllerDispatcher.registerMappings();
     Messages.subscribe('Hifi-Hand-RayPick-Blacklist');
     Messages.messageReceived.connect(controllerDispatcher.handleHandMessage);
     Script.scriptEnding.connect(controllerDispatcher.cleanup);
