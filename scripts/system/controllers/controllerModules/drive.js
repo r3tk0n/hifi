@@ -112,15 +112,15 @@ Script.include("/~/system/libraries/controllers.js");
                 this.total_angle += rollVelocity;
                 //print("total_angle: " + this.total_angle);
 
-                var absAngle = Math.abs(this.total_angle);
-                if (absAngle < 10) {
+                var absAngle = Math.abs(this.total_angle);          // Absolute value of the roll angle.
+                if (absAngle < DRIVE_DEADZONE) {
                     return makeRunningValues(true, [], []);
-                } else if (absAngle < 30 && absAngle > 0) {
-                    this.timerLimit = 1;
-                } else if (absAngle < 60 && absAngle >= 30) {
-                    this.timerLimit = 0.5;
-                } else if (absAngle > 60) {
-                    this.timerLimit = 0.25;
+                } else if (absAngle < DRIVE_SLOW && absAngle > DRIVE_DEADZONE) {
+                    this.timerLimit = DRIVE_SLOW_UPDATE;
+                } else if (absAngle < DRIVE_MEDIUM && absAngle >= DRIVE_SLOW) {
+                    this.timerLimit = DRIVE_MID_UPDATE;
+                } else if (absAngle > DRIVE_MEDIUM) {
+                    this.timerLimit = DRIVE_FAST_UPDATE;
                 }
 
                 this.timer += deltaTime;

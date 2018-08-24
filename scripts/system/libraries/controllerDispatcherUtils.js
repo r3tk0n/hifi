@@ -175,6 +175,16 @@ MIN_GRIP_MOVE = 0.2;                //  Smallest pressure that will cause moveme
 TRIGGER_ON = 0.1;
 TRIGGER_OFF = 0.05;
 
+// Drive snap-turn timer constants:
+DRIVE_FAST_UPDATE = 0.25;               // Seconds.
+DRIVE_MID_UPDATE = 0.5;                 // Seconds.
+DRIVE_SLOW_UPDATE = 1.0;                // Seconds.
+
+// Drive snapturn update region constraints
+DRIVE_DEADZONE = 10;                    // Degrees from where drive started in either direction.
+DRIVE_SLOW = 30;
+DRIVE_MEDIUM = 60;
+
 // Drive misc
 EXP3_NO_DRIVE_TIMER = 0.25;            // Seconds.
 
