@@ -279,12 +279,18 @@ Script.include("/~/system/libraries/controllers.js");
             var correctRotation = (rot > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && rot <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
         }
 
+        this.getDrive = function () {
+            return getEnabledModuleByName(this.hand === RIGHT_HAND ? "RightDriver" : "LeftDriver");
+        }
+
         this.sameHandFarGrabModule = getEnabledModuleByName(this.hand === RIGHT_HAND ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
 
         this.isReady = function (controllerData, deltaTime) {
             if (!HMD.active) {
                 return makeRunningValues(false, [], []);
             }
+
+            var thisHandDriver = this.getDrive();
 
             var otherModule = this.getOtherModule();
             // Controller Exp3 activation criteria.
@@ -315,6 +321,7 @@ Script.include("/~/system/libraries/controllers.js");
         };
 
         this.run = function (controllerData, deltaTime) {
+            var thisHandDriver = this.getDrive();
             // Do we need to switch to fargrab?
             var handRotation = controllerData.controllerRotAngles[this.hand];
             var contextSwitch = (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE && this.isPointing());
@@ -380,7 +387,8 @@ Script.include("/~/system/libraries/controllers.js");
             return this.teleport(result, teleportLocationType, controllerData);
         };
 
-        this.teleport = function(newResult, target, controllerData) {
+        this.teleport = function (newResult, target, controllerData) {
+            var thisHandDriver = this.getDrive();
             var result = newResult;
             if (controllerData.triggerValues[this.hand] < TRIGGER_OFF_VALUE) {
                 return makeRunningValues(true, [], []);
@@ -398,6 +406,7 @@ Script.include("/~/system/libraries/controllers.js");
                 MyAvatar.centerBody();
             }
 
+            thisHandDriver.justTeleported = true;
             this.disableLasers();
             this.active = false;
             return makeRunningValues(false, [], []);
