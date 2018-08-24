@@ -525,6 +525,15 @@ Script.include("/~/system/libraries/Xform.js");
                 return makeRunningValues(false, [], []);
             }
 
+            if (this.active) {
+                this.prepareDistanceRotatingData(controllerData);
+                this.active = true;
+                this.setLasersVisibility(true);
+                this.updateHandLine(ctrlrPick);
+                this.wasClicked = true;
+                return makeRunningValues(true, [], []);
+            }
+
             this.sameHandTeleportModule = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
             this.wasClicked = false;
             this.distanceHolding = false;

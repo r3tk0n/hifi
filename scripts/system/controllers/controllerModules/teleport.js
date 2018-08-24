@@ -290,6 +290,10 @@ Script.include("/~/system/libraries/controllers.js");
                 return makeRunningValues(false, [], []);
             }
 
+            if (this.active) {
+                return makeRunningValues(true, [], []);
+            }
+
             var thisHandDriver = this.getDrive();
 
             var otherModule = this.getOtherModule();
