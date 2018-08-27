@@ -96,6 +96,7 @@ Script.include("/~/system/libraries/Xform.js");
         var _this = this;
         this.hand = hand;
         this.grabbedThingID = null;
+        this.grabbedThingIntersectionOffset = null;
         this.targetObject = null;
         this.actionID = null; // action this script created...
         this.entityToLockOnto = null;
@@ -296,6 +297,7 @@ Script.include("/~/system/libraries/Xform.js");
             }
             this.actionID = null;
             this.grabbedThingID = null;
+            this.grabbedThingIntersectionOffset = null;
             this.targetObject = null;
             this.potentialEntityWithContextOverlay = false;
         };
@@ -391,7 +393,7 @@ Script.include("/~/system/libraries/Xform.js");
                 this.handLine1 = Overlays.addOverlay("line3d",
                     {
                         name: "handLine1",
-                        color: EXP3_FARGRAB_LOADED_COLOR,
+                        color: LIGHT_TEAL,
                         alpha: 1.0,
                         isSolid: true,
                         position: ctrlrPick.searchRay.position,
@@ -405,7 +407,7 @@ Script.include("/~/system/libraries/Xform.js");
                 this.handLine2 = Overlays.addOverlay("line3d",
                     {
                         name: "handLine2",
-                        color: EXP3_FARGRAB_LOADING_COLOR,
+                        color: LIGHT_TEAL,
                         alpha: 1.0,
                         isSolid: true,
                         position: ctrlrPick.searchRay.position,
@@ -415,19 +417,28 @@ Script.include("/~/system/libraries/Xform.js");
                     });
             }
 
-            if (this.grabbedThingID) {
+            var grabbable = false;
+            if (ctrlrPick.intersects) {
+                if (!Uuid.isEqual(Uuid.NULL, ctrlrPick.objectID)) {
+                    var props = Entities.getEntityProperties(ctrlrPick.objectID);
+                    grabbable = entityIsGrabbable(props);
+                }
+            }
+
+            if (!Uuid.isEqual(this.grabbedThingID, Uuid.NULL)) {
                 var props = Entities.getEntityProperties(this.grabbedThingID, ["position"]);
+                //var distance = Vec3.length(Vec3.subtract(ctrlrPick.interesction, ctrlrPick.searchRay.origin));
                 Overlays.editOverlay(this.handLine1, {
                     position: ctrlrPick.searchRay.origin,
                     endParentID: this.grabbedThingID,
-                    endPoint: props.position,
-                    color: BRIGHT_TEAL,                 // Color for actually having grabbed something.
+                    endPoint: Vec3.sum(this.grabbedThingIntersectionOffset, props.position),
+                    color: BRIGHT_TEAL,                 // Color for searching
                     visible: true
                 });
                 Overlays.editOverlay(this.handLine2, {
                     visible: false
                 });
-            } else if (ctrlrPick.intersects) {
+            } else if (grabbable) {
                 var startPos = ctrlrPick.searchRay.origin;
                 var endPos = ctrlrPick.intersection;
                 var progressPos = (triggerVal > 0) ? lerp(startPos, endPos, triggerVal) : startPos;
@@ -446,13 +457,25 @@ Script.include("/~/system/libraries/Xform.js");
                 Overlays.editOverlay(this.handLine2, {
                     position: progressPos,
                     endPoint: endPos,
-                    color: BRIGHT_TEAL,                 // Color the recedes in line.
+                    color: BRIGHT_TEAL,                 // Color that recedes in line.
+                    lineWidth: 0.08,
                     visible: true
+                });
+            } else if (ctrlrPick.intersects) {
+                var props = Entities.getEntityProperties(this.grabbedThingID, ["position"]);
+                Overlays.editOverlay(this.handLine1, {
+                    position: ctrlrPick.searchRay.origin,
+                    endPoint: ctrlrPick.intersection,
+                    color: LIGHT_TEAL,                 // Color for searching
+                    visible: true
+                });
+                Overlays.editOverlay(this.handLine2, {
+                    visible: false
                 });
             } else {
                 Overlays.editOverlay(this.handLine1, {
                     position: ctrlrPick.searchRay.origin,
-                    endPoint: Vec3.sum(ctrlrPick.searchRay.origin, Vec3.multiply(10, ctrlrPick.searchRay.direction)),
+                    endPoint: Vec3.sum(ctrlrPick.searchRay.origin, Vec3.multiply(100, ctrlrPick.searchRay.direction)),
                     endParentID: null,
                     color: LIGHT_TEAL,                  // Color for no intersection.
                     lineWidth: 0.06,
@@ -526,10 +549,10 @@ Script.include("/~/system/libraries/Xform.js");
             }
 
             if (this.active) {
-                this.prepareDistanceRotatingData(controllerData);
-                this.active = true;
                 this.setLasersVisibility(true);
                 this.updateHandLine(ctrlrPick);
+                this.prepareDistanceRotatingData(controllerData);
+                this.active = true;
                 this.wasClicked = true;
                 return makeRunningValues(true, [], []);
             }
@@ -692,6 +715,7 @@ Script.include("/~/system/libraries/Xform.js");
 
                             if (!this.distanceRotating) {
                                 this.grabbedThingID = entityID;
+                                this.grabbedThingIntersectionOffset = Vec3.subtract(rayPickInfo.intersection, targetProps.position);
                                 this.grabbedDistance = rayPickInfo.distance;
                             }
 
