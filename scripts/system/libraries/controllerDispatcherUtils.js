@@ -161,7 +161,7 @@ SMALL_NUMBER = 0.0001;
 
 // Controller Experiment 3 Head Angular Velocity Constants
 EXP3_HEAD_MAX_ANGULAR_VELOCITY = 0.1;
-EXP3_HAND_MAX_ANGULAR_VELOCITY = 0.15;
+EXP3_HAND_MAX_ANGULAR_VELOCITY = 0.2;
 EXP3_DELTA = 0.5;                           // Delta for trailing average
 
 // Controller Experiment 3 Controller Linear Velocity Constants
