@@ -425,7 +425,7 @@ Script.include("/~/system/libraries/Xform.js");
                 }
             }
 
-            if (!Uuid.isEqual(this.grabbedThingID, Uuid.NULL)) {
+            if (!Uuid.isEqual(this.grabbedThingID, Uuid.NULL)) {        // Something has been grabbed...
                 var props = Entities.getEntityProperties(this.grabbedThingID, ["position"]);
                 //var distance = Vec3.length(Vec3.subtract(ctrlrPick.interesction, ctrlrPick.searchRay.origin));
                 Overlays.editOverlay(this.handLine1, {
@@ -438,13 +438,11 @@ Script.include("/~/system/libraries/Xform.js");
                 Overlays.editOverlay(this.handLine2, {
                     visible: false
                 });
-            } else if (grabbable) {
+            } else if (grabbable) {     // Grabbable but not grabbed yet.
                 var startPos = ctrlrPick.searchRay.origin;
                 var endPos = ctrlrPick.intersection;
                 var progressPos = (triggerVal > 0) ? lerp(startPos, endPos, triggerVal) : startPos;
-                var tmp = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin);
                 var dir = ctrlrPick.searchRay.direction;
-                var angle = toDegrees(Vec3.getAngle(dir, tmp));
                 // We have an endpoint
                 Overlays.editOverlay(this.handLine1, {
                     position: startPos,
@@ -461,7 +459,7 @@ Script.include("/~/system/libraries/Xform.js");
                     lineWidth: 0.08,
                     visible: true
                 });
-            } else if (ctrlrPick.intersects) {
+            } else if (ctrlrPick.intersects) {      // Not grabbable, we haven't grabbed anything, but we have an intersection....
                 var props = Entities.getEntityProperties(this.grabbedThingID, ["position"]);
                 Overlays.editOverlay(this.handLine1, {
                     position: ctrlrPick.searchRay.origin,
@@ -472,7 +470,7 @@ Script.include("/~/system/libraries/Xform.js");
                 Overlays.editOverlay(this.handLine2, {
                     visible: false
                 });
-            } else {
+            } else {        // Otherwise, we're probably pointing at a skybox, so just draw a really long line.
                 Overlays.editOverlay(this.handLine1, {
                     position: ctrlrPick.searchRay.origin,
                     endPoint: Vec3.sum(ctrlrPick.searchRay.origin, Vec3.multiply(100, ctrlrPick.searchRay.direction)),
