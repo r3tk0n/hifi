@@ -23,7 +23,7 @@ Script.include("/~/system/libraries/utils.js");
 Script.include("/~/system/libraries/controllers.js");
 Script.include("/~/system/libraries/controllerDispatcherUtils.js");
 
-(function() {
+(function () {
     Script.include("/~/system/libraries/pointersUtils.js");
     var NEAR_MAX_RADIUS = 0.1;
 
@@ -90,6 +90,11 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             }
         };
 
+        // Velocity measurement variables.
+        this.headAngularVelocity = 0;
+        this.lastHMDOrientation = Quat.IDENTITY;
+        this.handLinearVelocity = Vec3.ZERO;
+
         this.runningPluginNames = {};
         this.leftTriggerValue = 0;
         this.leftTriggerClicked = 0;
@@ -151,13 +156,28 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             return deltaTime;
         };
 
-        this.setIgnorePointerItems = function() {
+        this.setIgnorePointerItems = function () {
             if (HMD.tabletID && HMD.tabletID !== this.tabletID) {
                 this.tabletID = HMD.tabletID;
                 Pointers.setIgnoreItems(_this.leftPointer, _this.blacklist);
                 Pointers.setIgnoreItems(_this.rightPointer, _this.blacklist);
+                Pointers.setIgnoreItems(_this.headPointer, _this.blacklist);
             }
         };
+
+        this.calculateHeadAngularVelocity = function (deltaTime) {
+            var thisHeadVelocity = Quat.angle(Quat.multiply(HMD.orientation, Quat.inverse(this.lastHMDOrientation))) / deltaTime;
+            this.headAngularVelocity = EXP3_DELTA * this.headAngularVelocity + (1.0 - EXP3_DELTA) * thisHeadVelocity;
+            this.lastHMDOrientation = HMD.orientation;
+            return this.headAngularVelocity;
+        }
+
+        this.calculateHandLinearVelocity = function (hand, deltaTime) {
+            var ctrlrPose = Controller.getPoseValue((hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+            var thisHandVelocity = ctrlrPose.velocity;
+            this.handLinearVelocity = Vec3.sum(Vec3.multiply(EXP3_DELTA, this.handLinearVelocity), Vec3.multiply((1.0 - EXP3_DELTA), thisHandVelocity));
+            return this.handLinearVelocity;
+        }
 
         this.update = function () {
             try {
@@ -245,7 +265,8 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             // raypick for each controller
             var rayPicks = [
                 Pointers.getPrevPickResult(_this.leftPointer),
-                Pointers.getPrevPickResult(_this.rightPointer)
+                Pointers.getPrevPickResult(_this.rightPointer),
+                Pointers.getPrevPickResult(_this.headPointer)
             ];
             var hudRayPicks = [
                 Pointers.getPrevPickResult(_this.leftHudPointer),
@@ -298,6 +319,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             var controllerData = {
                 triggerValues: [_this.leftTriggerValue, _this.rightTriggerValue],
                 triggerClicks: [_this.leftTriggerClicked, _this.rightTriggerClicked],
+                controllerRotAngles: [controllerTwistAngle(LEFT_HAND), controllerTwistAngle(RIGHT_HAND)],
                 secondaryValues: [_this.leftSecondaryValue, _this.rightSecondaryValue],
                 controllerLocations: controllerLocations,
                 nearbyEntityProperties: nearbyEntityProperties,
@@ -305,7 +327,9 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
                 nearbyOverlayIDs: nearbyOverlayIDs,
                 rayPicks: rayPicks,
                 hudRayPicks: hudRayPicks,
-                mouseRayPick: mouseRayPick
+                mouseRayPick: mouseRayPick,
+                handLinearVelocity: [this.calculateHandLinearVelocity(LEFT_HAND, deltaTime), this.calculateHandLinearVelocity(RIGHT_HAND, deltaTime)],
+                headAngularVelocity: this.calculateHeadAngularVelocity(deltaTime)
             };
             if (PROFILE) {
                 Script.endProfileRange("dispatch.gather");
@@ -383,9 +407,10 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             }
         };
 
-        this.setBlacklist = function() {
+        this.setBlacklist = function () {
             Pointers.setIgnoreItems(_this.leftPointer, this.blacklist);
             Pointers.setIgnoreItems(_this.rightPointer, this.blacklist);
+            Pointers.setIgnoreItems(_this.headPointer, this.blacklist);
         };
 
         var MAPPING_NAME = "com.highfidelity.controllerDispatcher";
@@ -405,7 +430,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
         this.leftPointer = this.pointerManager.createPointer(false, PickType.Ray, {
             joint: "_CAMERA_RELATIVE_CONTROLLER_LEFTHAND",
             filter: Picks.PICK_OVERLAYS | Picks.PICK_ENTITIES,
-            triggers: [{action: Controller.Standard.LTClick, button: "Focus"}, {action: Controller.Standard.LTClick, button: "Primary"}],
+            triggers: [{ action: Controller.Standard.LTClick, button: "Focus" }, { action: Controller.Standard.LTClick, button: "Primary" }],
             posOffset: getGrabPointSphereOffset(Controller.Standard.LeftHand, true),
             hover: true,
             scaleWithAvatar: true,
@@ -415,7 +440,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
         this.rightPointer = this.pointerManager.createPointer(false, PickType.Ray, {
             joint: "_CAMERA_RELATIVE_CONTROLLER_RIGHTHAND",
             filter: Picks.PICK_OVERLAYS | Picks.PICK_ENTITIES,
-            triggers: [{action: Controller.Standard.RTClick, button: "Focus"}, {action: Controller.Standard.RTClick, button: "Primary"}],
+            triggers: [{ action: Controller.Standard.RTClick, button: "Focus" }, { action: Controller.Standard.RTClick, button: "Primary" }],
             posOffset: getGrabPointSphereOffset(Controller.Standard.RightHand, true),
             hover: true,
             scaleWithAvatar: true,
@@ -427,7 +452,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             filter: Picks.PICK_HUD,
             maxDistance: DEFAULT_SEARCH_SPHERE_DISTANCE,
             posOffset: getGrabPointSphereOffset(Controller.Standard.LeftHand, true),
-            triggers: [{action: Controller.Standard.LTClick, button: "Focus"}, {action: Controller.Standard.LTClick, button: "Primary"}],
+            triggers: [{ action: Controller.Standard.LTClick, button: "Focus" }, { action: Controller.Standard.LTClick, button: "Primary" }],
             hover: true,
             scaleWithAvatar: true,
             distanceScaleEnd: true,
@@ -438,7 +463,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             filter: Picks.PICK_HUD,
             maxDistance: DEFAULT_SEARCH_SPHERE_DISTANCE,
             posOffset: getGrabPointSphereOffset(Controller.Standard.RightHand, true),
-            triggers: [{action: Controller.Standard.RTClick, button: "Focus"}, {action: Controller.Standard.RTClick, button: "Primary"}],
+            triggers: [{ action: Controller.Standard.RTClick, button: "Focus" }, { action: Controller.Standard.RTClick, button: "Primary" }],
             hover: true,
             scaleWithAvatar: true,
             distanceScaleEnd: true,
@@ -449,7 +474,14 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             filter: Picks.PICK_ENTITIES | Picks.PICK_OVERLAYS,
             enabled: true
         });
-        this.handleHandMessage = function(channel, message, sender) {
+        this.headPointer = this.pointerManager.createPointer(false, PickType.Ray, {
+            joint: "Avatar",
+            filter: Picks.PICK_OVERLAYS | Picks.PICK_ENTITIES,
+            hover: false,
+            scaleWithAvatar: true,
+            distanceScaleEnd: true
+        });
+        this.handleHandMessage = function (channel, message, sender) {
             var data;
             if (sender === MyAvatar.sessionUUID) {
                 try {
@@ -478,8 +510,25 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             }
         };
 
+        this.mappingName;
+        this.viveMapping;
+
+        this.registerMappings = function () {
+            // If the user is in a Vive...
+            if (Controller.Hardware.Vive) {
+                this.mappingName = "Hifi-Vive-Touch-Dev-" + Math.random();
+                this.viveMapping = Controller.newMapping(mappingName);
+                this.viveMapping.from(Controller.Hardware.Vive.LSTouch).to(Controller.Standard.LeftIndexPoint);
+                this.viveMapping.from(Controller.Hardware.Vive.RSTouch).to(Controller.Standard.RightIndexPoint);
+                Controller.enableMapping(this.mappingName);
+            }
+        }
+
         this.cleanup = function () {
             Controller.disableMapping(MAPPING_NAME);
+            if (Controller.Hardware.Vive) {
+                Controller.disableMapping(this.viveMapping);
+            }
             _this.pointerManager.removePointers();
             Pointers.removePointer(this.mouseRayPick);
             Selection.disableListHighlight(DISPATCHER_HOVERING_LIST);
@@ -490,7 +539,6 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             Messages.sendLocalMessage("home", overlayID);
         }
     }
-
     var HAPTIC_STYLUS_STRENGTH = 1.0;
     var HAPTIC_STYLUS_DURATION = 20.0;
     function mousePress(id, event) {
@@ -507,6 +555,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
     Overlays.mousePressOnOverlay.connect(mousePress);
     Entities.mousePressOnEntity.connect(mousePress);
     var controllerDispatcher = new ControllerDispatcher();
+    controllerDispatcher.registerMappings();
     Messages.subscribe('Hifi-Hand-RayPick-Blacklist');
     Messages.messageReceived.connect(controllerDispatcher.handleHandMessage);
     Script.scriptEnding.connect(controllerDispatcher.cleanup);

@@ -93,8 +93,10 @@ Script.include("/~/system/libraries/Xform.js");
     }
 
     function FarActionGrabEntity(hand) {
+        var _this = this;
         this.hand = hand;
         this.grabbedThingID = null;
+        this.grabbedThingIntersectionOffset = null;
         this.targetObject = null;
         this.actionID = null; // action this script created...
         this.entityToLockOnto = null;
@@ -120,8 +122,8 @@ Script.include("/~/system/libraries/Xform.js");
             550,
             this.hand === RIGHT_HAND ? ["rightHand"] : ["leftHand"],
             [],
-            100,
-            makeLaserParams(this.hand, false));
+            100);
+            //makeLaserParams(this.hand, false));
 
 
         this.handToController = function() {
@@ -295,6 +297,7 @@ Script.include("/~/system/libraries/Xform.js");
             }
             this.actionID = null;
             this.grabbedThingID = null;
+            this.grabbedThingIntersectionOffset = null;
             this.targetObject = null;
             this.potentialEntityWithContextOverlay = false;
         };
@@ -379,33 +382,247 @@ Script.include("/~/system/libraries/Xform.js");
             return false;
         };
 
-        this.isReady = function (controllerData) {
-            if (HMD.active) {
-                if (this.notPointingAtEntity(controllerData)) {
-                    return makeRunningValues(false, [], []);
-                }
+        this.handLine1 = Uuid.NULL;
+        this.handLine2 = Uuid.NULL;
 
-                this.distanceHolding = false;
-                this.distanceRotating = false;
+        this.updateHandLine = function (ctrlrPick) {
+            var triggerVal = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT);
+            if (Uuid.isEqual(this.handLine1, Uuid.NULL)) {
+                // We don't have a line yet...
+                // This is the segment that originates from the hand controller and ends at the LERP between start and end.
+                this.handLine1 = Overlays.addOverlay("line3d",
+                    {
+                        name: "handLine1",
+                        color: LIGHT_TEAL,
+                        alpha: 1.0,
+                        isSolid: true,
+                        position: ctrlrPick.searchRay.position,
+                        glow: 1,
+                        lineWidth: 0.06,
+                        visible: false
+                    });
+            }
+            if (Uuid.isEqual(this.handLine2, Uuid.NULL)) {
+                // This is the segment that originates from the LERP between overall line's start and end, and the endpoint
+                this.handLine2 = Overlays.addOverlay("line3d",
+                    {
+                        name: "handLine2",
+                        color: LIGHT_TEAL,
+                        alpha: 1.0,
+                        isSolid: true,
+                        position: ctrlrPick.searchRay.position,
+                        glow: 1,
+                        lineWidth: 0.06,
+                        visible: false
+                    });
+            }
 
-                if (controllerData.triggerValues[this.hand] > TRIGGER_ON_VALUE) {
-                    this.prepareDistanceRotatingData(controllerData);
-                    return makeRunningValues(true, [], []);
-                } else {
-                    this.destroyContextOverlay();
-                    return makeRunningValues(false, [], []);
+            var grabbable = false;
+            if (ctrlrPick.intersects) {
+                if (!Uuid.isEqual(Uuid.NULL, ctrlrPick.objectID)) {
+                    var props = Entities.getEntityProperties(ctrlrPick.objectID);
+                    grabbable = entityIsGrabbable(props);
                 }
             }
-            return makeRunningValues(false, [], []);
+
+            if (!Uuid.isEqual(this.grabbedThingID, Uuid.NULL)) {
+                var props = Entities.getEntityProperties(this.grabbedThingID, ["position"]);
+                //var distance = Vec3.length(Vec3.subtract(ctrlrPick.interesction, ctrlrPick.searchRay.origin));
+                Overlays.editOverlay(this.handLine1, {
+                    position: ctrlrPick.searchRay.origin,
+                    endParentID: this.grabbedThingID,
+                    endPoint: Vec3.sum(this.grabbedThingIntersectionOffset, props.position),
+                    color: BRIGHT_TEAL,                 // Color for searching
+                    visible: true
+                });
+                Overlays.editOverlay(this.handLine2, {
+                    visible: false
+                });
+            } else if (grabbable) {
+                var startPos = ctrlrPick.searchRay.origin;
+                var endPos = ctrlrPick.intersection;
+                var progressPos = (triggerVal > 0) ? lerp(startPos, endPos, triggerVal) : startPos;
+                var tmp = Vec3.subtract(ctrlrPick.intersection, ctrlrPick.searchRay.origin);
+                var dir = ctrlrPick.searchRay.direction;
+                var angle = toDegrees(Vec3.getAngle(dir, tmp));
+                // We have an endpoint
+                Overlays.editOverlay(this.handLine1, {
+                    position: startPos,
+                    endParentID: null,
+                    endPoint: progressPos,
+                    color: YELLOW,                      // Color that slowly fills line.
+                    lineWidth: 0.08,
+                    visible: (triggerVal < 0.01) ? false : true
+                });
+                Overlays.editOverlay(this.handLine2, {
+                    position: progressPos,
+                    endPoint: endPos,
+                    color: BRIGHT_TEAL,                 // Color that recedes in line.
+                    lineWidth: 0.08,
+                    visible: true
+                });
+            } else if (ctrlrPick.intersects) {
+                var props = Entities.getEntityProperties(this.grabbedThingID, ["position"]);
+                Overlays.editOverlay(this.handLine1, {
+                    position: ctrlrPick.searchRay.origin,
+                    endPoint: ctrlrPick.intersection,
+                    color: LIGHT_TEAL,                 // Color for searching
+                    visible: true
+                });
+                Overlays.editOverlay(this.handLine2, {
+                    visible: false
+                });
+            } else {
+                Overlays.editOverlay(this.handLine1, {
+                    position: ctrlrPick.searchRay.origin,
+                    endPoint: Vec3.sum(ctrlrPick.searchRay.origin, Vec3.multiply(100, ctrlrPick.searchRay.direction)),
+                    endParentID: null,
+                    color: LIGHT_TEAL,                  // Color for no intersection.
+                    lineWidth: 0.06,
+                    visible: true
+                });
+
+                Overlays.editOverlay(this.handLine2, {
+                    visible: false
+                });
+            }
+        };
+
+        // Lazy utility function for disabling both lasers.
+        this.setLasersVisibility = function (viz) {
+            Overlays.editOverlay(this.handLine1, { visible: viz });
+            Overlays.editOverlay(this.handLine2, { visible: viz });
+        }
+
+        this.getOtherModule = function () {
+            var otherModule = this.hand === RIGHT_HAND ? leftFarActionGrabEntity : rightFarActionGrabEntity;
+            return otherModule;
+        };
+
+        this.headAngularVelocity = 0;
+        this.handLinearVelocity = Vec3.ZERO;
+        this.lastHMDOrientation = Quat.IDENTITY;
+
+        this.active = false;
+
+        this.updateBoundsChecks = function () {
+            var handPose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+            var handRotation = Quat.multiply(MyAvatar.orientation, (this.hand === LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
+            var cameraOrientation = Quat.getFront(Camera.orientation);
+            var handOrientation = Quat.getUp(handRotation);
+            var rotBetween = Quat.rotationBetween(cameraOrientation, handOrientation);
+            var pitchRotation = cancelYawAndRoll(rotBetween);
+            var yawRotation = cancelPitchAndRoll(rotBetween);
+            var angleBetweenHorizontal = toDegrees(Quat.angle(yawRotation));
+            var angleBetweenVertical = toDegrees(Quat.angle(pitchRotation));
+
+            this.outOfBounds = ((angleBetweenHorizontal >= EXP3_FARGRAB_HORIZONTAL_BEAM_OFF_ANGLE) || (angleBetweenVertical >= EXP3_FARGRAB_VERTICAL_BEAM_OFF_ANGLE));
+            this.inBounds = ((angleBetweenHorizontal <= EXP3_FARGRAB_HORIZONTAL_BEAM_ON_ANGLE) && (angleBetweenVertical <= EXP3_FARGRAB_VERTICAL_BEAM_ON_ANGLE));
+        }
+
+        this.isPointing = function () {
+            return Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
+        }
+
+        this.handSteady = function (controllerData) {
+            return ((EXP3_USE_CTRLR_VELOCITY) ? (Vec3.length(controllerData.handLinearVelocity[this.hand]) <= EXP3_MAX_CTRLR_VELOCITY) : true);
+        }
+
+        this.headSteady = function (controllerData) {
+            return ((EXP3_USE_HEAD_VELOCITY) ? (controllerData.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY) : true);
+        }
+
+        this.correctRotation = function (controllerData) {
+            var rot = controllerData.controllerRotAngles[this.hand];
+            var correctRotation = (rot > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && rot <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
+        }
+
+        this.inBounds = false;
+        this.outOfBounds = false;
+        this.wasClicked = false;
+        this.sameHandTeleportModule = undefined;
+
+        this.isReady = function (controllerData, deltaTime) {
+            if (!EXP3_USE_FARGRAB || !HMD.active) {
+                this.setLasersVisibility(false);
+                return makeRunningValues(false, [], []);
+            }
+
+            if (this.active) {
+                this.setLasersVisibility(true);
+                this.updateHandLine(ctrlrPick);
+                this.prepareDistanceRotatingData(controllerData);
+                this.active = true;
+                this.wasClicked = true;
+                return makeRunningValues(true, [], []);
+            }
+
+            this.sameHandTeleportModule = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
+            this.wasClicked = false;
+            this.distanceHolding = false;
+            this.distanceRotating = false;
+            var otherModule = this.getOtherModule();
+
+            // Controller Exp3 activation criteria.
+            var headPick = controllerData.rayPicks[AVATAR_HEAD];        // Head raypick.
+            var ctrlrPick = controllerData.rayPicks[this.hand];         // Raypick for this hand.
+            var rot = controllerData.controllerRotAngles[this.hand];   // Rotation of wrist relative to controller's Z-axis
+            
+            // Is the index finger pointing?
+            var pointing = this.isPointing();
+
+            // Use correct rotation of the wrist...
+            var correctRotation = (EXP3_USE_CTRLR_ROTATION) ? (rot > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && rot <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE) : true;
+
+            // Head stability requirement (rotational velocity)
+            var correctHeadAngularVelocity = this.headSteady(controllerData);
+
+            // Hand stability requirement (linear velocity)
+            var correctControllerLinearVelocity = this.handSteady(controllerData);
+
+            // Update internal variables checking if we're within bounds to activate...
+            this.updateBoundsChecks();
+
+            // this.active will only be true if it's been set by another module for context switching...
+            if (pointing && correctRotation && correctHeadAngularVelocity && correctControllerLinearVelocity && this.inBounds || this.active) {
+                this.prepareDistanceRotatingData(controllerData);
+                this.active = true;
+                this.setLasersVisibility(true);
+                this.updateHandLine(ctrlrPick);
+                this.wasClicked = true;
+                return makeRunningValues(true, [], []);
+            } else {
+                // If the activation criteria for turning on the beams wasn't met...
+                this.destroyContextOverlay();
+                this.setLasersVisibility(false);
+                this.active = false;
+                return makeRunningValues(false, [], []);
+            }
         };
 
         this.run = function (controllerData) {
-            if (controllerData.triggerValues[this.hand] < TRIGGER_OFF_VALUE ||
-                this.notPointingAtEntity(controllerData) || this.targetIsNull()) {
+            // Update internal variables checking if we're within bounds to keep alive...
+            this.updateBoundsChecks();
+            // Update the laser...
+            this.updateHandLine(controllerData.rayPicks[this.hand]);
+            // Get the rotation for comparison...
+            var handRotation = controllerData.controllerRotAngles[this.hand];
+            var correctRotation = (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE);
+            // Do we need to switch to teleport?
+            var contextSwitch = (handRotation > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE && this.isPointing());
+            if (contextSwitch && this.sameHandTeleportModule) { this.sameHandTeleportModule.active = true; }
+            // If the trigger's not clicked but we're grabbing something, we should release...
+            var ending = (!Uuid.isEqual(Uuid.NULL, this.grabbedThingID) && (controllerData.triggerClicks[this.hand] === 0));
+
+            var angleDeactivation = (this.outOfBounds && Uuid.isEqual(Uuid.NULL, this.grabbedThingID));
+            
+            if (this.notPointingAtEntity(controllerData) || this.targetIsNull() || angleDeactivation || ending || contextSwitch) {
                 this.endFarGrabAction();
                 Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                     this.highlightedEntity);
                 this.highlightedEntity = null;
+                this.setLasersVisibility(false);
+                this.active = false;
                 return makeRunningValues(false, [], []);
             }
             this.intersectionDistance = controllerData.rayPicks[this.hand].distance;
@@ -436,6 +653,8 @@ Script.include("/~/system/libraries/Xform.js");
                     if (nearGrabReadiness[k].active && (nearGrabReadiness[k].targets[0] === this.grabbedThingID
                         || HMD.tabletID && nearGrabReadiness[k].targets[0] === HMD.tabletID)) {
                         this.endFarGrabAction();
+                        this.setLasersVisibility(false);
+                        this.active = false;
                         return makeRunningValues(false, [], []);
                     }
                 }
@@ -447,6 +666,8 @@ Script.include("/~/system/libraries/Xform.js");
                 for (var j = 0; j < nearGrabReadiness.length; j++) {
                     if (nearGrabReadiness[j].active) {
                         this.endFarGrabAction();
+                        this.setLasersVisibility(false);
+                        this.active = false;
                         return makeRunningValues(false, [], []);
                     }
                 }
@@ -465,6 +686,8 @@ Script.include("/~/system/libraries/Xform.js");
                         ]);
                         if (targetProps.href !== "") {
                             AddressManager.handleLookupString(targetProps.href);
+                            this.active = false;
+                            this.setLasersVisibility(false);
                             return makeRunningValues(false, [], []);
                         }
 
@@ -492,6 +715,7 @@ Script.include("/~/system/libraries/Xform.js");
 
                             if (!this.distanceRotating) {
                                 this.grabbedThingID = entityID;
+                                this.grabbedThingIntersectionOffset = Vec3.subtract(rayPickInfo.intersection, targetProps.position);
                                 this.grabbedDistance = rayPickInfo.distance;
                             }
 
@@ -582,6 +806,8 @@ Script.include("/~/system/libraries/Xform.js");
                     Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                         this.highlightedEntity);
                     this.highlightedEntity = null;
+                    this.active = false;
+                    this.setLasersVisibility(false);
                     return makeRunningValues(false, [], []);
                 }
             }
@@ -619,6 +845,8 @@ Script.include("/~/system/libraries/Xform.js");
     function cleanup() {
         disableDispatcherModule("LeftFarActionGrabEntity");
         disableDispatcherModule("RightFarActionGrabEntity");
+        Overlays.deleteOverlay(this.handLine1);
+        Overlays.deleteOverlay(this.handLine2);
     }
     Script.scriptEnding.connect(cleanup);
 }());

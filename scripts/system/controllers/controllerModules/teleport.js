@@ -110,7 +110,7 @@ Script.include("/~/system/libraries/controllers.js");
         SEAT: 'seat' // The current target is a seat
     };
 
-    var speed = 12.0;
+    var speed = 9.3;
     var accelerationAxis = {x: 0.0, y: -5.0, z: 0.0};
 
     function Teleporter(hand) {
@@ -238,17 +238,104 @@ Script.include("/~/system/libraries/controllers.js");
             this.state = TELEPORTER_STATES.TARGETTING;
         };
 
-        this.isReady = function(controllerData, deltaTime) {
+        this.lastRotation = Quat.IDENTITY;
+        this.headAngularVelocity = 0;
+        this.lastHMDOrientation = Quat.IDENTITY;
+
+        this.outsideDeactivationBounds = function () {
+            // Angle for tests as per Phillip's numbers:
+            var handPose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+            var handRotation = Quat.multiply(MyAvatar.orientation, (this.hand == LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
+            var angleBetween = toDegrees(Quat.angle(Quat.cancelOutRollAndPitch((Quat.rotationBetween(Quat.getFront(Camera.orientation), Quat.getUp(handRotation))))));
+            return (angleBetween >= EXP3_TELEPORT_BEAM_OFF_ANGLE);
+        }
+
+        this.insideActivationBounds = function () {
+            var handPose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+            var handRotation = Quat.multiply(MyAvatar.orientation, (this.hand == LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
+            var angleBetween = toDegrees(Quat.angle(Quat.cancelOutRollAndPitch((Quat.rotationBetween(Quat.getFront(Camera.orientation), Quat.getUp(handRotation))))));
+            return (angleBetween <= EXP3_TELEPORT_BEAM_ON_ANGLE);
+        }
+
+        this.otherTeleportActive = function () {
             var otherModule = this.getOtherModule();
-            if (!this.disabled && this.buttonValue !== 0 && !otherModule.active) {
-                this.active = true;
-                this.enterTeleport();
+            return otherModule.active;
+        }
+
+        this.isPointing = function () {
+            return Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightIndexPoint : Controller.Standard.LeftIndexPoint);
+        }
+
+        this.handSteady = function (controllerData) {
+            return ((EXP3_USE_CTRLR_VELOCITY) ? (Vec3.length(controllerData.handLinearVelocity[this.hand]) <= EXP3_MAX_CTRLR_VELOCITY) : true);
+        }
+
+        this.headSteady = function (controllerData) {
+            return ((EXP3_USE_HEAD_VELOCITY) ? (controllerData.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY) : true);
+        }
+
+        this.correctRotation = function (controllerData) {
+            var rot = controllerData.controllerRotAngles[this.hand];
+            var correctRotation = (rot > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && rot <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
+        }
+
+        this.getDrive = function () {
+            return getEnabledModuleByName(this.hand === RIGHT_HAND ? "RightDriver" : "LeftDriver");
+        }
+
+        this.sameHandFarGrabModule = getEnabledModuleByName(this.hand === RIGHT_HAND ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
+
+        this.isReady = function (controllerData, deltaTime) {
+            if (!HMD.active) {
+                return makeRunningValues(false, [], []);
+            }
+
+            if (this.active) {
                 return makeRunningValues(true, [], []);
             }
-            return makeRunningValues(false, [], []);
+
+            var thisHandDriver = this.getDrive();
+
+            var otherModule = this.getOtherModule();
+            // Controller Exp3 activation criteria.
+            var handRotation = controllerData.controllerRotAngles[this.hand];
+            var pointing = this.isPointing();
+
+            // Angle between look and raypick vector must be acceptable for activation.
+            var outOfBounds = this.outsideDeactivationBounds();
+            var inBounds = this.insideActivationBounds();
+
+            // Use correct wrist rotation.
+            var rot = controllerData.controllerRotAngles[this.hand];
+            var correctRotation = (rot > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && rot <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
+
+            // Head stability requirement (rotational velocity)
+            var correctHeadAngularVelocity = this.headSteady(controllerData);
+
+            // Hand stability requirement (linear velocity)
+            var correctControllerLinearVelocity = this.handSteady(controllerData);
+
+            // this.active will only be true if it's been set by another module for context switching...
+            if (!correctRotation || !pointing || !correctHeadAngularVelocity || !correctControllerLinearVelocity || !inBounds && this.active) {
+                return makeRunningValues(false, [], []);
+            }
+
+            this.active = true;
+            return makeRunningValues(true, [], []);
         };
 
-        this.run = function(controllerData, deltaTime) {
+        this.run = function (controllerData, deltaTime) {
+            var thisHandDriver = this.getDrive();
+            // Do we need to switch to fargrab?
+            var handRotation = controllerData.controllerRotAngles[this.hand];
+            var contextSwitch = (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE && this.isPointing());
+            if (contextSwitch && this.sameHandFarGrabModule) { this.sameHandFarGrabModule.active = true; }
+            if (this.outsideDeactivationBounds() || contextSwitch) {
+                // If the angle between the look vector and pointing vector is too great, turn off.
+                this.disableLasers();
+                this.active = false;
+                return makeRunningValues(false, [], []);
+            }
 
             // Get current hand pose information to see if the pose is valid
             var pose = Controller.getPoseValue(handInfo[(_this.hand === RIGHT_HAND) ? 'right' : 'left'].controllerInput);
@@ -301,12 +388,13 @@ Script.include("/~/system/libraries/controllers.js");
             } else if (teleportLocationType === TARGET.SEAT) {
                 this.setTeleportState(mode, "", "seat");
             }
-            return this.teleport(result, teleportLocationType);
+            return this.teleport(result, teleportLocationType, controllerData);
         };
 
-        this.teleport = function(newResult, target) {
+        this.teleport = function (newResult, target, controllerData) {
+            var thisHandDriver = this.getDrive();
             var result = newResult;
-            if (_this.buttonValue !== 0) {
+            if (controllerData.triggerValues[this.hand] < TRIGGER_OFF_VALUE) {
                 return makeRunningValues(true, [], []);
             }
 
@@ -322,6 +410,7 @@ Script.include("/~/system/libraries/controllers.js");
                 MyAvatar.centerBody();
             }
 
+            thisHandDriver.justTeleported = true;
             this.disableLasers();
             this.active = false;
             return makeRunningValues(false, [], []);

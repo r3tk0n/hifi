@@ -3,11 +3,11 @@
     "channels": [
         { "from": "Vive.LY", "to": "Standard.LeftIndexPoint",
             "peek": true,
-            "filters": [ { "type": "hysteresis", "min": 0.7, "max": 0.75 } ]
+            "filters": [ { "type": "hysteresis", "min": -0.75, "max": 0.75 } ]
         },
         { "from": "Vive.RY", "to": "Standard.RightIndexPoint",
             "peek": true,
-            "filters": [ { "type": "hysteresis", "min": 0.7, "max": 0.75 } ]
+            "filters": [ { "type": "hysteresis", "min": -0.75, "max": 0.75 } ]
         },
 
         { "from": "Vive.LY", "when": "Vive.LSY", "filters": ["invert"], "to": "Standard.LY" },
