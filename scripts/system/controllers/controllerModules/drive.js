@@ -35,6 +35,11 @@ Script.include("/~/system/libraries/controllers.js");
             return (angle <= 45) ? true : false;
         }
 
+        this.isPointingUp = function () {
+            var angle = getAngleFromGround(this.hand);
+            return (angle >= 135) ? true : false;
+        }
+
         this.isReady = function (controllerData, deltaTime) {
             if (this.justTeleported) {
                 if (controllerData.triggerValues[this.hand] > TRIGGER_OFF_VALUE) {
@@ -56,6 +61,7 @@ Script.include("/~/system/libraries/controllers.js");
             var squeezed = gripValue > TRIGGER_ON_VALUE;
             var released = gripValue < TRIGGER_OFF_VALUE;
             var pointingDown = this.isPointingDown();
+            var pointingUp = this.isPointingUp();
 
             if (this.hand === RIGHT_HAND) {
                 print("pointingDown: " + pointingDown);
@@ -67,7 +73,7 @@ Script.include("/~/system/libraries/controllers.js");
                 this.startPos = pose.translation;
                 this.isGrabbing = true;
                 this.active = true;
-                if (!pointingDown) {
+                if (!pointingDown && !pointingUp) {
                     Controller.enableMapping(mappingName);
                 }
                 return makeRunningValues(true, [], []);
