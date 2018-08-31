@@ -716,6 +716,28 @@ getAngleFromGround = function (hand) {
     return angle;
 }
 
+getAngleFromLookVector = function (hand) {
+    var pose = Controller.getPoseValue(hand === RIGHT_HAND ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+    if (!pose.valid) {
+        return 0;
+    }
+    var normal = Vec3.multiplyQbyV(MyAvatar.orientation, Vec3.UNIT_Y);
+    var lookVec = Quat.getForward(Camera.orientation);
+    var projectedLookVec = Vec3.subtract(lookVec, projectVontoW(lookVec, normal));
+
+    var ctrlrPoint = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
+    var projectedCtrlrPoint = Vec3.subtract(ctrlrPoint, projectVontoW(ctrlrPoint, normal));
+
+    var refAxis = Vec3.multiplyQbyV(Quat.angleAxis(-90, normal), projectedLookVec);
+
+    var angle = toDegrees(Vec3.getAngle(projectedCtrlrPoint, projectedLookVec));
+    var angle2 = toDegrees(Vec3.getAngle(projectedCtrlrPoint, refAxis));
+    if (angle2 <= 90) {
+        angle *= -1;
+    }
+    return angle;
+}
+
 if (typeof module !== 'undefined') {
     module.exports = {
         makeDispatcherModuleParameters: makeDispatcherModuleParameters,
