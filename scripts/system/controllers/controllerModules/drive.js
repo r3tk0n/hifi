@@ -14,15 +14,12 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
 Script.include("/~/system/libraries/controllers.js");
 
 (function () {// BEGIN LOCAL_SCOPE
-
-    this.isGrabbing = false;
-    this.delay = 0.0;
-
     function Driver(hand) {
         //print("Loaded Driver...");
         var _this = this;
         this.hand = hand;
         this.active = false;
+        this.isGrabbing = false;
 
         var mappingName, driverMapping;
 
@@ -30,7 +27,13 @@ Script.include("/~/system/libraries/controllers.js");
             return (this.hand === RIGHT_HAND) ? leftDriver : rightDriver;
         }
 
+
         this.justTeleported = false;
+
+        this.isPointingDown = function () {
+            var angle = getAngleFromGround(this.hand);
+            return (angle <= 45) ? true : false;
+        }
 
         this.isReady = function (controllerData, deltaTime) {
             if (this.justTeleported) {
@@ -49,81 +52,65 @@ Script.include("/~/system/libraries/controllers.js");
             var farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
             var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
 
-            // Head stability requirement (rotational velocity)
-            //var correctHeadAngularVelocity = (EXP3_USE_HEAD_VELOCITY) ? (controllerData.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY) : true;
-
-            // Hand stability requirement (linear velocity)
-            //var correctControllerLinearVelocity = (EXP3_USE_CTRLR_VELOCITY) ? (Vec3.length(controllerData.handLinearVelocity[this.hand]) <= EXP3_MAX_CTRLR_VELOCITY) : true;
-
             var gripValue = Controller.getValue((hand == RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT);
             var squeezed = gripValue > TRIGGER_ON_VALUE;
             var released = gripValue < TRIGGER_OFF_VALUE;
-            var pose = Controller.getPoseValue((hand == RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+            var pointingDown = this.isPointingDown();
+
+            if (this.hand === RIGHT_HAND) {
+                print("pointingDown: " + pointingDown);
+            }
 
             if (squeezed & !this.isGrabbing) {
+                this.runningAngle = getRadialAngleFromAvatar(this.hand);
+                var pose = Controller.getPoseValue(hand === RIGHT_HAND ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+                this.startPos = pose.translation;
                 this.isGrabbing = true;
                 this.active = true;
-                Controller.enableMapping(mappingName);
+                if (!pointingDown) {
+                    Controller.enableMapping(mappingName);
+                }
                 return makeRunningValues(true, [], []);
             }
-            this.delay = 0;
             return makeRunningValues(false, [], []);
         };
 
-        this.timerLimit = 1;
-        this.timer = 0;
-        this.total_angle = 0;
-
-        this.fromRads = function (v) {
-            return { x: toDegrees(v.x), y: toDegrees(v.y), z: toDegrees(v.z) };
-        }
+        this.runningAngle = 0;
+        this.deltaAngle = 0;
+        this.startPos = Vec3.ZERO;
 
         this.run = function (controllerData, deltaTime) {
+            var pose = Controller.getPoseValue(hand === RIGHT_HAND ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+
             var gripValue = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT);
             var squeezed = gripValue > TRIGGER_ON;
             var released = gripValue < TRIGGER_OFF;
+            var currentAngle = getRadialAngleFromAvatar(this.hand);
+
+            var d = getRadialAngleDeltaFromAvatar(this.hand, this.startPos);
+            this.deltaAngle += d;
 
             if (this.isGrabbing && released) {
-                this.up = Vec3.ZERO;
-                this.right = Vec3.ZERO;
-                this.normal = Vec3.ZERO;
                 this.active = false;
                 this.isGrabbing = false;
-                this.timer = 0;
-                this.timerLimit = 1;
-                this.total_angle = 0;
+                this.runningAngle = 0;
+                this.deltaAngle = 0;
+                this.startPos = Vec3.ZERO;
                 driverMapping.disable();
-                //print("Release!");
                 return makeRunningValues(false, [], []);
             }
+
             if (squeezed) {
-                // Avatar space...
-                var pose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
-                var rollVelocity = toDegrees(pose.angularVelocity.z * deltaTime);
-                this.total_angle += rollVelocity;
-                //print("total_angle: " + this.total_angle);
-
-                var absAngle = Math.abs(this.total_angle);          // Absolute value of the roll angle.
-                if (absAngle < DRIVE_DEADZONE) {
-                    return makeRunningValues(true, [], []);
-                } else if (absAngle < DRIVE_SLOW && absAngle > DRIVE_DEADZONE) {
-                    this.timerLimit = DRIVE_SLOW_UPDATE;
-                } else if (absAngle < DRIVE_MEDIUM && absAngle >= DRIVE_SLOW) {
-                    this.timerLimit = DRIVE_MID_UPDATE;
-                } else if (absAngle > DRIVE_MEDIUM) {
-                    this.timerLimit = DRIVE_FAST_UPDATE;
+                if (this.deltaAngle > DRIVE_ROT_ANGLE) {
+                    MyAvatar.orientation = Quat.multiply(MyAvatar.orientation, Quat.angleAxis(DRIVE_ROT_ANGLE * ROT_MULTIPLIER, Vec3.UNIT_Y));
+                    this.deltaAngle -= DRIVE_ROT_ANGLE;
+                } else if (this.deltaAngle < -DRIVE_ROT_ANGLE) {
+                    MyAvatar.orientation = Quat.multiply(MyAvatar.orientation, Quat.angleAxis(-DRIVE_ROT_ANGLE * ROT_MULTIPLIER, Vec3.UNIT_Y));
+                    this.deltaAngle += DRIVE_ROT_ANGLE;
+                } else {
+                    // Nothing.
                 }
-
-                this.timer += deltaTime;
-                if (this.timer >= this.timerLimit) {
-                    this.timer = 0;
-                    if (this.total_angle > 0) {
-                        MyAvatar.orientation = Quat.multiply(MyAvatar.orientation, Quat.angleAxis(SNAP_TURN_ANGLE, Vec3.UNIT_Y));
-                    } else {
-                        MyAvatar.orientation = Quat.multiply(MyAvatar.orientation, Quat.angleAxis(-SNAP_TURN_ANGLE, Vec3.UNIT_Y));
-                    }
-                    
-                }
+                this.startPos = pose.translation;
             }
 
             return makeRunningValues(true, [], []);
