@@ -718,11 +718,12 @@ getAngleFromGround = function (hand) {
 
 getAngleFromLookVector = function (hand) {
     var pose = Controller.getPoseValue(hand === RIGHT_HAND ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+    var headPose = Controller.getPoseValue("Head");
     if (!pose.valid) {
         return 0;
     }
     var normal = Vec3.multiplyQbyV(MyAvatar.orientation, Vec3.UNIT_Y);
-    var lookVec = Quat.getForward(Camera.orientation);
+    var lookVec = Quat.getForward(headPose.rotation);
     var projectedLookVec = Vec3.subtract(lookVec, projectVontoW(lookVec, normal));
 
     var ctrlrPoint = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
