@@ -40,6 +40,17 @@ Script.include("/~/system/libraries/controllers.js");
             return (angle >= 135) ? true : false;
         }
 
+        this.isPointingToSide = function () {
+            var angle = getAngleFromLookVector(this.hand);
+            var absAngle = Math.abs(angle);
+            
+            return (absAngle >= 80 && absAngle <= 110 || absAngle >= 170);
+        }
+
+        this.pointingToSide = false;
+        this.pointingDown = false;
+        this.pointingUp = false;
+
         this.isReady = function (controllerData, deltaTime) {
             if (this.justTeleported) {
                 if (controllerData.triggerValues[this.hand] > TRIGGER_OFF_VALUE) {
@@ -60,12 +71,9 @@ Script.include("/~/system/libraries/controllers.js");
             var gripValue = Controller.getValue((hand == RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT);
             var squeezed = gripValue > TRIGGER_ON_VALUE;
             var released = gripValue < TRIGGER_OFF_VALUE;
-            var pointingDown = this.isPointingDown();
-            var pointingUp = this.isPointingUp();
-
-            if (this.hand === RIGHT_HAND) {
-                print("pointingDown: " + pointingDown);
-            }
+            this.pointingDown = this.isPointingDown();
+            this.pointingUp = this.isPointingUp();
+            this.pointingToSide = this.isPointingToSide();
 
             if (squeezed & !this.isGrabbing) {
                 this.runningAngle = getRadialAngleFromAvatar(this.hand);
@@ -73,7 +81,7 @@ Script.include("/~/system/libraries/controllers.js");
                 this.startPos = pose.translation;
                 this.isGrabbing = true;
                 this.active = true;
-                if (!pointingDown && !pointingUp) {
+                if (!this.pointingDown && !this.pointingUp && !this.pointingToSide) {
                     Controller.enableMapping(mappingName);
                 }
                 return makeRunningValues(true, [], []);
@@ -87,16 +95,14 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.run = function (controllerData, deltaTime) {
             var pose = Controller.getPoseValue(hand === RIGHT_HAND ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
-
             var gripValue = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT);
             var squeezed = gripValue > TRIGGER_ON;
             var released = gripValue < TRIGGER_OFF;
-            var currentAngle = getRadialAngleFromAvatar(this.hand);
-
-            var d = getRadialAngleDeltaFromAvatar(this.hand, this.startPos);
-            this.deltaAngle += d;
 
             if (this.isGrabbing && released) {
+                this.pointingToSide = false;
+                this.pointingDown = false;
+                this.pointingUp = false;
                 this.active = false;
                 this.isGrabbing = false;
                 this.runningAngle = 0;
@@ -106,7 +112,10 @@ Script.include("/~/system/libraries/controllers.js");
                 return makeRunningValues(false, [], []);
             }
 
-            if (squeezed) {
+            if (squeezed && (this.pointingToSide || this.pointingDown || this.pointingUp)) {
+                var d = getRadialAngleDeltaFromAvatar(this.hand, this.startPos);
+                this.deltaAngle += d;
+
                 if (this.deltaAngle > DRIVE_ROT_ANGLE) {
                     MyAvatar.orientation = Quat.multiply(MyAvatar.orientation, Quat.angleAxis(DRIVE_ROT_ANGLE * ROT_MULTIPLIER, Vec3.UNIT_Y));
                     this.deltaAngle -= DRIVE_ROT_ANGLE;

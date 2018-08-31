@@ -361,7 +361,7 @@ unhighlightTargetEntity = function (entityID) {
     Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity", entityID);
 };
 
-entityIsDistanceGrabbable = function(eidgProps) {
+entityIsDistanceGrabbable = function (eidgProps) {
     if (!entityIsGrabbable(eidgProps)) {
         return false;
     }
@@ -668,8 +668,6 @@ cancelPitchAndRoll = function (q) {
     return Quat.fromVec3Degrees(eulerAngles);
 }
 
-INVALID_RADIAL_ANGLE = 9000;
-
 getRadialAngleFromAvatar = function (hand) {
     var pose = Controller.getPoseValue(hand === RIGHT_HAND ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
     if (!pose.valid) {
@@ -715,6 +713,29 @@ getAngleFromGround = function (hand) {
     var ctrlrForward = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
     var up = Vec3.multiplyQbyV(MyAvatar.orientation, Vec3.multiply(-1, Vec3.UNIT_Y));
     var angle = toDegrees(Vec3.getAngle(ctrlrForward, up));
+    return angle;
+}
+
+getAngleFromLookVector = function (hand) {
+    var pose = Controller.getPoseValue(hand === RIGHT_HAND ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+    var headPose = Controller.getPoseValue("Head");
+    if (!pose.valid) {
+        return 0;
+    }
+    var normal = Vec3.multiplyQbyV(MyAvatar.orientation, Vec3.UNIT_Y);
+    var lookVec = Quat.getForward(headPose.rotation);
+    var projectedLookVec = Vec3.subtract(lookVec, projectVontoW(lookVec, normal));
+
+    var ctrlrPoint = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
+    var projectedCtrlrPoint = Vec3.subtract(ctrlrPoint, projectVontoW(ctrlrPoint, normal));
+
+    var refAxis = Vec3.multiplyQbyV(Quat.angleAxis(-90, normal), projectedLookVec);
+
+    var angle = toDegrees(Vec3.getAngle(projectedCtrlrPoint, projectedLookVec));
+    var angle2 = toDegrees(Vec3.getAngle(projectedCtrlrPoint, refAxis));
+    if (angle2 <= 90) {
+        angle *= -1;
+    }
     return angle;
 }
 
