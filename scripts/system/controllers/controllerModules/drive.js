@@ -30,7 +30,6 @@ Script.include("/~/system/libraries/controllers.js");
             return (this.hand === RIGHT_HAND) ? leftDriver : rightDriver;
         }
 
-
         this.justTeleported = false;
 
         this.isReady = function (controllerData, deltaTime) {

@@ -666,6 +666,24 @@ cancelPitchAndRoll = function (q) {
     return Quat.fromVec3Degrees(eulerAngles);
 }
 
+INVALID_RADIAL_ANGLE = 9000;
+
+getRadialAngleFromAvatar = function (hand) {
+    var pose = Controller.getPoseValue(hand === RIGHT_HAND ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+    if (!pose.valid) {
+        return 0;
+    }
+    var normal = Vec3.multiplyQbyV(MyAvatar.orientation, Vec3.UNIT_Y);                      // This will be the normal to the user's horizontal plane, regardless of gravity.
+    var projectedVec = Vec3.subtract(pose.translation, projectVontoW(pose.translation, normal));
+
+    var angle = toDegrees(Vec3.getAngle(projectedVec, Vec3.multiply(-1, Vec3.UNIT_Z)));     // Angle we care about.
+    var angle2 = toDegrees(Vec3.getAngle(projectedVec, Vec3.UNIT_X));                       // Reference vector used to figure out the sign of the angle.
+    if (angle2 <= 90) {
+        angle *= -1;
+    }
+    return angle;
+}
+
 if (typeof module !== 'undefined') {
     module.exports = {
         makeDispatcherModuleParameters: makeDispatcherModuleParameters,
