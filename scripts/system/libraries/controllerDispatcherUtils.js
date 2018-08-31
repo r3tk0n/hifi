@@ -168,6 +168,8 @@ EXP3_DELTA = 0.5;                           // Delta for trailing average
 EXP3_MAX_CTRLR_VELOCITY = 0.025;        // m/s
 
 // Drive snap-turn constants.
+ROT_MULTIPLIER = 2;
+DRIVE_ROT_ANGLE = 7.5;
 SNAP_TURN_WRIST_ANGLE = 22.5;       //  How far must you turn wrist to snap turn?
 SNAP_TURN_ANGLE = 22.5;             //  Degrees to snap turn 
 MAX_SPEED = 3.0;                    //  Max walking speed in m/sec, both hands = 2X
@@ -359,7 +361,7 @@ unhighlightTargetEntity = function (entityID) {
     Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity", entityID);
 };
 
-entityIsDistanceGrabbable = function(eidgProps) {
+entityIsDistanceGrabbable = function (eidgProps) {
     if (!entityIsGrabbable(eidgProps)) {
         return false;
     }
@@ -664,6 +666,54 @@ cancelPitchAndRoll = function (q) {
     eulerAngles.x = 0;            // Cancel pitch.
     eulerAngles.z = 0;            // Cancel roll.
     return Quat.fromVec3Degrees(eulerAngles);
+}
+
+getRadialAngleFromAvatar = function (hand) {
+    var pose = Controller.getPoseValue(hand === RIGHT_HAND ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+    if (!pose.valid) {
+        return 0;
+    }
+    var normal = Vec3.multiplyQbyV(MyAvatar.orientation, Vec3.UNIT_Y);                      // This will be the normal to the user's horizontal plane, regardless of gravity.
+    var projectedVec = Vec3.subtract(pose.translation, projectVontoW(pose.translation, normal));
+
+    var angle = toDegrees(Vec3.getAngle(projectedVec, Vec3.multiply(-1, Vec3.UNIT_Z)));     // Angle we care about.
+    var angle2 = toDegrees(Vec3.getAngle(projectedVec, Vec3.multiply(-1, Vec3.UNIT_X)));                       // Reference vector used to figure out the sign of the angle.
+    if (angle2 <= 90) {
+        angle *= -1;
+    }
+    return angle;
+}
+
+getRadialAngleDeltaFromAvatar = function (hand, lastPos) {
+    var pose = Controller.getPoseValue(hand === RIGHT_HAND ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+    if (!pose.valid || Vec3.withinEpsilon(lastPos, pose.translation, 0.005)) {
+        return 0;
+    }
+    var normal = Vec3.multiplyQbyV(MyAvatar.orientation, Vec3.UNIT_Y);                      // This will be the normal to the user's horizontal plane, regardless of gravity.
+    var projectedVec = Vec3.subtract(pose.translation, projectVontoW(pose.translation, normal));
+
+    var projectedLastVec = Vec3.subtract(lastPos, projectVontoW(lastPos, normal));
+
+    var refRot = Quat.angleAxis(-90, normal);
+    var refVec = Vec3.multiplyQbyV(refRot, projectedLastVec);
+
+    var angle = toDegrees(Vec3.getAngle(projectedVec, projectedLastVec));     // Angle we care about.
+    var angle2 = toDegrees(Vec3.getAngle(projectedVec, refVec));                       // Reference vector used to figure out the sign of the angle.
+    if (angle2 <= 90) {
+        angle *= -1;
+    }
+    return angle;
+}
+
+getAngleFromGround = function (hand) {
+    var pose = Controller.getPoseValue(hand === RIGHT_HAND ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+    if (!pose.valid) {
+        return 0;
+    }
+    var ctrlrForward = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
+    var up = Vec3.multiplyQbyV(MyAvatar.orientation, Vec3.multiply(-1, Vec3.UNIT_Y));
+    var angle = toDegrees(Vec3.getAngle(ctrlrForward, up));
+    return angle;
 }
 
 if (typeof module !== 'undefined') {
