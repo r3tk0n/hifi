@@ -44,7 +44,7 @@ Script.include("/~/system/libraries/controllers.js");
             var angle = getAngleFromLookVector(this.hand);
             var absAngle = Math.abs(angle);
             
-            return (absAngle >= 80 && absAngle <= 110 || absAngle >= 170);
+            return (absAngle >= 67.5 && absAngle <= 112.5);
         }
 
         this.pointingToSide = false;
@@ -58,11 +58,6 @@ Script.include("/~/system/libraries/controllers.js");
                 } else {
                     this.justTeleported = false;
                 }
-            }
-
-            var otherModule = this.getOtherModule();
-            if (!EXP3_USE_DRIVE || otherModule.active) {
-                return makeRunningValues(false, [], []);
             }
 
             var farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
