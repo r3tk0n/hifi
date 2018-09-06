@@ -60,17 +60,17 @@ Script.include("/~/system/libraries/controllers.js");
     var cancelPath = {
         color: COLORS_TELEPORT_CANCEL,
         alpha: 1,
-        width: 0.025
+        width: 0.0125
     };
     var teleportPath = {
         color: COLORS_TELEPORT_CAN_TELEPORT,
         alpha: 1,
-        width: 0.025
+        width: 0.0125
     };
     var seatPath = {
         color: COLORS_TELEPORT_SEAT,
         alpha: 1,
-        width: 0.025
+        width: 0.0125
     };
     var teleportEnd = {
         type: "model",
@@ -129,9 +129,11 @@ Script.include("/~/system/libraries/controllers.js");
         };
 
         this.teleportParabolaHandVisible = Pointers.createPointer(PickType.Parabola, {
-            joint: (_this.hand === RIGHT_HAND) ? "_CAMERA_RELATIVE_CONTROLLER_RIGHTHAND" : "_CAMERA_RELATIVE_CONTROLLER_LEFTHAND",
+            //joint: (_this.hand === RIGHT_HAND) ? "_CAMERA_RELATIVE_CONTROLLER_RIGHTHAND" : "_CAMERA_RELATIVE_CONTROLLER_LEFTHAND",
+            joint: (this.hand === RIGHT_HAND) ? "RightHand" : "LeftHand",
             dirOffset: { x: 0, y: 1, z: 0.1 },
-            posOffset: { x: (_this.hand === RIGHT_HAND) ? 0.03 : -0.03, y: 0.2, z: 0.02 },
+            //posOffset: { x: (_this.hand === RIGHT_HAND) ? 0.03 : -0.03, y: 0.2, z: 0.02 },
+            posOffset: getFingertipOffset(_this.hand),
             filter: Picks.PICK_ENTITIES,
             faceAvatar: true,
             scaleWithAvatar: true,
@@ -144,9 +146,11 @@ Script.include("/~/system/libraries/controllers.js");
             maxDistance: 8.0
         });
         this.teleportParabolaHandInvisible = Pointers.createPointer(PickType.Parabola, {
-            joint: (_this.hand === RIGHT_HAND) ? "_CAMERA_RELATIVE_CONTROLLER_RIGHTHAND" : "_CAMERA_RELATIVE_CONTROLLER_LEFTHAND",
+            //joint: (_this.hand === RIGHT_HAND) ? "_CAMERA_RELATIVE_CONTROLLER_RIGHTHAND" : "_CAMERA_RELATIVE_CONTROLLER_LEFTHAND",
+            joint: (this.hand === RIGHT_HAND) ? "RightHand" : "LeftHand",
             dirOffset: { x: 0, y: 1, z: 0.1 },
-            posOffset: { x: (_this.hand === RIGHT_HAND) ? 0.03 : -0.03, y: 0.2, z: 0.02 },
+            //posOffset: { x: (_this.hand === RIGHT_HAND) ? 0.03 : -0.03, y: 0.2, z: 0.02 },
+            posOffset: getFingertipOffset(_this.hand),
             filter: Picks.PICK_ENTITIES | Picks.PICK_INCLUDE_INVISIBLE,
             faceAvatar: true,
             scaleWithAvatar: true,
