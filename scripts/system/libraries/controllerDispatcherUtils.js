@@ -170,7 +170,7 @@ EXP3_MAX_CTRLR_VELOCITY = 0.025;        // m/s
 
 // Drive snap-turn constants.
 ROT_MULTIPLIER = 2;
-DRIVE_ROT_ANGLE = 7.5;
+DRIVE_ROT_ANGLE = 15;
 SNAP_TURN_WRIST_ANGLE = 22.5;       //  How far must you turn wrist to snap turn?
 SNAP_TURN_ANGLE = 22.5;             //  Degrees to snap turn 
 MAX_SPEED = 3.0;                    //  Max walking speed in m/sec, both hands = 2X

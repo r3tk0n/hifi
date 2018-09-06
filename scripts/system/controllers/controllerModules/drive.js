@@ -33,6 +33,29 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.justTeleported = false;
 
+        this.isPointingDown = function () {
+            var angle = getAngleFromGround(this.hand);
+            return (angle <= 45) ? true : false;
+        }
+
+        this.isPointingUp = function () {
+            var angle = getAngleFromGround(this.hand);
+            return (angle >= 135) ? true : false;
+        }
+
+        this.isPointingToSide = function () {
+            var angle = getAngleFromLookVector(this.hand);
+            var absAngle = Math.abs(angle);
+
+            return (absAngle >= 67.5 && absAngle <= 112.5);
+        }
+
+        this.pointingToSide = false;
+        this.pointingDown = false;
+        this.pointingUp = false;
+        this.deltaAngle = 0.0;
+        this.startPos = Vec3.ZERO;
+
         this.isReady = function (controllerData, deltaTime) {
             if (this.justTeleported) {
                 if (controllerData.triggerValues[this.hand] > TRIGGER_OFF_VALUE) {
@@ -60,11 +83,18 @@ Script.include("/~/system/libraries/controllers.js");
             var squeezed = gripValue > TRIGGER_ON_VALUE;
             var released = gripValue < TRIGGER_OFF_VALUE;
             var pose = Controller.getPoseValue((hand == RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+            this.pointingDown = this.isPointingDown();
+            this.pointingUp = this.isPointingUp();
+            this.pointingToSide = this.isPointingToSide();
 
             if (squeezed & !this.isGrabbing) {
+                var pose = Controller.getPoseValue(hand === RIGHT_HAND ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+                this.startPos = pose.translation;
                 this.isGrabbing = true;
                 this.active = true;
-                Controller.enableMapping(mappingName);
+                if (!this.pointingDown && !this.pointingUp && !this.pointingToSide) {
+                    Controller.enableMapping(mappingName);
+                }
                 return makeRunningValues(true, [], []);
             }
             this.delay = 0;
@@ -80,11 +110,17 @@ Script.include("/~/system/libraries/controllers.js");
         }
 
         this.run = function (controllerData, deltaTime) {
+            var pose = Controller.getPoseValue(hand === RIGHT_HAND ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
             var gripValue = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT);
             var squeezed = gripValue > TRIGGER_ON;
             var released = gripValue < TRIGGER_OFF;
 
             if (this.isGrabbing && released) {
+                this.pointingToSide = false;
+                this.pointingDown = false;
+                this.pointingUp = false;
+                this.startPos = Vec3.ZERO;
+                this.deltaAngle = 0.0;
                 this.up = Vec3.ZERO;
                 this.right = Vec3.ZERO;
                 this.normal = Vec3.ZERO;
@@ -97,7 +133,23 @@ Script.include("/~/system/libraries/controllers.js");
                 //print("Release!");
                 return makeRunningValues(false, [], []);
             }
-            if (squeezed) {
+
+            // Driving snapturn...
+            if (squeezed && (this.pointingToSide || this.pointingDown || this.pointingUp)) {
+                var d = getRadialAngleDeltaFromAvatar(this.hand, this.startPos);
+                this.deltaAngle += d;
+
+                if (this.deltaAngle > DRIVE_ROT_ANGLE) {
+                    MyAvatar.orientation = Quat.multiply(MyAvatar.orientation, Quat.angleAxis(DRIVE_ROT_ANGLE * ROT_MULTIPLIER, Vec3.UNIT_Y));
+                    this.deltaAngle -= DRIVE_ROT_ANGLE;
+                } else if (this.deltaAngle < -DRIVE_ROT_ANGLE) {
+                    MyAvatar.orientation = Quat.multiply(MyAvatar.orientation, Quat.angleAxis(-DRIVE_ROT_ANGLE * ROT_MULTIPLIER, Vec3.UNIT_Y));
+                    this.deltaAngle += DRIVE_ROT_ANGLE;
+                } else {
+                    // Nothing.
+                }
+                this.startPos = pose.translation;
+            } else if (squeezed) {
                 // Avatar space...
                 var pose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
                 var rollVelocity = toDegrees(pose.angularVelocity.z * deltaTime);
