@@ -127,7 +127,7 @@ selectionManager.addEventListener(function () {
         needToDestroyParticleExplorer = true;
     }
 
-    if (needToDestroyParticleExplorer && selectedParticleEntityID !== null) {
+    if (needToDestroyParticleExplorer && selectedParticleEntityID !== null && particleExplorerTool) {
         selectedParticleEntityID = null;
         particleExplorerTool.destroyWebView();
     }
@@ -1425,7 +1425,9 @@ Script.update.connect(function (deltaTime) {
     var dOrientation = Math.abs(Quat.dot(Camera.orientation, lastOrientation) - 1);
     var dPosition = Vec3.distance(Camera.position, lastPosition);
     if (dOrientation > 0.001 || dPosition > 0.001) {
-        propertyMenu.hide();
+        if (propertyMenu) {
+            propertyMenu.hide();
+        }
         lastOrientation = Camera.orientation;
         lastPosition = Camera.position;
     }
