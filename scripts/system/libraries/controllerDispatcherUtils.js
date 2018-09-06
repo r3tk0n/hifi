@@ -192,9 +192,12 @@ DRIVE_MEDIUM = 60;
 EXP3_NO_DRIVE_TIMER = 0.25;            // Seconds.
 
 
-COLORS_GRAB_SEARCHING_HALF_SQUEEZE = { red: 10, green: 10, blue: 255 };
+//COLORS_GRAB_SEARCHING_HALF_SQUEEZE = { red: 10, green: 10, blue: 255 };
+COLORS_GRAB_SEARCHING_HALF_SQUEEZE = { red: 0, green: 128, blue: 128 };
 COLORS_GRAB_SEARCHING_FULL_SQUEEZE = { red: 250, green: 10, blue: 10 };
-COLORS_GRAB_DISTANCE_HOLD = { red: 238, green: 75, blue: 214 };
+//COLORS_GRAB_SEARCHING_FULL_SQUEEZE = { red: 0, green: 255, blue: 255 };
+//COLORS_GRAB_DISTANCE_HOLD = { red: 238, green: 75, blue: 214 };
+COLORS_GRAB_DISTANCE_HOLD = { red: 0, green: 255, blue: 255 };
 
 NEAR_GRAB_RADIUS = 1.0;
 
@@ -792,7 +795,11 @@ getFingertipOffset = function (hand) {
 
     var rotation = MyAvatar.getAbsoluteDefaultJointRotationInObjectFrame(handIndex);
 
-    return Vec3.multiplyQbyV(Quat.inverse(rotation), offset);
+    var rotatedOffset = Vec3.multiplyQbyV(Quat.inverse(rotation), offset);
+
+    var fingerAdjustment = Vec3.multiply(MyAvatar.scale, { x: 0, y: 0.01, z: 0 });      // Bump it forward by a centimeter.
+
+    return Vec3.sum(rotatedOffset, fingerAdjustment);
 }
 
 if (typeof module !== 'undefined') {
