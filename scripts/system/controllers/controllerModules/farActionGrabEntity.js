@@ -123,8 +123,8 @@ Script.include("/~/system/libraries/Xform.js");
             550,
             this.hand === RIGHT_HAND ? ["rightHand"] : ["leftHand"],
             [],
-            100);
-            //makeLaserParams(this.hand, false));
+            100,
+            makeLaserParams(this.hand, true));
 
 
         this.handToController = function() {
@@ -388,6 +388,7 @@ Script.include("/~/system/libraries/Xform.js");
 
         this.updateHandLine = function (ctrlrPick) {
             var triggerVal = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT);
+            var offset = getFingertipOffset(this.hand);
             if (Uuid.isEqual(this.handLine1, Uuid.NULL)) {
                 // We don't have a line yet...
                 // This is the segment that originates from the hand controller and ends at the LERP between start and end.
@@ -397,7 +398,7 @@ Script.include("/~/system/libraries/Xform.js");
                         color: LIGHT_TEAL,
                         alpha: 1.0,
                         isSolid: true,
-                        position: ctrlrPick.searchRay.position,
+                        position: Vec3.sum(ctrlrPick.searchRay.position, offset),
                         glow: 1,
                         lineWidth: 0.06,
                         visible: false
@@ -411,7 +412,7 @@ Script.include("/~/system/libraries/Xform.js");
                         color: LIGHT_TEAL,
                         alpha: 1.0,
                         isSolid: true,
-                        position: ctrlrPick.searchRay.position,
+                        position: Vec3.sum(ctrlrPick.searchRay.position, offset),
                         glow: 1,
                         lineWidth: 0.06,
                         visible: false
@@ -440,7 +441,7 @@ Script.include("/~/system/libraries/Xform.js");
                     visible: false
                 });
             } else if (grabbable) {     // Grabbable but not grabbed yet.
-                var startPos = ctrlrPick.searchRay.origin;
+                var startPos = Vec3.sum(ctrlrPick.searchRay.origin, offset);
                 var endPos = ctrlrPick.intersection;
                 var progressPos = (triggerVal > 0) ? lerp(startPos, endPos, triggerVal) : startPos;
                 var dir = ctrlrPick.searchRay.direction;
@@ -463,7 +464,7 @@ Script.include("/~/system/libraries/Xform.js");
             } else if (ctrlrPick.intersects) {      // Not grabbable, we haven't grabbed anything, but we have an intersection....
                 var props = Entities.getEntityProperties(this.grabbedThingID, ["position"]);
                 Overlays.editOverlay(this.handLine1, {
-                    position: ctrlrPick.searchRay.origin,
+                    position: Vec3.sum(ctrlrPick.searchRay.origin, offset),
                     endPoint: ctrlrPick.intersection,
                     color: LIGHT_TEAL,                 // Color for searching
                     visible: true
@@ -472,9 +473,10 @@ Script.include("/~/system/libraries/Xform.js");
                     visible: false
                 });
             } else {        // Otherwise, we're probably pointing at a skybox, so just draw a really long line.
+                var startPos = Vec3.sum(ctrlrPick.searchRay.origin, offset);
                 Overlays.editOverlay(this.handLine1, {
-                    position: ctrlrPick.searchRay.origin,
-                    endPoint: Vec3.sum(ctrlrPick.searchRay.origin, Vec3.multiply(100, ctrlrPick.searchRay.direction)),
+                    position: startPos,
+                    endPoint: Vec3.sum(startPos, Vec3.multiply(100, ctrlrPick.searchRay.direction)),
                     endParentID: null,
                     color: LIGHT_TEAL,                  // Color for no intersection.
                     lineWidth: 0.06,
@@ -547,9 +549,14 @@ Script.include("/~/system/libraries/Xform.js");
                 return makeRunningValues(false, [], []);
             }
 
+            // Controller Exp3 activation criteria.
+            var headPick = controllerData.rayPicks[AVATAR_HEAD];        // Head raypick.
+            var ctrlrPick = controllerData.rayPicks[this.hand];         // Raypick for this hand.
+            var rot = controllerData.controllerRotAngles[this.hand];   // Rotation of wrist relative to controller's Z-axis
+
             if (this.active) {
                 this.setLasersVisibility(true);
-                this.updateHandLine(ctrlrPick);
+                //this.updateHandLine(ctrlrPick);
                 this.prepareDistanceRotatingData(controllerData);
                 this.active = true;
                 this.wasClicked = true;
@@ -561,11 +568,6 @@ Script.include("/~/system/libraries/Xform.js");
             this.distanceHolding = false;
             this.distanceRotating = false;
             var otherModule = this.getOtherModule();
-
-            // Controller Exp3 activation criteria.
-            var headPick = controllerData.rayPicks[AVATAR_HEAD];        // Head raypick.
-            var ctrlrPick = controllerData.rayPicks[this.hand];         // Raypick for this hand.
-            var rot = controllerData.controllerRotAngles[this.hand];   // Rotation of wrist relative to controller's Z-axis
             
             // Is the index finger pointing?
             var pointing = this.isPointing();
@@ -587,7 +589,7 @@ Script.include("/~/system/libraries/Xform.js");
                 this.prepareDistanceRotatingData(controllerData);
                 this.active = true;
                 this.setLasersVisibility(true);
-                this.updateHandLine(ctrlrPick);
+                //this.updateHandLine(ctrlrPick);
                 this.wasClicked = true;
                 return makeRunningValues(true, [], []);
             } else {
@@ -603,7 +605,7 @@ Script.include("/~/system/libraries/Xform.js");
             // Update internal variables checking if we're within bounds to keep alive...
             this.updateBoundsChecks();
             // Update the laser...
-            this.updateHandLine(controllerData.rayPicks[this.hand]);
+            //this.updateHandLine(controllerData.rayPicks[this.hand]);
             // Get the rotation for comparison...
             var handRotation = controllerData.controllerRotAngles[this.hand];
             var correctRotation = (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE);

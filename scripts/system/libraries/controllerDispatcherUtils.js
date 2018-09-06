@@ -762,6 +762,39 @@ worldPositionToRegistrationFrameMatrix = function(wptrProps, pos) {
     return offsetMat;
 };
 
+getFingertipJointIndex = function (hand) {
+    var index = -1;
+    var handJoint = (hand === RIGHT_HAND) ? "RightHandIndex" : "LeftHandIndex";
+
+    for (x = 10; x > 0; x--) {
+        index = MyAvatar.getJointIndex(handJoint + x);
+        if (index !== -1) {
+            break;              // If it's not -1, we've found our furthest index for a finger joint from the palm.
+        }
+    }
+
+    return index;               // Will be -1 if the avatar has no index finger joints.
+}
+
+getFingertipOffset = function (hand) {
+    var fingerIndex = getFingertipJointIndex(hand);
+
+    if (fingerIndex === -1) {
+        return Vec3.ZERO;
+    }
+
+    var handIndex = MyAvatar.getJointIndex(hand === RIGHT_HAND ? "RightHand" : "LeftHand");
+
+    var fingerTipPos = MyAvatar.getAbsoluteDefaultJointTranslationInObjectFrame(fingerIndex);
+    var handPos = MyAvatar.getAbsoluteDefaultJointTranslationInObjectFrame(handIndex);
+
+    var offset = Vec3.subtract(fingerTipPos, handPos);
+
+    var rotation = MyAvatar.getAbsoluteDefaultJointRotationInObjectFrame(handIndex);
+
+    return Vec3.multiplyQbyV(Quat.inverse(rotation), offset);
+}
+
 if (typeof module !== 'undefined') {
     module.exports = {
         makeDispatcherModuleParameters: makeDispatcherModuleParameters,
