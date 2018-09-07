@@ -802,6 +802,11 @@ getFingertipOffset = function (hand) {
     return Vec3.sum(rotatedOffset, fingerAdjustment);
 }
 
+getWristRotationQuat = function (hand) {
+    var joint = MyAvatar.getJointIndex(hand === RIGHT_HAND ? "RightHand" : "LeftHand");
+    return Quat.multiply(MyAvatar.orientation, MyAvatar.getAbsoluteJointRotationInObjectFrame(joint));
+}
+
 if (typeof module !== 'undefined') {
     module.exports = {
         makeDispatcherModuleParameters: makeDispatcherModuleParameters,
