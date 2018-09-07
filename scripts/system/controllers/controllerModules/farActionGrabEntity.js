@@ -440,7 +440,7 @@ Script.include("/~/system/libraries/Xform.js");
             var rot = controllerData.controllerRotAngles[this.hand];   // Rotation of wrist relative to controller's Z-axis
 
             if (this.active) {
-                print((this.hand === RIGHT_HAND ? "RightHand" : "LeftHand") + " switched to teleport...");
+                //print((this.hand === RIGHT_HAND ? "RightHand" : "LeftHand") + " switched to fargrab...");
                 this.prepareDistanceRotatingData(controllerData);
                 this.active = true;
                 this.wasClicked = true;
@@ -491,7 +491,7 @@ Script.include("/~/system/libraries/Xform.js");
             // Do we need to switch to teleport?
             var contextSwitch = (handRotation > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE && Uuid.isEqual(Uuid.NULL, this.grabbedThingID));
             if (contextSwitch && this.sameHandTeleportModule) {
-                print((this.hand === RIGHT_HAND ? "RightHand" : "LeftHand") + " context switch from fargrab.");
+                //print((this.hand === RIGHT_HAND ? "RightHand" : "LeftHand") + " context switch from fargrab.");
                 this.sameHandTeleportModule.active = true;
             }
             // If the trigger's not clicked but we're grabbing something, we should release...

@@ -295,7 +295,7 @@ Script.include("/~/system/libraries/controllers.js");
             }
 
             if (this.active) {
-                print((this.hand === RIGHT_HAND ? "RightHand" : "LeftHand") + " switched to teleport...");
+                //print((this.hand === RIGHT_HAND ? "RightHand" : "LeftHand") + " switched to teleport...");
                 return makeRunningValues(true, [], []);
             }
 
@@ -323,6 +323,7 @@ Script.include("/~/system/libraries/controllers.js");
 
             // this.active will only be true if it's been set by another module for context switching...
             if (!correctRotation || !pointing || !correctHeadAngularVelocity || !correctControllerLinearVelocity || !inBounds && this.active) {
+                this.active = false;
                 return makeRunningValues(false, [], []);
             }
 
@@ -337,7 +338,7 @@ Script.include("/~/system/libraries/controllers.js");
             var contextSwitch = (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE);
             if (contextSwitch && this.sameHandFarGrabModule) {
                 // Context switching...
-                print((this.hand === RIGHT_HAND ? "RightHand" : "LeftHand") + " context switch from teleport.");
+                //print((this.hand === RIGHT_HAND ? "RightHand" : "LeftHand") + " context switch from teleport.");
                 this.sameHandFarGrabModule.active = true;
             }
             if (this.outsideDeactivationBounds() || contextSwitch) {

@@ -29,6 +29,7 @@ var CONTOLLER_SCRIPTS = [
     "controllerModules/inVREditMode.js",
     "controllerModules/disableOtherModule.js",
     "controllerModules/drive.js",
+    //"controllerModules/tutorialOverlay.js",
     "controllerModules/farTrigger.js",
     "controllerModules/teleport.js",
     "controllerModules/hudOverlayPointer.js",

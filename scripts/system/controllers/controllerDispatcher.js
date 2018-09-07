@@ -60,7 +60,9 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             leftHandTrigger: false,
             rightHandEquip: false,
             leftHandEquip: false,
-            mouse: false
+            mouse: false,
+            leftHandOverlay: false,
+            rightHandOverlay: false,
         };
 
         this.laserVisibleStatus = [false, false, false, false];
