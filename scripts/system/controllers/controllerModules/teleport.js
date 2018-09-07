@@ -287,7 +287,7 @@ Script.include("/~/system/libraries/controllers.js");
             return getEnabledModuleByName(this.hand === RIGHT_HAND ? "RightDriver" : "LeftDriver");
         }
 
-        this.sameHandFarGrabModule = getEnabledModuleByName(this.hand === RIGHT_HAND ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
+        this.sameHandFarGrabModule = undefined;
 
         this.isReady = function (controllerData, deltaTime) {
             if (!HMD.active) {
@@ -295,9 +295,11 @@ Script.include("/~/system/libraries/controllers.js");
             }
 
             if (this.active) {
+                print((this.hand === RIGHT_HAND ? "RightHand" : "LeftHand") + " switched to teleport...");
                 return makeRunningValues(true, [], []);
             }
 
+            this.sameHandFarGrabModule = getEnabledModuleByName(this.hand === RIGHT_HAND ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
             var thisHandDriver = this.getDrive();
 
             var otherModule = this.getOtherModule();
@@ -332,8 +334,12 @@ Script.include("/~/system/libraries/controllers.js");
             var thisHandDriver = this.getDrive();
             // Do we need to switch to fargrab?
             var handRotation = controllerData.controllerRotAngles[this.hand];
-            var contextSwitch = (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE && this.isPointing());
-            if (contextSwitch && this.sameHandFarGrabModule) { this.sameHandFarGrabModule.active = true; }
+            var contextSwitch = (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE);
+            if (contextSwitch && this.sameHandFarGrabModule) {
+                // Context switching...
+                print((this.hand === RIGHT_HAND ? "RightHand" : "LeftHand") + " context switch from teleport.");
+                this.sameHandFarGrabModule.active = true;
+            }
             if (this.outsideDeactivationBounds() || contextSwitch) {
                 // If the angle between the look vector and pointing vector is too great, turn off.
                 this.disableLasers();

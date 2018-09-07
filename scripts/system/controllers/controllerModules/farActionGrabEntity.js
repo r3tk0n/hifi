@@ -383,118 +383,6 @@ Script.include("/~/system/libraries/Xform.js");
             return false;
         };
 
-        this.handLine1 = Uuid.NULL;
-        this.handLine2 = Uuid.NULL;
-
-        this.updateHandLine = function (ctrlrPick) {
-            var triggerVal = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT);
-            var offset = getFingertipOffset(this.hand);
-            if (Uuid.isEqual(this.handLine1, Uuid.NULL)) {
-                // We don't have a line yet...
-                // This is the segment that originates from the hand controller and ends at the LERP between start and end.
-                this.handLine1 = Overlays.addOverlay("line3d",
-                    {
-                        name: "handLine1",
-                        color: LIGHT_TEAL,
-                        alpha: 1.0,
-                        isSolid: true,
-                        position: Vec3.sum(ctrlrPick.searchRay.position, offset),
-                        glow: 1,
-                        lineWidth: 0.06,
-                        visible: false
-                    });
-            }
-            if (Uuid.isEqual(this.handLine2, Uuid.NULL)) {
-                // This is the segment that originates from the LERP between overall line's start and end, and the endpoint
-                this.handLine2 = Overlays.addOverlay("line3d",
-                    {
-                        name: "handLine2",
-                        color: LIGHT_TEAL,
-                        alpha: 1.0,
-                        isSolid: true,
-                        position: Vec3.sum(ctrlrPick.searchRay.position, offset),
-                        glow: 1,
-                        lineWidth: 0.06,
-                        visible: false
-                    });
-            }
-
-            var grabbable = false;
-            if (ctrlrPick.intersects) {
-                if (!Uuid.isEqual(Uuid.NULL, ctrlrPick.objectID)) {
-                    var props = Entities.getEntityProperties(ctrlrPick.objectID);
-                    grabbable = entityIsGrabbable(props);
-                }
-            }
-
-            if (!Uuid.isEqual(this.grabbedThingID, Uuid.NULL)) {        // Something has been grabbed...
-                var props = Entities.getEntityProperties(this.grabbedThingID, ["position"]);
-                //var distance = Vec3.length(Vec3.subtract(ctrlrPick.interesction, ctrlrPick.searchRay.origin));
-                Overlays.editOverlay(this.handLine1, {
-                    position: ctrlrPick.searchRay.origin,
-                    endParentID: this.grabbedThingID,
-                    endPoint: Vec3.sum(this.grabbedThingIntersectionOffset, props.position),
-                    color: BRIGHT_TEAL,                 // Color for searching
-                    visible: true
-                });
-                Overlays.editOverlay(this.handLine2, {
-                    visible: false
-                });
-            } else if (grabbable) {     // Grabbable but not grabbed yet.
-                var startPos = Vec3.sum(ctrlrPick.searchRay.origin, offset);
-                var endPos = ctrlrPick.intersection;
-                var progressPos = (triggerVal > 0) ? lerp(startPos, endPos, triggerVal) : startPos;
-                var dir = ctrlrPick.searchRay.direction;
-                // We have an endpoint
-                Overlays.editOverlay(this.handLine1, {
-                    position: startPos,
-                    endParentID: null,
-                    endPoint: progressPos,
-                    color: YELLOW,                      // Color that slowly fills line.
-                    lineWidth: 0.08,
-                    visible: (triggerVal < 0.01) ? false : true
-                });
-                Overlays.editOverlay(this.handLine2, {
-                    position: progressPos,
-                    endPoint: endPos,
-                    color: BRIGHT_TEAL,                 // Color that recedes in line.
-                    lineWidth: 0.08,
-                    visible: true
-                });
-            } else if (ctrlrPick.intersects) {      // Not grabbable, we haven't grabbed anything, but we have an intersection....
-                var props = Entities.getEntityProperties(this.grabbedThingID, ["position"]);
-                Overlays.editOverlay(this.handLine1, {
-                    position: Vec3.sum(ctrlrPick.searchRay.origin, offset),
-                    endPoint: ctrlrPick.intersection,
-                    color: LIGHT_TEAL,                 // Color for searching
-                    visible: true
-                });
-                Overlays.editOverlay(this.handLine2, {
-                    visible: false
-                });
-            } else {        // Otherwise, we're probably pointing at a skybox, so just draw a really long line.
-                var startPos = Vec3.sum(ctrlrPick.searchRay.origin, offset);
-                Overlays.editOverlay(this.handLine1, {
-                    position: startPos,
-                    endPoint: Vec3.sum(startPos, Vec3.multiply(100, ctrlrPick.searchRay.direction)),
-                    endParentID: null,
-                    color: LIGHT_TEAL,                  // Color for no intersection.
-                    lineWidth: 0.06,
-                    visible: true
-                });
-
-                Overlays.editOverlay(this.handLine2, {
-                    visible: false
-                });
-            }
-        };
-
-        // Lazy utility function for disabling both lasers.
-        this.setLasersVisibility = function (viz) {
-            Overlays.editOverlay(this.handLine1, { visible: viz });
-            Overlays.editOverlay(this.handLine2, { visible: viz });
-        }
-
         this.getOtherModule = function () {
             var otherModule = this.hand === RIGHT_HAND ? leftFarActionGrabEntity : rightFarActionGrabEntity;
             return otherModule;
@@ -545,18 +433,14 @@ Script.include("/~/system/libraries/Xform.js");
 
         this.isReady = function (controllerData, deltaTime) {
             if (!EXP3_USE_FARGRAB || !HMD.active) {
-                this.setLasersVisibility(false);
                 return makeRunningValues(false, [], []);
             }
 
             // Controller Exp3 activation criteria.
-            var headPick = controllerData.rayPicks[AVATAR_HEAD];        // Head raypick.
-            var ctrlrPick = controllerData.rayPicks[this.hand];         // Raypick for this hand.
             var rot = controllerData.controllerRotAngles[this.hand];   // Rotation of wrist relative to controller's Z-axis
 
             if (this.active) {
-                this.setLasersVisibility(true);
-                //this.updateHandLine(ctrlrPick);
+                print((this.hand === RIGHT_HAND ? "RightHand" : "LeftHand") + " switched to teleport...");
                 this.prepareDistanceRotatingData(controllerData);
                 this.active = true;
                 this.wasClicked = true;
@@ -588,14 +472,11 @@ Script.include("/~/system/libraries/Xform.js");
             if (pointing && correctRotation && correctHeadAngularVelocity && correctControllerLinearVelocity && this.inBounds || this.active) {
                 this.prepareDistanceRotatingData(controllerData);
                 this.active = true;
-                this.setLasersVisibility(true);
-                //this.updateHandLine(ctrlrPick);
                 this.wasClicked = true;
                 return makeRunningValues(true, [], []);
             } else {
                 // If the activation criteria for turning on the beams wasn't met...
                 this.destroyContextOverlay();
-                this.setLasersVisibility(false);
                 this.active = false;
                 return makeRunningValues(false, [], []);
             }
@@ -604,14 +485,15 @@ Script.include("/~/system/libraries/Xform.js");
         this.run = function (controllerData) {
             // Update internal variables checking if we're within bounds to keep alive...
             this.updateBoundsChecks();
-            // Update the laser...
-            //this.updateHandLine(controllerData.rayPicks[this.hand]);
             // Get the rotation for comparison...
             var handRotation = controllerData.controllerRotAngles[this.hand];
             var correctRotation = (handRotation > CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_FARGRAB_MAX_ANGLE);
             // Do we need to switch to teleport?
-            var contextSwitch = (handRotation > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE && this.isPointing());
-            if (contextSwitch && this.sameHandTeleportModule) { this.sameHandTeleportModule.active = true; }
+            var contextSwitch = (handRotation > CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && handRotation <= CONTROLLER_EXP3_TELEPORT_MAX_ANGLE && Uuid.isEqual(Uuid.NULL, this.grabbedThingID));
+            if (contextSwitch && this.sameHandTeleportModule) {
+                print((this.hand === RIGHT_HAND ? "RightHand" : "LeftHand") + " context switch from fargrab.");
+                this.sameHandTeleportModule.active = true;
+            }
             // If the trigger's not clicked but we're grabbing something, we should release...
             var ending = (!Uuid.isEqual(Uuid.NULL, this.grabbedThingID) && (controllerData.triggerClicks[this.hand] === 0));
 
@@ -622,7 +504,6 @@ Script.include("/~/system/libraries/Xform.js");
                 Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                     this.highlightedEntity);
                 this.highlightedEntity = null;
-                this.setLasersVisibility(false);
                 this.active = false;
                 return makeRunningValues(false, [], []);
             }
@@ -654,7 +535,6 @@ Script.include("/~/system/libraries/Xform.js");
                     if (nearGrabReadiness[k].active && (nearGrabReadiness[k].targets[0] === this.grabbedThingID
                         || HMD.tabletID && nearGrabReadiness[k].targets[0] === HMD.tabletID)) {
                         this.endFarGrabAction();
-                        this.setLasersVisibility(false);
                         this.active = false;
                         return makeRunningValues(false, [], []);
                     }
@@ -667,7 +547,6 @@ Script.include("/~/system/libraries/Xform.js");
                 for (var j = 0; j < nearGrabReadiness.length; j++) {
                     if (nearGrabReadiness[j].active) {
                         this.endFarGrabAction();
-                        this.setLasersVisibility(false);
                         this.active = false;
                         return makeRunningValues(false, [], []);
                     }
@@ -688,7 +567,6 @@ Script.include("/~/system/libraries/Xform.js");
                         if (targetProps.href !== "") {
                             AddressManager.handleLookupString(targetProps.href);
                             this.active = false;
-                            this.setLasersVisibility(false);
                             return makeRunningValues(false, [], []);
                         }
 
@@ -808,7 +686,6 @@ Script.include("/~/system/libraries/Xform.js");
                         this.highlightedEntity);
                     this.highlightedEntity = null;
                     this.active = false;
-                    this.setLasersVisibility(false);
                     return makeRunningValues(false, [], []);
                 }
             }
