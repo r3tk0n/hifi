@@ -460,6 +460,23 @@ public slots:
     */
     glm::quat cancelOutRoll(const glm::quat& q);
 
+    /**jsdoc
+    * Get the swing component of a quaternion about a vector.
+    * @function Quat(0).getSwing
+    * @param {Vec3} v - Vector representing what the rotation is relative to.
+    * @param {Quat} q - Rotation quaternion we're decomposing.
+    * @return {Quat} - Returns the 'swing' about the passed-in vector v, decomposed from quat q.
+    */
+    glm::quat getSwing(const glm::vec3& v, const glm::quat& q);
+
+    /**jsdoc
+    * Get the swing component of a quaternion about a vector.
+    * @function Quat(0).getTwist
+    * @param {Vec3} v - Vector representing what the rotation is relative to.
+    * @param {Quat} q - Rotation quaternion we're decomposing.
+    * @return {Quat} - Returns the 'swing' about the passed-in vector v, decomposed from quat q.
+    */
+    glm::quat getTwist(const glm::vec3& v, const glm::quat& q);
 private:
     const glm::quat& IDENTITY() const { return Quaternions::IDENTITY; }
 

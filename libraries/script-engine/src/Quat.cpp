@@ -13,6 +13,7 @@
 
 #include <glm/gtx/vector_angle.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <GeometryUtil.h>
 
 #include <QDebug>
 
@@ -140,4 +141,16 @@ glm::quat Quat::cancelOutRollAndPitch(const glm::quat& q) {
 
 glm::quat Quat::cancelOutRoll(const glm::quat& q) {
     return ::cancelOutRoll(q);
+}
+
+glm::quat Quat::getSwing(const glm::vec3& v, const glm::quat& q) {
+    glm::quat swing, twist;
+    swingTwistDecomposition(q, v, swing, twist);
+    return swing;
+}
+
+glm::quat Quat::getTwist(const glm::vec3& v, const glm::quat& q) {
+    glm::quat swing, twist;
+    swingTwistDecomposition(q, v, swing, twist);
+    return twist;
 }

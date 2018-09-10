@@ -12,6 +12,7 @@
 #include "Vec3.h"
 
 #include <glm/gtx/vector_angle.hpp>
+#include <GeometryUtil.h>
 
 #include <QDebug>
 
