@@ -136,11 +136,11 @@ EXP3_USE_POINTING_DOWN_FOR_OFF = false;
 EXP3_USE_THUMB_UP = false;
 
 // Controller Experiment 3 Rotation Angles:
-CONTROLLER_EXP3_TELEPORT_MIN_ANGLE = 0;
-CONTROLLER_EXP3_TELEPORT_MAX_ANGLE = 47;
+CONTROLLER_EXP3_TELEPORT_MIN_ANGLE = -135;
+CONTROLLER_EXP3_TELEPORT_MAX_ANGLE = -43;
 // Three degree gap
-CONTROLLER_EXP3_FARGRAB_MIN_ANGLE = 43;
-CONTROLLER_EXP3_FARGRAB_MAX_ANGLE = 135;
+CONTROLLER_EXP3_FARGRAB_MIN_ANGLE = -47;
+CONTROLLER_EXP3_FARGRAB_MAX_ANGLE = 45;
 //CONTROLLER_EXP3_DRIVE_MIN_ANGLE = 135;
 CONTROLLER_EXP3_DRIVE_MIN_ANGLE = 0;
 //CONTROLLER_EXP3_DRIVE_MAX_ANGLE = 180;
@@ -618,23 +618,52 @@ toRadians = function (angle) {
     return angle * (Math.PI / 180);
 }
 
+//// Came from controller_experiment2, used here for controlling whether we're checking teleport or fargrab.
+//controllerTwistAngle = function (hand) {
+//    // Retrieve the hand's pose.
+//    var handPose = Controller.getPoseValue(hand === LEFT_HAND ? Controller.Standard.LeftHand : Controller.Standard.RightHand);
+//    // Get the rotation of the controller for the given hand.
+//    var handRotationQuat = handPose.rotation;
+//    // Get it into avatar space.
+//    var handRotationVector = Vec3.multiplyQbyV(handRotationQuat, Vec3.UNIT_X);
+
+//    // Figure out the plane we're testing against...
+
+//    // Multiply up vector by avatar rotation.
+//    var v1 = Vec3.multiplyQbyV(MyAvatar.rotation, Vec3.UNIT_Z);
+//    var v2 = Vec3.multiplyQbyV(MyAvatar.rotation, Vec3.UNIT_Y);
+//    var normal = Vec3.cross(v1, v2);
+//    // Take the cosine inverse of the dot product to retrieve theta (angle, returned in degrees).
+//    return toDegrees(Math.acos(Vec3.dot(Vec3.normalize(handRotationVector), Vec3.normalize(normal))));
+//}
+
 // Came from controller_experiment2, used here for controlling whether we're checking teleport or fargrab.
 controllerTwistAngle = function (hand) {
     // Retrieve the hand's pose.
     var handPose = Controller.getPoseValue(hand === LEFT_HAND ? Controller.Standard.LeftHand : Controller.Standard.RightHand);
     // Get the rotation of the controller for the given hand.
-    var handRotationQuat = handPose.rotation;
-    // Get it into avatar space.
-    var handRotationVector = Vec3.multiplyQbyV(handRotationQuat, Vec3.UNIT_X);
+    var rot = handPose.rotation;
 
-    // Figure out the plane we're testing against...
+    var ctrlrForward = Vec3.multiplyQbyV(rot, Vec3.UNIT_Y);
+    var avatarUp = Vec3.multiplyQbyV(MyAvatar.orientation, Vec3.UNIT_Y);
+    var sideAxis = (hand === RIGHT_HAND) ? { x: -1, y: 0, z: 0 } : Vec3.UNIT_X;
+    var rotBetween = Quat.lookAt(Vec3.ZERO, ctrlrForward, avatarUp);
 
-    // Multiply up vector by avatar rotation.
-    var v1 = Vec3.multiplyQbyV(MyAvatar.rotation, Vec3.UNIT_Z);
-    var v2 = Vec3.multiplyQbyV(MyAvatar.rotation, Vec3.UNIT_Y);
-    var normal = Vec3.cross(v1, v2);
+    var dir = Vec3.multiplyQbyV(rot, Vec3.UNIT_Z);
+    var ref = Vec3.multiplyQbyV(rotBetween, sideAxis);
+    var ref2 = Vec3.multiplyQbyV(rotBetween, avatarUp);
+
+    var angle = toDegrees(Vec3.getAngle(dir, ref));
+    var angle2 = toDegrees(Vec3.getAngle(dir, ref2));
+
+    if (angle2 > 90) {
+        angle *= -1;
+    }
+
+    return angle;
+
     // Take the cosine inverse of the dot product to retrieve theta (angle, returned in degrees).
-    return toDegrees(Math.acos(Vec3.dot(Vec3.normalize(handRotationVector), Vec3.normalize(normal))));
+    //return toDegrees(Math.acos(Vec3.dot(Vec3.normalize(handRotationVector), Vec3.normalize(normal))));
 }
 
 projectVontoW = function (v, w) {
