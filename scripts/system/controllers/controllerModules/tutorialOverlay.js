@@ -48,7 +48,7 @@ Script.include("/~/system/libraries/controllers.js");
         this.isReady = function (controllerData, deltaTime) {
             if (this.isPointingUp()) {     // MyAvatar setting bool check goes here.
                 print("starting...");
-                this.showWristGem(controllerData);
+                this.showWristGem(controllerData.controllerRotAngles[this.hand]);
                 return makeRunningValues(true, [], []);
             }
             return makeRunningValues(false, [], []);
@@ -60,7 +60,7 @@ Script.include("/~/system/libraries/controllers.js");
                 return makeRunningValues(false, [], []);
             }
            
-            this.updateWristGem(controllerData);
+            this.updateWristGem(controllerData.controllerRotAngles[this.hand]);
 
             return makeRunningValues(true, [], []);
         };
@@ -76,12 +76,20 @@ Script.include("/~/system/libraries/controllers.js");
             }
         }
 
-        this.updateWristGem = function (controllerData) {
-            var localRot = this.getLocalRot(controllerData.controllerRotAngles[this.hand]);
+        this.updateWristGem = function (wristRotation) {
+            var handIndex = MyAvatar.getJointIndex(this.hand === RIGHT_HAND ? "RightHand" : "LeftHand");
+            var translation = MyAvatar.getJointPosition(handIndex);
+            var localRot = this.getLocalRot(wristRotation);
+            var inTeleportAngle = (wristRotation >= CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && wristRotation < CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
+            var inFarGrabAngle = (wristRotation >= CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && wristRotation < CONTROLLER_EXP3_FARGRAB_MAX_ANGLE);
             if (!Uuid.isEqual(Uuid.NULL, this.teleportCircleUuid)) {
                 // Overlay already exists, just update its properties.
+                var circleColor = (inTeleportAngle ? { red: 0, green: 0, blue: 255 } : { red: 0, green: 0, blue: 128 });
                 var props = {
-                    localRotation: localRot
+                    position: translation,
+                    localRotation: localRot,
+                    alpha: (inTeleportAngle ? 1.0 : 0.4),
+                    color: circleColor
                 }
                 var attempt = Overlays.editOverlay(this.teleportCircleUuid, props);
                 if (!attempt) {
@@ -90,8 +98,12 @@ Script.include("/~/system/libraries/controllers.js");
             }
             if (!Uuid.isEqual(Uuid.NULL, this.farGrabCircleUuid)) {
                 // Overlay already exists, just update its properties.
+                var circleColor = (inFarGrabAngle ? { red: 255, green: 255, blue: 0 } : { red: 128, green: 128, blue: 0 });
                 var props = {
-                    localRotation: localRot
+                    position: translation,
+                    localRotation: localRot,
+                    alpha: (inFarGrabAngle ? 1.0 : 0.4),
+                    color: circleColor
                 }
                 var attempt = Overlays.editOverlay(this.farGrabCircleUuid, props);
                 if (!attempt) {
@@ -100,10 +112,10 @@ Script.include("/~/system/libraries/controllers.js");
             }
         }
 
-        this.showWristGem = function (controllerData) {
+        this.showWristGem = function (wristRotation) {
             var pose = Controller.getPoseValue(this.hand === RIGHT_HAND ? "RightHand" : "LeftHand");
             var handIndex = MyAvatar.getJointIndex(this.hand === RIGHT_HAND ? "RightHand" : "LeftHand");
-            var localRot = this.getLocalRot(controllerData.controllerRotAngles[this.hand]);
+            var localRot = this.getLocalRot(wristRotation);
             var translation = MyAvatar.getJointPosition(handIndex);
             var scale = MyAvatar.getAvatarScale();
 
@@ -132,14 +144,14 @@ Script.include("/~/system/libraries/controllers.js");
                     color: circleColor,
                     outerRadius: maxRadius,
                     innerRadius: minRadius,
-                    alpha: 1,
+                    alpha: 0.4,
                     grabbable: false
                 };
                 this.teleportCircleUuid = Overlays.addOverlay("circle3d", teleportCircleProps);
             }
             if (Uuid.isEqual(Uuid.NULL, this.farGrabCircleUuid)) {
                 print("Spawning far grab circle...");
-                var circleColor = { red: 128, green: 128, blue: 0 };
+                var circleColor = { red: 255, green: 255, blue: 0 };
                 var teleportCircleProps = {
                     visible: true,
                     name: "farGrabCircle",
@@ -153,7 +165,7 @@ Script.include("/~/system/libraries/controllers.js");
                     color: circleColor,
                     outerRadius: maxRadius,
                     innerRadius: minRadius,
-                    alpha: 1,
+                    alpha: 0.4,
                     grabbable: false
                 };
                 this.farGrabCircleUuid = Overlays.addOverlay("circle3d", teleportCircleProps);
