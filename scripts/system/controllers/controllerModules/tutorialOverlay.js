@@ -48,6 +48,7 @@ Script.include("/~/system/libraries/controllers.js");
         this.isReady = function (controllerData, deltaTime) {
             if (this.isPointingUp()) {     // MyAvatar setting bool check goes here.
                 print("starting...");
+                this.showWristGem(controllerData);
                 return makeRunningValues(true, [], []);
             }
             return makeRunningValues(false, [], []);
@@ -55,28 +56,66 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.run = function (controllerData, deltaTime) {
             if (this.isPointingDown()) {     // MyAvatar setting bool check goes here.
-                Overlays.deleteOverlay(this.teleportCircleUuid);
-                Overlays.deleteOverlay(this.farGrabCircleUuid);
-                this.farGrabCircleUuid = Uuid.NULL;
-                this.teleportCircleUuid = Uuid.NULL;
+                this.hideWristGem();
                 return makeRunningValues(false, [], []);
             }
+           
+            this.updateWristGem(controllerData);
+
+            return makeRunningValues(true, [], []);
+        };
+
+        this.hideWristGem = function () {
+            if (!Uuid.isEqual(Uuid.NULL, this.teleportCircleUuid)) {
+                Overlays.deleteOverlay(this.teleportCircleUuid);
+                this.teleportCircleUuid = Uuid.NULL;
+            }
+            if (!Uuid.isEqual(Uuid.NULL, this.farGrabCircleUuid)) {
+                Overlays.deleteOverlay(this.farGrabCircleUuid);
+                this.farGrabCircleUuid = Uuid.NULL;
+            }
+        }
+
+        this.updateWristGem = function (controllerData) {
+            var localRot = this.getLocalRot(controllerData.controllerRotAngles[this.hand]);
+            if (!Uuid.isEqual(Uuid.NULL, this.teleportCircleUuid)) {
+                // Overlay already exists, just update its properties.
+                var props = {
+                    localRotation: localRot
+                }
+                var attempt = Overlays.editOverlay(this.teleportCircleUuid, props);
+                if (!attempt) {
+                    print("Could not find overlay to edit for teleport semicircle.");
+                }
+            }
+            if (!Uuid.isEqual(Uuid.NULL, this.farGrabCircleUuid)) {
+                // Overlay already exists, just update its properties.
+                var props = {
+                    localRotation: localRot
+                }
+                var attempt = Overlays.editOverlay(this.farGrabCircleUuid, props);
+                if (!attempt) {
+                    print("Could not find overlay to edit for fargrab semicircle.");
+                }
+            }
+        }
+
+        this.showWristGem = function (controllerData) {
             var pose = Controller.getPoseValue(this.hand === RIGHT_HAND ? "RightHand" : "LeftHand");
             var handIndex = MyAvatar.getJointIndex(this.hand === RIGHT_HAND ? "RightHand" : "LeftHand");
-            var translation = MyAvatar.getJointPosition(handIndex);
-
-            var worldTranslation = Vec3.sum(Vec3.multiplyQbyV(MyAvatar.orientation, translation), MyAvatar.position);
-            var worldRotation = getWristRotationQuat(this.hand);
             var localRot = this.getLocalRot(controllerData.controllerRotAngles[this.hand]);
-
+            var translation = MyAvatar.getJointPosition(handIndex);
             var scale = MyAvatar.getAvatarScale();
+
             var minRadius = 0.025 * scale;
             var maxRadius = 0.03 * scale;
 
             var teleportMinAngle = -45;
             var teleportMaxAngle = 45
 
-            // Hand teleport circle...
+            var farGrabMinAngle = 45;
+            var farGrabMaxAngle = 135;
+
             if (Uuid.isEqual(Uuid.NULL, this.teleportCircleUuid)) {
                 print("Spawning teleport circle...");
                 var circleColor = { red: 0, green: 0, blue: 255 };
@@ -84,7 +123,6 @@ Script.include("/~/system/libraries/controllers.js");
                     visible: true,
                     name: "teleportCircle",
                     position: translation,
-                    //rotation: worldRotation,
                     localRotation: localRot,
                     parentID: MyAvatar.SELF_ID,
                     parentJointIndex: handIndex,
@@ -98,22 +136,7 @@ Script.include("/~/system/libraries/controllers.js");
                     grabbable: false
                 };
                 this.teleportCircleUuid = Overlays.addOverlay("circle3d", teleportCircleProps);
-            } else {
-                // Overlay already exists, just update its properties.
-                var props = {
-                    //rotation: worldRotation
-                    localRotation: localRot
-                }
-                var attempt = Overlays.editOverlay(this.teleportCircleUuid, props);
-                if (!attempt) {
-                    print("Could not find overlay to edit for teleport semicircle.");
-                }
             }
-
-            var farGrabMinAngle = 45;
-            var farGrabMaxAngle = 135;
-
-            // Handle fargrab circle....
             if (Uuid.isEqual(Uuid.NULL, this.farGrabCircleUuid)) {
                 print("Spawning far grab circle...");
                 var circleColor = { red: 128, green: 128, blue: 0 };
@@ -121,7 +144,6 @@ Script.include("/~/system/libraries/controllers.js");
                     visible: true,
                     name: "farGrabCircle",
                     position: translation,
-                    //rotation: worldRotation,
                     localRotation: localRot,
                     parentID: MyAvatar.SELF_ID,
                     parentJointIndex: handIndex,
@@ -135,20 +157,8 @@ Script.include("/~/system/libraries/controllers.js");
                     grabbable: false
                 };
                 this.farGrabCircleUuid = Overlays.addOverlay("circle3d", teleportCircleProps);
-            } else {
-                // Overlay already exists, just update its properties.
-                //var rot = controllerData[];
-                var props = {
-                    //rotation: worldRotation
-                    localRotation: localRot
-                }
-                var attempt = Overlays.editOverlay(this.farGrabCircleUuid, props);
-                if (!attempt) {
-                    print("Could not find overlay to edit for fargrab semicircle.");
-                }
             }
-            return makeRunningValues(true, [], []);
-        };
+        }
 
         this.cleanup = function () {
             // Clean up vars and stuff.
