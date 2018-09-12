@@ -44,6 +44,7 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.teleportCircleUuid = Uuid.NULL;
         this.farGrabCircleUuid = Uuid.NULL;
+        this.wristGemRotIndicator = Uuid.NULL;
 
         this.isReady = function (controllerData, deltaTime) {
             if (this.isPointingUp()) {     // MyAvatar setting bool check goes here.
@@ -74,14 +75,21 @@ Script.include("/~/system/libraries/controllers.js");
                 Overlays.deleteOverlay(this.farGrabCircleUuid);
                 this.farGrabCircleUuid = Uuid.NULL;
             }
+            if (!Uuid.isEqual(Uuid.NULL, this.wristGemRotIndicator)) {
+                Overlays.deleteOverlay(this.wristGemRotIndicator);
+                this.wristGemRotIndicator = Uuid.NULL;
+            }
         }
 
         this.updateWristGem = function (wristRotation) {
+            var pose = Controller.getPoseValue(this.hand === RIGHT_HAND ? "RightHand" : "LeftHand");
             var handIndex = MyAvatar.getJointIndex(this.hand === RIGHT_HAND ? "RightHand" : "LeftHand");
             var translation = MyAvatar.getJointPosition(handIndex);
             var localRot = this.getLocalRot(wristRotation);
             var inTeleportAngle = (wristRotation >= CONTROLLER_EXP3_TELEPORT_MIN_ANGLE && wristRotation < CONTROLLER_EXP3_TELEPORT_MAX_ANGLE);
             var inFarGrabAngle = (wristRotation >= CONTROLLER_EXP3_FARGRAB_MIN_ANGLE && wristRotation < CONTROLLER_EXP3_FARGRAB_MAX_ANGLE);
+            var scale = MyAvatar.getAvatarScale();
+            var minRadius = 0.035 * scale;
             if (!Uuid.isEqual(Uuid.NULL, this.teleportCircleUuid)) {
                 // Overlay already exists, just update its properties.
                 var circleColor = (inTeleportAngle ? { red: 0, green: 0, blue: 255 } : { red: 0, green: 0, blue: 128 });
@@ -93,7 +101,7 @@ Script.include("/~/system/libraries/controllers.js");
                 }
                 var attempt = Overlays.editOverlay(this.teleportCircleUuid, props);
                 if (!attempt) {
-                    print("Could not find overlay to edit for teleport semicircle.");
+                    //print("Could not find overlay to edit for teleport semicircle.");
                 }
             }
             if (!Uuid.isEqual(Uuid.NULL, this.farGrabCircleUuid)) {
@@ -107,7 +115,24 @@ Script.include("/~/system/libraries/controllers.js");
                 }
                 var attempt = Overlays.editOverlay(this.farGrabCircleUuid, props);
                 if (!attempt) {
-                    print("Could not find overlay to edit for fargrab semicircle.");
+                    //print("Could not find overlay to edit for fargrab semicircle.");
+                }
+            }
+            if (!Uuid.isEqual(Uuid.NULL, this.wristGemRotIndicator)) {
+                var triangleDim = 0.02;
+                var triangleOffset = minRadius - (triangleDim / 2);
+                if (this.hand === LEFT_HAND) { triangleOffset *= -1; }
+                var localRot = (this.hand === LEFT_HAND) ? Quat.multiply(pose.rotation, Quat.angleAxis(180, Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y))) : pose.rotation;
+                var props = {
+                    position: translation,
+                    localPosition: { x: triangleOffset, y: 0.0, z: 0 },
+                    //localRotation: localRot,
+                    localRotation: localRot,
+                    alpha: 0.7
+                }
+                var attempt = Overlays.editOverlay(this.wristGemRotIndicator, props);
+                if (!attempt) {
+                    //print("Could not find overlay to edit for wristgem rotation triangle.");
                 }
             }
         }
@@ -119,8 +144,8 @@ Script.include("/~/system/libraries/controllers.js");
             var translation = MyAvatar.getJointPosition(handIndex);
             var scale = MyAvatar.getAvatarScale();
 
-            var minRadius = 0.025 * scale;
-            var maxRadius = 0.03 * scale;
+            var minRadius = 0.035 * scale;
+            var maxRadius = 0.04 * scale;
 
             var teleportMinAngle = -45;
             var teleportMaxAngle = 45
@@ -128,8 +153,9 @@ Script.include("/~/system/libraries/controllers.js");
             var farGrabMinAngle = 45;
             var farGrabMaxAngle = 135;
 
+            // Teleport Gem
             if (Uuid.isEqual(Uuid.NULL, this.teleportCircleUuid)) {
-                print("Spawning teleport circle...");
+                //print("Spawning teleport circle...");
                 var circleColor = { red: 0, green: 0, blue: 255 };
                 var teleportCircleProps = {
                     visible: true,
@@ -149,8 +175,10 @@ Script.include("/~/system/libraries/controllers.js");
                 };
                 this.teleportCircleUuid = Overlays.addOverlay("circle3d", teleportCircleProps);
             }
+
+            // FarGrab Gem
             if (Uuid.isEqual(Uuid.NULL, this.farGrabCircleUuid)) {
-                print("Spawning far grab circle...");
+                //print("Spawning far grab circle...");
                 var circleColor = { red: 255, green: 255, blue: 0 };
                 var teleportCircleProps = {
                     visible: true,
@@ -169,6 +197,34 @@ Script.include("/~/system/libraries/controllers.js");
                     grabbable: false
                 };
                 this.farGrabCircleUuid = Overlays.addOverlay("circle3d", teleportCircleProps);
+            }
+
+            var triangleDim = 0.02;
+            var triangleOffset = minRadius - (triangleDim / 2);
+            if (this.hand === LEFT_HAND) { triangleOffset *= -1; }
+
+            // Rotation indicator gem
+            if (Uuid.isEqual(Uuid.NULL, this.wristGemRotIndicator)) {
+                //print("Spawning rotation indicator triangle...");
+                var shapeColor = { red: 0, green: 0, blue: 0 };
+                var localRot = (this.hand === LEFT_HAND) ? Quat.multiply(pose.rotation, Quat.angleAxis(180, Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y))) : pose.rotation;
+                var rotationGemProps = {
+                    visible: true,
+                    name: "wristGemRotIndicator",
+                    color: shapeColor,
+                    alpha: 0.7,
+                    position: translation,
+                    localPosition: {x: triangleOffset, y: 0.0, z: 0},
+                    parentID: MyAvatar.SELF_ID,
+                    parentJointIndex: handIndex,
+                    localRotation: localRot,
+                    isSolid: true,
+                    ignorePickIntersection: true,
+                    grabbable: false,
+                    dimensions: { x: triangleDim, y: 0.0001, z: 0.01},
+                    shape: "Triangle"
+                }
+                this.wristGemRotIndicator = Overlays.addOverlay("shape", rotationGemProps);
             }
         }
 
