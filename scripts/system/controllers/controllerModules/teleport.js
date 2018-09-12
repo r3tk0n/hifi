@@ -341,7 +341,10 @@ Script.include("/~/system/libraries/controllers.js");
                 //print((this.hand === RIGHT_HAND ? "RightHand" : "LeftHand") + " context switch from teleport.");
                 this.sameHandFarGrabModule.active = true;
             }
-            if (this.outsideDeactivationBounds() || contextSwitch) {
+
+            var pose = Controller.getPoseValue(handInfo[(_this.hand === RIGHT_HAND) ? 'right' : 'left'].controllerInput);
+
+            if (this.outsideDeactivationBounds() || contextSwitch || !pose.valid) {
                 // If the angle between the look vector and pointing vector is too great, turn off.
                 this.disableLasers();
                 this.active = false;
@@ -349,7 +352,7 @@ Script.include("/~/system/libraries/controllers.js");
             }
 
             // Get current hand pose information to see if the pose is valid
-            var pose = Controller.getPoseValue(handInfo[(_this.hand === RIGHT_HAND) ? 'right' : 'left'].controllerInput);
+            //var pose = Controller.getPoseValue(handInfo[(_this.hand === RIGHT_HAND) ? 'right' : 'left'].controllerInput);
             var mode = pose.valid ? _this.hand : 'head';
             if (!pose.valid) {
                 Pointers.disablePointer(_this.teleportParabolaHandVisible);
