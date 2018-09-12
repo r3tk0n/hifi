@@ -30,7 +30,7 @@ Script.include("/~/system/libraries/controllers.js");
             return (angle <= 45) ? true : false;
         }
 
-        this.getLocalRot = function () {
+        this.getLocalRot = function (wristAngle) {
             var temp = Quat.angleAxis(90, Vec3.UNIT_X);
             if (this.hand === LEFT_HAND) {
                 temp = Quat.multiply(Quat.angleAxis(-90, Vec3.UNIT_Y), temp);
@@ -38,7 +38,8 @@ Script.include("/~/system/libraries/controllers.js");
                 temp = Quat.multiply(temp, Quat.angleAxis(180, Vec3.UNIT_X));
                 temp = Quat.multiply(Quat.angleAxis(-90, Vec3.UNIT_Y), temp);
             }
-            return temp;
+            var forward = Vec3.multiplyQbyV(temp, { x: 0, y: 0, z: -1 });
+            return Quat.multiply(Quat.angleAxis(wristAngle, forward), temp);
         }
 
         this.teleportCircleUuid = Uuid.NULL;
@@ -66,10 +67,11 @@ Script.include("/~/system/libraries/controllers.js");
 
             var worldTranslation = Vec3.sum(Vec3.multiplyQbyV(MyAvatar.orientation, translation), MyAvatar.position);
             var worldRotation = getWristRotationQuat(this.hand);
-            var localRot = this.getLocalRot();
+            var localRot = this.getLocalRot(controllerData.controllerRotAngles[this.hand]);
 
-            var minRadius = 0.05;
-            var maxRadius = 0.06;
+            var scale = MyAvatar.getAvatarScale();
+            var minRadius = 0.025 * scale;
+            var maxRadius = 0.03 * scale;
 
             var teleportMinAngle = -45;
             var teleportMaxAngle = 45
@@ -100,6 +102,7 @@ Script.include("/~/system/libraries/controllers.js");
                 // Overlay already exists, just update its properties.
                 var props = {
                     //rotation: worldRotation
+                    localRotation: localRot
                 }
                 var attempt = Overlays.editOverlay(this.teleportCircleUuid, props);
                 if (!attempt) {
@@ -109,6 +112,7 @@ Script.include("/~/system/libraries/controllers.js");
 
             var farGrabMinAngle = 45;
             var farGrabMaxAngle = 135;
+
             // Handle fargrab circle....
             if (Uuid.isEqual(Uuid.NULL, this.farGrabCircleUuid)) {
                 print("Spawning far grab circle...");
@@ -136,6 +140,7 @@ Script.include("/~/system/libraries/controllers.js");
                 //var rot = controllerData[];
                 var props = {
                     //rotation: worldRotation
+                    localRotation: localRot
                 }
                 var attempt = Overlays.editOverlay(this.farGrabCircleUuid, props);
                 if (!attempt) {
