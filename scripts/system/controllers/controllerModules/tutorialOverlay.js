@@ -47,7 +47,11 @@ Script.include("/~/system/libraries/controllers.js");
         this.wristGemRotIndicator = Uuid.NULL;
 
         this.isReady = function (controllerData, deltaTime) {
-            if (this.isPointingUp()) {     // MyAvatar setting bool check goes here.
+            if (!MyAvatar.getTutorialPref()) {
+                makeRunningValues(false, [], []);
+            }
+
+            if (MyAvatar.getTutorialPref()) {
                 print("starting...");
                 this.showWristGem(controllerData.controllerRotAngles[this.hand]);
                 return makeRunningValues(true, [], []);
@@ -56,7 +60,7 @@ Script.include("/~/system/libraries/controllers.js");
         };
 
         this.run = function (controllerData, deltaTime) {
-            if (this.isPointingDown()) {     // MyAvatar setting bool check goes here.
+            if (!MyAvatar.getTutorialPref()) {
                 this.hideWristGem();
                 return makeRunningValues(false, [], []);
             }
