@@ -55,6 +55,7 @@ Script.include("/~/system/libraries/controllers.js");
         this.pointingUp = false;
         this.deltaAngle = 0.0;
         this.startPos = Vec3.ZERO;
+        this.startAngle = 0.0;
 
         this.isReady = function (controllerData, deltaTime) {
             if (this.justTeleported) {
@@ -90,6 +91,7 @@ Script.include("/~/system/libraries/controllers.js");
             if (squeezed & !this.isGrabbing) {
                 var pose = Controller.getPoseValue(hand === RIGHT_HAND ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
                 this.startPos = pose.translation;
+                this.startAngle = controllerData.controllerRotAngles[this.hand];
                 this.isGrabbing = true;
                 this.active = true;
                 if (!this.pointingDown && !this.pointingUp && !this.pointingToSide) {
@@ -129,6 +131,7 @@ Script.include("/~/system/libraries/controllers.js");
                 this.timer = 0;
                 this.timerLimit = 1;
                 this.total_angle = 0;
+                this.startAngle = 0.0;
                 driverMapping.disable();
                 //print("Release!");
                 return makeRunningValues(false, [], []);

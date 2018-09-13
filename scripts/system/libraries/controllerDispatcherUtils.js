@@ -184,9 +184,15 @@ DRIVE_MID_UPDATE = 0.5;                 // Seconds.
 DRIVE_SLOW_UPDATE = 1.0;                // Seconds.
 
 // Drive snapturn update region constraints
-DRIVE_DEADZONE = 10;                    // Degrees from where drive started in either direction.
-DRIVE_SLOW = 30;
-DRIVE_MEDIUM = 60;
+DRIVE_DEADZONE = 20;                    // Degrees from where drive started in either direction.
+DRIVE_SLOW = 60;
+DRIVE_MEDIUM = 90;
+
+// Drive overlay colors:
+DRIVE_DEADZONE_COLOR = { red: 255, green: 0, blue: 0 };
+DRIVE_SLOW_COLOR = { red: 0, green: 255, blue: 0 };
+DRIVE_MEDIUM_COLOR = { red: 0, green: 0, blue: 255 };
+DRIVE_FAST_COLOR = { red: 255, green: 255, blue: 0 };
 
 // Drive misc
 EXP3_NO_DRIVE_TIMER = 0.25;            // Seconds.
