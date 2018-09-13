@@ -667,9 +667,6 @@ controllerTwistAngle = function (hand) {
     }
 
     return angle;
-
-    // Take the cosine inverse of the dot product to retrieve theta (angle, returned in degrees).
-    //return toDegrees(Math.acos(Vec3.dot(Vec3.normalize(handRotationVector), Vec3.normalize(normal))));
 }
 
 projectVontoW = function (v, w) {
