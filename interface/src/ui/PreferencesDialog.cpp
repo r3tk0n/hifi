@@ -264,6 +264,11 @@ void setupPreferences() {
         });
         preferences->addPreference(preference);
     }
+    {
+        auto getter = [myAvatar]()->bool { return myAvatar->getTutorialPref(); };
+        auto setter = [myAvatar](bool value) { myAvatar->setTutorialPref(value); };
+        preferences->addPreference(new CheckPreference(VR_MOVEMENT, "Enable Tutorial", getter, setter));
+    }
 
     static const QString AVATAR_CAMERA{ "Mouse Sensitivity" };
     {

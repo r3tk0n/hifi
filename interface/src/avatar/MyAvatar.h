@@ -986,6 +986,18 @@ public:
     Q_INVOKABLE void setFlyingHMDPref(bool enabled);
 
     /**jsdoc
+     * @function MyAvatar.setTutorialPref
+     * @param {boolean} enabled
+     */
+    Q_INVOKABLE void setTutorialPref(bool enabled);
+
+    /**jsdoc
+     * @function MyAvatar.getTutorialPref
+     * @returns {boolean}
+     */
+    Q_INVOKABLE bool getTutorialPref();
+
+    /**jsdoc
      * @function MyAvatar.getFlyingDesktopPref
      * @returns {boolean}
      */
@@ -1583,6 +1595,7 @@ private:
     bool _enableFlying { false };
     bool _flyingPrefDesktop { true };
     bool _flyingPrefHMD { false };
+    bool _tutorialEnabled { true };
     bool _wasPushing { false };
     bool _isPushing { false };
     bool _isBeingPushed { false };

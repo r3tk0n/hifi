@@ -1152,6 +1152,7 @@ void MyAvatar::saveData() {
 
     settings.setValue("yawSpeed", _yawSpeed);
     settings.setValue("pitchSpeed", _pitchSpeed);
+    settings.setValue("tutorialEnabled", getTutorialPref());
 
     // only save the fullAvatarURL if it has not been overwritten on command line
     // (so the overrideURL is not valid), or it was overridden _and_ we specified
@@ -1316,6 +1317,7 @@ void MyAvatar::loadData() {
 
     _yawSpeed = loadSetting(settings, "yawSpeed", _yawSpeed);
     _pitchSpeed = loadSetting(settings, "pitchSpeed", _pitchSpeed);
+    _tutorialEnabled = loadSetting(settings, "tutorialEnabled", _tutorialEnabled);
 
     _prefOverrideAnimGraphUrl.set(QUrl(settings.value("animGraphURL", "").toString()));
     _fullAvatarURLFromPreferences = settings.value("fullAvatarURL", AvatarData::defaultFullAvatarModelUrl()).toUrl();
@@ -3269,6 +3271,19 @@ void MyAvatar::setFlyingHMDPref(bool enabled) {
 
 bool MyAvatar::getFlyingHMDPref() {
     return _flyingPrefHMD;
+}
+
+void MyAvatar::setTutorialPref(bool enabled) {
+    if (QThread::currentThread() != thread()) {
+        QMetaObject::invokeMethod(this, "setTutorialPref", Q_ARG(bool, enabled));
+        return;
+    }
+
+    _tutorialEnabled = enabled;
+}
+
+bool MyAvatar::getTutorialPref() {
+    return _tutorialEnabled;
 }
 
 // Public interface for targetscale
