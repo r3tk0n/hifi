@@ -258,7 +258,7 @@ Script.include("/~/system/libraries/controllers.js");
             var scale = MyAvatar.getAvatarScale();
 
             var minRadius = 0.035 * scale;
-            var maxRadius = 0.04 * scale;
+            var maxRadius = 0.05 * scale;
 
             var teleportMinAngle = -45;
             var teleportMaxAngle = 45
@@ -447,7 +447,9 @@ Script.include("/~/system/libraries/controllers.js");
             var scale = MyAvatar.getAvatarScale();
 
             var minRadius = 0.035 * scale;
-            var maxRadius = 0.04 * scale;
+            var maxRadius = 0.05 * scale;
+
+            var driveAlpha = 0.7;
 
             if (Uuid.isEqual(Uuid.NULL, this.driveDeadzone)) {
                 //print("Spawning drive deadzone...");
@@ -464,7 +466,7 @@ Script.include("/~/system/libraries/controllers.js");
                     color: DRIVE_DEADZONE_COLOR,
                     outerRadius: maxRadius,
                     innerRadius: minRadius,
-                    alpha: 0.4,
+                    alpha: driveAlpha,
                     grabbable: false
                 };
                 this.driveDeadzone = Overlays.addOverlay("circle3d", props);
@@ -484,7 +486,7 @@ Script.include("/~/system/libraries/controllers.js");
                     color: DRIVE_SLOW_COLOR,
                     outerRadius: maxRadius,
                     innerRadius: minRadius,
-                    alpha: 0.4,
+                    alpha: driveAlpha,
                     grabbable: false
                 }
                 this.driveSlowNeg = Overlays.addOverlay("circle3d", props);
@@ -504,7 +506,7 @@ Script.include("/~/system/libraries/controllers.js");
                     color: DRIVE_MEDIUM_COLOR,
                     outerRadius: maxRadius,
                     innerRadius: minRadius,
-                    alpha: 0.4,
+                    alpha: driveAlpha,
                     grabbable: false
                 }
                 this.driveMedNeg = Overlays.addOverlay("circle3d", props);
@@ -524,7 +526,7 @@ Script.include("/~/system/libraries/controllers.js");
                     color: DRIVE_FAST_COLOR,
                     outerRadius: maxRadius,
                     innerRadius: minRadius,
-                    alpha: 0.4,
+                    alpha: driveAlpha,
                     grabbable: false
                 }
                 this.driveFastNeg = Overlays.addOverlay("circle3d", props);
@@ -544,7 +546,7 @@ Script.include("/~/system/libraries/controllers.js");
                     color: DRIVE_SLOW_COLOR,
                     outerRadius: maxRadius,
                     innerRadius: minRadius,
-                    alpha: 0.4,
+                    alpha: driveAlpha,
                     grabbable: false
                 }
                 this.driveSlowPos = Overlays.addOverlay("circle3d", props);
@@ -564,7 +566,7 @@ Script.include("/~/system/libraries/controllers.js");
                     color: DRIVE_MEDIUM_COLOR,
                     outerRadius: maxRadius,
                     innerRadius: minRadius,
-                    alpha: 0.4,
+                    alpha: driveAlpha,
                     grabbable: false
                 }
                 this.driveMedPos = Overlays.addOverlay("circle3d", props);
@@ -584,7 +586,7 @@ Script.include("/~/system/libraries/controllers.js");
                     color: DRIVE_FAST_COLOR,
                     outerRadius: maxRadius,
                     innerRadius: minRadius,
-                    alpha: 0.4,
+                    alpha: driveAlpha,
                     grabbable: false
                 }
                 this.driveFastPos = Overlays.addOverlay("circle3d", props);
