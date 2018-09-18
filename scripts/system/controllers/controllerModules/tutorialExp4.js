@@ -25,6 +25,16 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
 
     var UPDATE_INTERVAL = 5000;     // Must be > player's HEARTBEAT_INTERVAL
 
+    var driveZone = (function () {
+        this.enterEntity = function (entityID) {
+            // Stuff to do when entering entity.
+        };
+
+        this.leaveEntity = function (entityID) {
+            // Stuff to do when leaving entity.
+        }
+    });
+
     function Tutorial() {
         var _this = this;
         this.active = false;
@@ -33,6 +43,9 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
         this.timeStamp = Date.now();
         this.updateTimer = 0;
         this.tutorialCompleted = false;
+
+        this.entities = [];
+        this.overlays = [];
 
         // Zone Entities:
         this.zone1 = Uuid.NULL;             // Drive
@@ -43,10 +56,116 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
         this.flags = [false, false, false, false];
         this.stage = 0;                     // Will act as index for "this.flags", starts at 0.
 
+        this.isPointingUp = function () {
+            var angle = getAngleFromGround(this.hand);
+            return (angle >= 135) ? true : false;
+        }
+
+        this.spawnBox = function (position, orientation, name) {
+            var height = MyAvatar.getHeight();
+            var scale = MyAvatar.getAvatarScale();
+            var width = 1.0 * scale;
+
+            var props = {
+                type: "Box",
+                name: name,
+                position: position,
+                visible: true,
+                canCastShadow: false,
+                rotation: orientation,
+                collisionless: true,
+                color: { red: 255, green: 0, blue: 0 },
+                dynamic: false,
+                dimensions: { x: width, y: height, z: width }
+            };
+
+            var id = Entities.addEntity(props);
+            this.entities.push(id);
+            return id;
+        }
+
+        this.spawnWireframeBox = function(position, orientation, name) {
+            var height = MyAvatar.getHeight();
+            var scale = MyAvatar.getAvatarScale();
+            var width = 1.0 * scale;
+
+            var props = {
+                color: {red: 255, green: 0, blue: 0},
+                alpha: 1.0,
+                name: name,
+                isWire: true,
+                visible: true,
+                dimensions: {x: width, y: height, z: width},
+                position: position,
+                orientation: orientation
+            };
+
+            var id = Overlays.addOverlay("cube", props);
+            this.overlays.push(id);
+            return id;
+        }
+
+        this.spawnBoxes = function () {
+            var position = MyAvatar.position;
+            var orientation = MyAvatar.orientation;
+            var distance = 5 * MyAvatar.getAvatarScale();
+
+            var forward = Vec3.multiplyQbyV(orientation, { x: 0, y: 0, z: -1 });
+            var backward = Vec3.multiplyQbyV(orientation, Vec3.UNIT_Z);
+            var right = Vec3.multiplyQbyV(orientation, Vec3.UNIT_X);
+            var left = Vec3.multiplyQbyV(orientation, { x: -1, y: 0, z: 0 });
+            var up = Vec3.multiplyQbyV(orientation, Vec3.UNIT_Y);
+
+            var offsetZ1 = Vec3.sum(position, Vec3.multiply(distance, forward));
+            var offsetZ2 = Vec3.sum(offsetZ1, Vec3.multiply(distance, left));
+            var offsetZ3 = Vec3.sum(offsetZ1, Vec3.multiply(distance, right));
+            var offsetZ4 = Vec3.sum(offsetZ1, Vec3.multiply(distance, forward));
+
+            //this.zone1 = this.spawnBox(offsetZ1, orientation, "Zone 1");
+            //this.zone2 = this.spawnBox(offsetZ2, orientation, "Zone 2");
+            //this.zone3 = this.spawnBox(offsetZ3, orientation, "Zone 3");
+            //this.zone4 = this.spawnBox(offsetZ4, orientation, "Zone 4");
+            this.zone1 = this.spawnWireframeBox(offsetZ1, orientation, "Zone 1");
+            this.zone2 = this.spawnWireframeBox(offsetZ2, orientation, "Zone 2");
+            this.zone3 = this.spawnWireframeBox(offsetZ3, orientation, "Zone 3");
+            this.zone4 = this.spawnWireframeBox(offsetZ4, orientation, "Zone 4");
+        }
+
+        this.clearIDs = function () {
+            this.zone1 = Uuid.NULL;
+            this.zone2 = Uuid.NULL;
+            this.zone3 = Uuid.NULL;
+            this.zone4 = Uuid.NULL;
+        }
+
+        this.cleanupEntities = function () {
+            for (x in this.entities) {
+                Entities.deleteEntity(this.entities[x]);
+            }
+
+            this.entities = [];
+
+            this.clearIDs();
+        }
+
+        this.cleanupOverlays = function () {
+            for (x in this.overlays) {
+                Overlays.deleteOverlay(this.overlays[x]);
+            }
+            this.overlays = [];
+            this.clearIDs();
+        }
+
         this.isReady = function (controllerData, deltaTime) {
             if (HMD.active) {
                 // Only run if we're using a headset.
-                return makeRunningValues(true, [], []);
+                if (controllerData.triggerClicks[RIGHT_HAND]) {
+                    // Do this check separately to save cycles on the angle from ground call.
+                    // Run if the trigger is clicked and we're pointing up.
+                    print("Spawning boxes...");
+                    this.spawnBoxes();
+                    return makeRunningValues(true, [], []);
+                }
             }
             return makeRunningValues(false, [], []);
         }
@@ -54,15 +173,18 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
         this.run = function (controllerData, deltaTime) {
             if (!HMD.active) {
                 // Kill if we're not in HMD...
-                for (x in flags) {
+                for (x in this.flags) {
                     // Reset our flags...
-                    flags[x] = false;
+                    this.flags = false;
                 }
+
+                this.tearDown();
+
                 this.stage = 0;
                 return makeRunningValues(false, [], []);
             }
 
-            // Do shit.
+            // Do stuff.
             return makeRunningValues(true, [], []);
         }
 
@@ -135,8 +257,14 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             this.updateTimer = Script.setInterval(this.updatePlayer, UPDATE_INTERVAL);
         }
 
+        this.tearDown = function () {
+            this.cleanupEntities();
+        }
+
         this.cleanup = function () {
             Script.clearInterval(this.updateTimer);
+
+            this.tearDown();
 
             Messages.messageReceived.disconnect(this.onMessageReceived);
             Messages.unsubscribe(HIFI_RECORDER_CHANNEL);
@@ -144,13 +272,13 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
 
         this.parameters = makeDispatcherModuleParameters(
             700, // priority
-            [], // slots (none)
+            ["tutorial"], // slots (none)
             [], // ???
             100 // update something something...
         );
     } // END Tutorial()
 
-    var tutorialVar = Tutorial();
+    var tutorialVar = new Tutorial();
     tutorialVar.setUp();
     enableDispatcherModule(tutorialName, tutorialVar);
 
