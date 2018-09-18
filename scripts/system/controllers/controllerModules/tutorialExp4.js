@@ -97,6 +97,37 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             }
         }
 
+        this.stopPlaying = function () {
+            Messages.sendMessage(HIFI_PLAYER_CHANNEL, JSON.stringify({
+                player: this.playerID,
+                command: PLAYER_COMMAND_STOP
+            }));
+        }
+
+        this.playRecording = function (recording, position, orientation) {
+            // Check optional parameters:
+            if (position === undefined) {
+                position = MyAvatar.position;
+            }
+            if (orientation === undefined) {
+                orientation = MyAvatar.orientation;
+            }
+
+            if (Uuid.isEqual(this.playerID, Uuid.NULL)) {
+                // No player exists...
+                print("Error (tutorialExp4.js: No player exists.");
+                return;
+            }
+
+            Messages.sendMessage(HIFI_PLAYER_CHANNEL, JSON.stringify({
+                player: this.playerID,
+                command: PLAYER_COMMAND_PLAY,
+                recording: recording,
+                position: position,
+                orientation: orientation
+            }));
+        }
+
         this.setUp = function () {
             Messages.messageReceived.connect(this.onMessageReceived);
             Messages.subscribe(HIFI_RECORDER_CHANNEL);
