@@ -1957,19 +1957,32 @@ void MyAvatar::updateMotors() {
     }
 
     if (_motionBehaviors & AVATAR_MOTION_ACTION_MOTOR_ENABLED) {
-        if (_characterController.getState() == CharacterController::State::Hover ||
+        if (qApp->isHMDMode() && getLeftHandPose().isValid()) {
+            // Fly and walk per left hand orientation.
+            const glm::quat LEFT_HAND_ZERO_ROT(glm::quat(glm::radians(glm::vec3(90.0f, -90.0f, 0.0f))));
+            glm::quat handOrientation = getLeftPalmRotation() * LEFT_HAND_ZERO_ROT;
+            if (_characterController.getState() == CharacterController::State::Hover ||
                 _characterController.computeCollisionGroup() == BULLET_COLLISION_GROUP_COLLISIONLESS) {
-            motorRotation = getMyHead()->getHeadOrientation();
+                motorRotation = cancelOutRoll(handOrientation);
+            } else {
+                motorRotation = cancelOutRollAndPitch(handOrientation);
+            }
         } else {
-            // non-hovering = walking: follow camera twist about vertical but not lift
-            // we decompose camera's rotation and store the twist part in motorRotation
-            // however, we need to perform the decomposition in the avatar-frame
-            // using the local UP axis and then transform back into world-frame
-            glm::quat orientation = getWorldOrientation();
-            glm::quat headOrientation = glm::inverse(orientation) * getMyHead()->getHeadOrientation(); // avatar-frame
-            glm::quat liftRotation;
-            swingTwistDecomposition(headOrientation, Vectors::UNIT_Y, liftRotation, motorRotation);
-            motorRotation = orientation * motorRotation;
+            // Fly and walk per camera orientation.
+            if (_characterController.getState() == CharacterController::State::Hover ||
+                _characterController.computeCollisionGroup() == BULLET_COLLISION_GROUP_COLLISIONLESS) {
+                motorRotation = getMyHead()->getHeadOrientation();
+            } else {
+                // non-hovering = walking: follow camera twist about vertical but not lift
+                // we decompose camera's rotation and store the twist part in motorRotation
+                // however, we need to perform the decomposition in the avatar-frame
+                // using the local UP axis and then transform back into world-frame
+                glm::quat orientation = getWorldOrientation();
+                glm::quat headOrientation = glm::inverse(orientation) * getMyHead()->getHeadOrientation(); // avatar-frame
+                glm::quat liftRotation;
+                swingTwistDecomposition(headOrientation, Vectors::UNIT_Y, liftRotation, motorRotation);
+                motorRotation = orientation * motorRotation;
+            }
         }
 
         if (_isPushing || _isBraking || !_isBeingPushed) {
