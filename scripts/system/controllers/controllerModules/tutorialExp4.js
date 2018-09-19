@@ -47,11 +47,21 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
         this.entities = [];
         this.overlays = [];
 
-        // Zone Entities:
-        this.zone1 = Uuid.NULL;             // Drive
-        this.zone2 = Uuid.NULL;             // Teleport
-        this.zone3 = Uuid.NULL;             // FarGrab
-        this.zone4 = Uuid.NULL;             // Snapturn
+        // (Not) Zone Entities:
+        this.driveZone = Uuid.NULL;
+        this.drivezoneOverlay = Uuid.NULL;
+        this.teleportZone = Uuid.NULL;
+        this.teleportZoneOverlay = Uuid.NULL;
+        this.fargrabZone = Uuid.NULL;
+        this.fargrabZoneOverlay = Uuid.NULL;
+        this.snapturnZone = Uuid.NULL;
+        this.snapturnZone = Uuid.NULL;
+
+        // Targets
+        this.fargrabTarget = Uuid.NULL;
+        this.snapturnTarget1 = Uuid.NULL;
+        this.snapturnTarget2 = Uuid.NULL;
+        this.snapturnTarget3 = Uuid.NULL;
 
         this.flags = [false, false, false, false];
         this.stage = 0;                     // Will act as index for "this.flags", starts at 0.
@@ -61,11 +71,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             return (angle >= 135) ? true : false;
         }
 
-        this.spawnBox = function (position, orientation, name) {
-            var height = MyAvatar.getHeight();
-            var scale = MyAvatar.getAvatarScale();
-            var width = 1.0 * scale;
-
+        this.spawnBox = function (position, orientation, dimensions, name) {
             var props = {
                 type: "Box",
                 name: name,
@@ -75,8 +81,9 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
                 rotation: orientation,
                 collisionless: true,
                 color: { red: 255, green: 0, blue: 0 },
+                alpha: 0.001,
                 dynamic: false,
-                dimensions: { x: width, y: height, z: width }
+                dimensions: dimensions
             };
 
             var id = Entities.addEntity(props);
@@ -84,20 +91,16 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             return id;
         }
 
-        this.spawnWireframeBox = function(position, orientation, name) {
-            var height = MyAvatar.getHeight();
-            var scale = MyAvatar.getAvatarScale();
-            var width = 1.0 * scale;
-
+        this.spawnWireframeBox = function(position, orientation, dimensions, name) {
             var props = {
                 color: {red: 255, green: 0, blue: 0},
                 alpha: 1.0,
                 name: name,
                 isWire: true,
                 visible: true,
-                dimensions: {x: width, y: height, z: width},
                 position: position,
-                orientation: orientation
+                orientation: orientation,
+                dimensions: dimensions
             };
 
             var id = Overlays.addOverlay("cube", props);
@@ -110,6 +113,12 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             var orientation = MyAvatar.orientation;
             var distance = 5 * MyAvatar.getAvatarScale();
 
+            // Dimensions of boxes...
+            var height = MyAvatar.getHeight();
+            var scale = MyAvatar.getAvatarScale();
+            var width = 1.0 * scale;
+            var dimensions = {x: width, y: height, z: width};
+
             var forward = Vec3.multiplyQbyV(orientation, { x: 0, y: 0, z: -1 });
             var backward = Vec3.multiplyQbyV(orientation, Vec3.UNIT_Z);
             var right = Vec3.multiplyQbyV(orientation, Vec3.UNIT_X);
@@ -121,21 +130,30 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             var offsetZ3 = Vec3.sum(offsetZ1, Vec3.multiply(distance, right));
             var offsetZ4 = Vec3.sum(offsetZ1, Vec3.multiply(distance, forward));
 
-            //this.zone1 = this.spawnBox(offsetZ1, orientation, "Zone 1");
-            //this.zone2 = this.spawnBox(offsetZ2, orientation, "Zone 2");
-            //this.zone3 = this.spawnBox(offsetZ3, orientation, "Zone 3");
-            //this.zone4 = this.spawnBox(offsetZ4, orientation, "Zone 4");
-            this.zone1 = this.spawnWireframeBox(offsetZ1, orientation, "Zone 1");
-            this.zone2 = this.spawnWireframeBox(offsetZ2, orientation, "Zone 2");
-            this.zone3 = this.spawnWireframeBox(offsetZ3, orientation, "Zone 3");
-            this.zone4 = this.spawnWireframeBox(offsetZ4, orientation, "Zone 4");
+            this.driveZone = this.spawnBox(offsetZ1, orientation, dimensions, "Zone 1");
+            this.teleportZone = this.spawnBox(offsetZ2, orientation, dimensions, "Zone 2");
+            this.fargrabZone = this.spawnBox(offsetZ3, orientation, dimensions, "Zone 3");
+            this.snapturnZone = this.spawnBox(offsetZ4, orientation, dimensions, "Zone 4");
+            this.driveZone = this.spawnWireframeBox(offsetZ1, orientation, dimensions, "Zone 1 Overlay");
+            this.teleportZone = this.spawnWireframeBox(offsetZ2, orientation, dimensions, "Zone 2 Overlay");
+            this.fargrabZone = this.spawnWireframeBox(offsetZ3, orientation, dimensions, "Zone 3 Overlay");
+            this.snapturnZone = this.spawnWireframeBox(offsetZ4, orientation, dimensions, "Zone 4 Overlay");
         }
 
         this.clearIDs = function () {
-            this.zone1 = Uuid.NULL;
-            this.zone2 = Uuid.NULL;
-            this.zone3 = Uuid.NULL;
-            this.zone4 = Uuid.NULL;
+            this.driveZone = Uuid.NULL;
+            this.drivezoneOverlay = Uuid.NULL;
+            this.teleportZone = Uuid.NULL;
+            this.teleportZoneOverlay = Uuid.NULL;
+            this.fargrabZone = Uuid.NULL;
+            this.fargrabZoneOverlay = Uuid.NULL;
+            this.snapturnZone = Uuid.NULL;
+            this.snapturnZone = Uuid.NULL;
+        }
+
+        this.tearDown = function () {
+            this.cleanupEntities();
+            this.cleanupOverlays();
         }
 
         this.cleanupEntities = function () {
@@ -255,10 +273,6 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             Messages.subscribe(HIFI_RECORDER_CHANNEL);
 
             this.updateTimer = Script.setInterval(this.updatePlayer, UPDATE_INTERVAL);
-        }
-
-        this.tearDown = function () {
-            this.cleanupEntities();
         }
 
         this.cleanup = function () {
