@@ -62,6 +62,41 @@
    worldPositionToRegistrationFrameMatrix: true
 */
 
+/* Begin Experiment 5 Constants */
+
+HORIZONTAL_BEAM_ON = 18;
+HORIZONTAL_BEAM_OFF = 22;
+VERTICAL_BEAM_ON = 60;
+VERTICAL_BEAM_OFF = 64;
+
+/* End Experiment 5 Constants */
+
+/* Begin Experiment 5 Functions */
+
+cancelYawAndRoll = function (q) {
+    var eulerAngles = Quat.safeEulerAngles(q);
+    eulerAngles.y = 0;            // Cancel Yaw.
+    eulerAngles.z = 0;            // Cancel roll.
+    return Quat.fromVec3Degrees(eulerAngles);
+}
+
+cancelPitchAndRoll = function (q) {
+    var eulerAngles = Quat.safeEulerAngles(q);
+    eulerAngles.x = 0;            // Cancel pitch.
+    eulerAngles.z = 0;            // Cancel roll.
+    return Quat.fromVec3Degrees(eulerAngles);
+}
+
+toDegrees = function (angle) {
+    return angle * (180 / Math.PI);
+}
+
+toRadians = function (angle) {
+    return angle * (Math.PI / 180);
+}
+
+/* End Experiment 5 Functions */
+
 MSECS_PER_SEC = 1000.0;
 INCHES_TO_METERS = 1.0 / 39.3701;
 

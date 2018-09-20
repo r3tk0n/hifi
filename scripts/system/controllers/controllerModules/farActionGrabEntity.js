@@ -22,7 +22,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
 Script.include("/~/system/libraries/controllers.js");
 Script.include("/~/system/libraries/Xform.js");
 
-(function() {
+(function () {
     var GRABBABLE_PROPERTIES = [
         "position",
         "registrationPoint",
@@ -51,7 +51,7 @@ Script.include("/~/system/libraries/Xform.js");
         this.previousCollisionStatus = null;
         this.madeDynamic = null;
 
-        this.makeDynamic = function() {
+        this.makeDynamic = function () {
             if (this.targetEntityID) {
                 var newProps = {
                     dynamic: true,
@@ -63,24 +63,25 @@ Script.include("/~/system/libraries/Xform.js");
             }
         };
 
-        this.restoreTargetEntityOriginalProps = function() {
+        this.restoreTargetEntityOriginalProps = function () {
             if (this.madeDynamic) {
                 var props = {};
                 props.dynamic = false;
                 props.collisionless = this.previousCollisionStatus;
-                var zeroVector = {x: 0, y: 0, z:0};
+                var zeroVector = { x: 0, y: 0, z: 0 };
                 props.localVelocity = zeroVector;
                 props.localRotation = zeroVector;
                 Entities.editEntity(this.targetEntityID, props);
             }
         };
 
-        this.getTargetEntity = function() {
+        this.getTargetEntity = function () {
             var parentPropsLength = this.parentProps.length;
             if (parentPropsLength !== 0) {
                 var targetEntity = {
                     id: this.parentProps[parentPropsLength - 1].id,
-                    props: this.parentProps[parentPropsLength - 1]};
+                    props: this.parentProps[parentPropsLength - 1]
+                };
                 this.targetEntityID = targetEntity.id;
                 this.targetEntityProps = targetEntity.props;
                 return targetEntity;
@@ -89,13 +90,16 @@ Script.include("/~/system/libraries/Xform.js");
             this.targetEntityProps = this.entityProps;
             return {
                 id: this.entityID,
-                props: this.entityProps};
+                props: this.entityProps
+            };
         };
     }
 
     function FarActionGrabEntity(hand) {
+        var _this = this;
         this.hand = hand;
         this.grabbedThingID = null;
+        this.grabbedThingIntersectionOffset = null;
         this.targetObject = null;
         this.actionID = null; // action this script created...
         this.entityToLockOnto = null;
@@ -122,14 +126,14 @@ Script.include("/~/system/libraries/Xform.js");
             this.hand === RIGHT_HAND ? ["rightHand"] : ["leftHand"],
             [],
             100,
-            makeLaserParams(this.hand, false));
+            makeLaserParams(this.hand, true));
 
 
-        this.handToController = function() {
+        this.handToController = function () {
             return (this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand;
         };
 
-        this.distanceGrabTimescale = function(mass, distance) {
+        this.distanceGrabTimescale = function (mass, distance) {
             var timeScale = DISTANCE_HOLDING_ACTION_TIMEFRAME * mass /
                 DISTANCE_HOLDING_UNITY_MASS * distance /
                 DISTANCE_HOLDING_UNITY_DISTANCE;
@@ -139,7 +143,7 @@ Script.include("/~/system/libraries/Xform.js");
             return timeScale;
         };
 
-        this.getMass = function(dimensions, density) {
+        this.getMass = function (dimensions, density) {
             return (dimensions.x * dimensions.y * dimensions.z) * density;
         };
 
@@ -201,7 +205,7 @@ Script.include("/~/system/libraries/Xform.js");
             this.previousRoomControllerPosition = roomControllerPosition;
         };
 
-        this.continueDistanceHolding = function(controllerData) {
+        this.continueDistanceHolding = function (controllerData) {
             var controllerLocation = controllerData.controllerLocations[this.hand];
             var worldControllerPosition = controllerLocation.position;
             var worldControllerRotation = controllerLocation.orientation;
@@ -296,17 +300,18 @@ Script.include("/~/system/libraries/Xform.js");
             }
             this.actionID = null;
             this.grabbedThingID = null;
+            this.grabbedThingIntersectionOffset = null;
             this.targetObject = null;
             this.potentialEntityWithContextOverlay = false;
         };
 
-        this.updateRecommendedArea = function() {
+        this.updateRecommendedArea = function () {
             var dims = Controller.getViewportDimensions();
             this.reticleMaxX = dims.x - MARGIN;
             this.reticleMaxY = dims.y - MARGIN;
         };
 
-        this.calculateNewReticlePosition = function(intersection) {
+        this.calculateNewReticlePosition = function (intersection) {
             this.updateRecommendedArea();
             var point2d = HMD.overlayFromWorldPoint(intersection);
             point2d.x = Math.max(this.reticleMinX, Math.min(point2d.x, this.reticleMaxX));
@@ -314,7 +319,7 @@ Script.include("/~/system/libraries/Xform.js");
             return point2d;
         };
 
-        this.notPointingAtEntity = function(controllerData) {
+        this.notPointingAtEntity = function (controllerData) {
             var intersection = controllerData.rayPicks[this.hand];
             var entityProperty = Entities.getEntityProperties(intersection.objectID);
             var entityType = entityProperty.type;
@@ -327,7 +332,7 @@ Script.include("/~/system/libraries/Xform.js");
             return false;
         };
 
-        this.distanceRotate = function(otherFarGrabModule) {
+        this.distanceRotate = function (otherFarGrabModule) {
             this.distanceRotating = true;
             this.distanceHolding = false;
 
@@ -344,7 +349,7 @@ Script.include("/~/system/libraries/Xform.js");
             this.previousWorldControllerRotation = worldControllerRotation;
         };
 
-        this.prepareDistanceRotatingData = function(controllerData) {
+        this.prepareDistanceRotatingData = function (controllerData) {
             var intersection = controllerData.rayPicks[this.hand];
 
             var controllerLocation = getControllerWorldLocation(this.handToController(), true);
@@ -364,7 +369,7 @@ Script.include("/~/system/libraries/Xform.js");
             this.previousWorldControllerRotation = worldControllerRotation;
         };
 
-        this.destroyContextOverlay = function(controllerData) {
+        this.destroyContextOverlay = function (controllerData) {
             if (this.entityWithContextOverlay) {
                 ContextOverlay.destroyContextOverlay(this.entityWithContextOverlay);
                 this.entityWithContextOverlay = false;
@@ -372,7 +377,7 @@ Script.include("/~/system/libraries/Xform.js");
             }
         };
 
-        this.targetIsNull = function() {
+        this.targetIsNull = function () {
             var properties = Entities.getEntityProperties(this.grabbedThingID);
             if (Object.keys(properties).length === 0 && this.distanceHolding) {
                 return true;
@@ -380,38 +385,95 @@ Script.include("/~/system/libraries/Xform.js");
             return false;
         };
 
-        this.isReady = function (controllerData) {
-            if (HMD.active) {
-                if (this.notPointingAtEntity(controllerData)) {
-                    return makeRunningValues(false, [], []);
-                }
+        this.getOtherModule = function () {
+            var otherModule = this.hand === RIGHT_HAND ? leftFarActionGrabEntity : rightFarActionGrabEntity;
+            return otherModule;
+        };
 
-                this.distanceHolding = false;
-                this.distanceRotating = false;
+        this.headAngularVelocity = 0;
+        this.handLinearVelocity = Vec3.ZERO;
+        this.lastHMDOrientation = Quat.IDENTITY;
 
-                if (controllerData.triggerValues[this.hand] > TRIGGER_ON_VALUE) {
-                    this.prepareDistanceRotatingData(controllerData);
-                    return makeRunningValues(true, [], []);
-                } else {
-                    this.destroyContextOverlay();
-                    return makeRunningValues(false, [], []);
-                }
+        this.active = false;
+
+        this.updateBoundsChecks = function () {
+            var handPose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+            var handRotation = Quat.multiply(MyAvatar.orientation, (this.hand === LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
+            var cameraOrientation = Quat.getFront(Camera.orientation);
+            var handOrientation = Quat.getUp(handRotation);
+            var rotBetween = Quat.rotationBetween(cameraOrientation, handOrientation);
+            var pitchRotation = cancelYawAndRoll(rotBetween);
+            var yawRotation = cancelPitchAndRoll(rotBetween);
+            var angleBetweenHorizontal = toDegrees(Quat.angle(yawRotation));
+            var angleBetweenVertical = toDegrees(Quat.angle(pitchRotation));
+
+            this.outOfBounds = ((angleBetweenHorizontal >= HORIZONTAL_BEAM_OFF) || (angleBetweenVertical >= VERTICAL_BEAM_OFF));
+            this.inBounds = ((angleBetweenHorizontal <= HORIZONTAL_BEAM_ON) && (angleBetweenVertical <= VERTICAL_BEAM_ON));
+        }
+
+        this.inBounds = false;
+        this.outOfBounds = false;
+        this.sameHandTeleportModule = null;
+
+        this.isReady = function (controllerData, deltaTime) {
+            if (!HMD.active) {
+                return makeRunningValues(false, [], []);
             }
-            return makeRunningValues(false, [], []);
+
+            if (this.active) {
+                //print((this.hand === RIGHT_HAND ? "RightHand" : "LeftHand") + " switched to fargrab...");
+                this.prepareDistanceRotatingData(controllerData);
+                this.active = true;
+                return makeRunningValues(true, [], []);
+            }
+
+            this.sameHandTeleportModule = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
+            this.distanceHolding = false;
+            this.distanceRotating = false;
+            var otherModule = this.getOtherModule();
+
+            // Update internal variables checking if we're within bounds to activate...
+            this.updateBoundsChecks();
+
+            // this.active will only be true if it's been set by another module for context switching...
+            if (this.inBounds || this.active) {
+                this.prepareDistanceRotatingData(controllerData);
+                this.active = true;
+                return makeRunningValues(true, [], []);
+            } else {
+                // If the activation criteria for turning on the beams wasn't met...
+                this.destroyContextOverlay();
+                this.active = false;
+                return makeRunningValues(false, [], []);
+            }
         };
 
         this.run = function (controllerData) {
-            if (controllerData.triggerValues[this.hand] < TRIGGER_OFF_VALUE ||
-                this.notPointingAtEntity(controllerData) || this.targetIsNull()) {
+            // Update internal variables checking if we're within bounds to keep alive...
+            this.updateBoundsChecks();
+            // Do we need to switch to teleport? Only if teleport's active and we're not grabbing something...
+            var contextSwitch = (this.sameHandTeleportModule.active && Uuid.isEqual(Uuid.NULL, this.grabbedThingID));
+            if (contextSwitch && this.sameHandTeleportModule) {
+                //print((this.hand === RIGHT_HAND ? "RightHand" : "LeftHand") + " context switch from fargrab.");
+                this.sameHandTeleportModule.active = true;
+            }
+
+            // If the trigger's not clicked but we're grabbing something, we should release...
+            var ending = (!Uuid.isEqual(Uuid.NULL, this.grabbedThingID) && (controllerData.triggerClicks[this.hand] === 0));
+
+            var angleDeactivation = (this.outOfBounds && Uuid.isEqual(Uuid.NULL, this.grabbedThingID));
+
+            if (this.notPointingAtEntity(controllerData) || this.targetIsNull() || angleDeactivation || ending || contextSwitch) {
                 this.endFarGrabAction();
                 Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                     this.highlightedEntity);
                 this.highlightedEntity = null;
+                this.active = false;
                 return makeRunningValues(false, [], []);
             }
             this.intersectionDistance = controllerData.rayPicks[this.hand].distance;
 
-            var otherModuleName =this.hand === RIGHT_HAND ? "LeftFarActionGrabEntity" : "RightFarActionGrabEntity";
+            var otherModuleName = this.hand === RIGHT_HAND ? "LeftFarActionGrabEntity" : "RightFarActionGrabEntity";
             var otherFarGrabModule = getEnabledModuleByName(otherModuleName);
 
             // gather up the readiness of the near-grab modules
@@ -437,6 +499,7 @@ Script.include("/~/system/libraries/Xform.js");
                     if (nearGrabReadiness[k].active && (nearGrabReadiness[k].targets[0] === this.grabbedThingID
                         || HMD.tabletID && nearGrabReadiness[k].targets[0] === HMD.tabletID)) {
                         this.endFarGrabAction();
+                        this.active = false;
                         return makeRunningValues(false, [], []);
                     }
                 }
@@ -448,6 +511,7 @@ Script.include("/~/system/libraries/Xform.js");
                 for (var j = 0; j < nearGrabReadiness.length; j++) {
                     if (nearGrabReadiness[j].active) {
                         this.endFarGrabAction();
+                        this.active = false;
                         return makeRunningValues(false, [], []);
                     }
                 }
@@ -466,6 +530,7 @@ Script.include("/~/system/libraries/Xform.js");
                         ]);
                         if (targetProps.href !== "") {
                             AddressManager.handleLookupString(targetProps.href);
+                            this.active = false;
                             return makeRunningValues(false, [], []);
                         }
 
@@ -493,6 +558,7 @@ Script.include("/~/system/libraries/Xform.js");
 
                             if (!this.distanceRotating) {
                                 this.grabbedThingID = entityID;
+                                this.grabbedThingIntersectionOffset = Vec3.subtract(rayPickInfo.intersection, targetProps.position);
                                 this.grabbedDistance = rayPickInfo.distance;
                             }
 
@@ -574,7 +640,7 @@ Script.include("/~/system/libraries/Xform.js");
             return this.exitIfDisabled(controllerData);
         };
 
-        this.exitIfDisabled = function(controllerData) {
+        this.exitIfDisabled = function (controllerData) {
             var moduleName = this.hand === RIGHT_HAND ? "RightDisableModules" : "LeftDisableModules";
             var disableModule = getEnabledModuleByName(moduleName);
             if (disableModule) {
@@ -583,6 +649,7 @@ Script.include("/~/system/libraries/Xform.js");
                     Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                         this.highlightedEntity);
                     this.highlightedEntity = null;
+                    this.active = false;
                     return makeRunningValues(false, [], []);
                 }
             }
@@ -592,10 +659,10 @@ Script.include("/~/system/libraries/Xform.js");
             return makeRunningValues(true, [], [], laserLockInfo);
         };
 
-        this.calculateOffset = function(controllerData) {
+        this.calculateOffset = function (controllerData) {
             if (this.distanceHolding || this.distanceRotating) {
                 var targetProps = Entities.getEntityProperties(this.targetObject.entityID,
-                                                               [ "position", "rotation", "registrationPoint", "dimensions" ]);
+                                                               ["position", "rotation", "registrationPoint", "dimensions"]);
                 return worldPositionToRegistrationFrameMatrix(targetProps, controllerData.rayPicks[this.hand].intersection);
             }
             return undefined;
@@ -611,6 +678,8 @@ Script.include("/~/system/libraries/Xform.js");
     function cleanup() {
         disableDispatcherModule("LeftFarActionGrabEntity");
         disableDispatcherModule("RightFarActionGrabEntity");
+        Overlays.deleteOverlay(this.handLine1);
+        Overlays.deleteOverlay(this.handLine2);
     }
     Script.scriptEnding.connect(cleanup);
 }());
