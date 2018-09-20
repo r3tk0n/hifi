@@ -397,18 +397,47 @@ Script.include("/~/system/libraries/Xform.js");
         this.active = false;
 
         this.updateBoundsChecks = function () {
+            /*
+                This function checks whether the user is pointing within acceptable bounds in order to turn on or off the beam.
+            */
             var handPose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
-            var handRotation = Quat.multiply(MyAvatar.orientation, (this.hand === LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
-            var cameraOrientation = Quat.getFront(Camera.orientation);
-            var handOrientation = Quat.getUp(handRotation);
-            var rotBetween = Quat.rotationBetween(cameraOrientation, handOrientation);
-            var pitchRotation = cancelYawAndRoll(rotBetween);
-            var yawRotation = cancelPitchAndRoll(rotBetween);
-            var angleBetweenHorizontal = toDegrees(Quat.angle(yawRotation));
-            var angleBetweenVertical = toDegrees(Quat.angle(pitchRotation));
+            var headPose = Controller.getPoseValue("Head");
+            var lookVector = Quat.getForward(headPose.rotation);
+            var pointingVector = Vec3.multiplyQbyV(handPose.rotation, Vec3.UNIT_Y);
 
-            this.outOfBounds = ((angleBetweenHorizontal >= HORIZONTAL_BEAM_OFF) || (angleBetweenVertical >= VERTICAL_BEAM_OFF));
-            this.inBounds = ((angleBetweenHorizontal <= HORIZONTAL_BEAM_ON) && (angleBetweenVertical <= VERTICAL_BEAM_ON));
+            // Reference vectors.
+            var upVector = Quat.getUp(headPose.rotation);
+            var rightVector = Quat.getRight(headPose.rotation);
+
+            // Horizontal Comparison Vectors.
+            var hPoint = Vec3.subtract(pointingVector, projectVontoW(pointingVector, upVector));
+            var hLook = Vec3.subtract(lookVector, projectVontoW(lookVector, upVector));
+
+            var hAngle = toDegrees(Vec3.getAngle(hPoint, hLook));
+            var hRefAngle = toDegrees(Vec3.getAngle(hPoint, rightVector));
+
+            if (hRefAngle > 90) {
+                hAngle *= -1;
+            }
+
+            // Vertical comparison Vectors
+            var vPoint = Vec3.subtract(pointingVector, projectVontoW(pointingVector, rightVector));
+            var vLook = Vec3.subtract(lookVector, projectVontoW(lookVector, rightVector));
+
+            var vAngle = toDegrees(Vec3.getAngle(vPoint, vLook));
+            var vRefAngle = toDegrees(Vec3.getAngle(vPoint, upVector));
+
+            if (vRefAngle > 90) {
+                vAngle *= -1;
+            }
+
+            if (CONSIDER_VERTICAL) {
+                this.outOfBounds = ((hAngle >= HORIZONTAL_BEAM_OFF || hAngle <= -HORIZONTAL_BEAM_OFF) || (vAngle >= VERTICAL_BEAM_OFF || vAngle <= VERTICAL_BEAM_OFF_NEG));
+                this.inBounds = ((hAngle <= HORIZONTAL_BEAM_ON && hAngle >= -HORIZONTAL_BEAM_ON) && (vAngle <= VERTICAL_BEAM_ON && vAngle >= VERTICAL_BEAM_ON_NEG));
+            } else {
+                this.outOfBounds = (hAngle >= HORIZONTAL_BEAM_OFF || hAngle <= -HORIZONTAL_BEAM_OFF);
+                this.inBounds = (hAngle <= HORIZONTAL_BEAM_ON && hAngle >= -HORIZONTAL_BEAM_ON);
+            }
         }
 
         this.inBounds = false;

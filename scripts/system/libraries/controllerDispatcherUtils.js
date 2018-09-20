@@ -64,33 +64,40 @@
 
 /* Begin Experiment 5 Constants */
 
-HORIZONTAL_BEAM_ON = 18;
-HORIZONTAL_BEAM_OFF = 22;
-VERTICAL_BEAM_ON = 60;
-VERTICAL_BEAM_OFF = 64;
+// These two values deal with how far user can point from the look vector on the horizontal
+// plane to activate/deactivate beams.
+HORIZONTAL_BEAM_ON = 7.5
+HORIZONTAL_BEAM_OFF = 22.5;
+
+// These four values deal with how far user can point from the look vector on the vertical
+// plane to activate/deactivate beams.
+VERTICAL_BEAM_ON = 12;              // How far "up" user must point to turn on.
+VERTICAL_BEAM_ON_NEG = -7.5;        // How far "down" user must point to turn on.
+VERTICAL_BEAM_OFF = 22.5;           // How far "up" user must point to turn off.
+VERTICAL_BEAM_OFF_NEG = -22.5       // How far "down" user must point to turn off.
+
+// Flags for which kind of tests we're doing:
+CONSIDER_VERTICAL = true;
 
 /* End Experiment 5 Constants */
 
 /* Begin Experiment 5 Functions */
 
-cancelYawAndRoll = function (q) {
-    var eulerAngles = Quat.safeEulerAngles(q);
-    eulerAngles.y = 0;            // Cancel Yaw.
-    eulerAngles.z = 0;            // Cancel roll.
-    return Quat.fromVec3Degrees(eulerAngles);
+// Project vector 'v' onto vector 'w'.
+projectVontoW = function (v, w) {
+    // Project vector v onto vector w
+    var denominator = Vec3.length(w);
+    // Denominator should be mag(w)^2
+    denominator *= denominator;
+    return Vec3.multiply((Vec3.dot(v, w) / denominator), w);
 }
 
-cancelPitchAndRoll = function (q) {
-    var eulerAngles = Quat.safeEulerAngles(q);
-    eulerAngles.x = 0;            // Cancel pitch.
-    eulerAngles.z = 0;            // Cancel roll.
-    return Quat.fromVec3Degrees(eulerAngles);
-}
-
+// Radians to degrees utility function.
 toDegrees = function (angle) {
     return angle * (180 / Math.PI);
 }
 
+// Degrees to radians utility function.
 toRadians = function (angle) {
     return angle * (Math.PI / 180);
 }
