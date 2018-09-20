@@ -1960,11 +1960,31 @@ void MyAvatar::updateMotors() {
         if (qApp->isHMDMode() && getLeftHandPose().isValid()) {
             // Fly and walk per left hand orientation.
             const glm::quat LEFT_HAND_ZERO_ROT(glm::quat(glm::radians(glm::vec3(90.0f, -90.0f, 0.0f))));
+            const float MAX_START_FLYING_ANGLE = 30.0f; // Max offset from vertical that hand can be pointed to start flying.
+            const float COS_MAX_START_FLYING_ANGLE = glm::cos(glm::radians(MAX_START_FLYING_ANGLE));
             glm::quat handOrientation = getLeftPalmRotation() * LEFT_HAND_ZERO_ROT;
             if (_characterController.getState() == CharacterController::State::Hover ||
+                _characterController.getState() == CharacterController::State::Takeoff ||
                 _characterController.computeCollisionGroup() == BULLET_COLLISION_GROUP_COLLISIONLESS) {
+                // Fly per left hand orientation.
+                motorRotation = cancelOutRoll(handOrientation);
+            } else if (_characterController.getState() == CharacterController::State::InAir) {
+                // In air possibly after initiating flying.
+                if (_isPushing && !_haveSentSecondJump
+                        && glm::dot(handOrientation * Vectors::UNIT_NEG_Z, Vectors::UNIT_Y) >= COS_MAX_START_FLYING_ANGLE) {
+                    // Send a second jump so that start flying straight away.
+                    _characterController.jump();
+                    _haveSentSecondJump = true;
+                }
+                motorRotation = cancelOutRoll(handOrientation);
+            } else if (_isPushing && !_wasPushing
+                    && glm::dot(handOrientation * Vectors::UNIT_NEG_Z, Vectors::UNIT_Y) >= COS_MAX_START_FLYING_ANGLE) {
+                // On ground but user is stationary and wants to fly.
+                _characterController.jump(); // Initiate flying.
+                _haveSentSecondJump = false;
                 motorRotation = cancelOutRoll(handOrientation);
             } else {
+                // Walk on ground per left hand orientation.
                 motorRotation = cancelOutRollAndPitch(handOrientation);
             }
         } else {
