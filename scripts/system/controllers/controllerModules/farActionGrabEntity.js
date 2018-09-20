@@ -397,44 +397,57 @@ Script.include("/~/system/libraries/Xform.js");
         this.active = false;
 
         this.updateBoundsChecks = function () {
-            /*
-                This function checks whether the user is pointing within acceptable bounds in order to turn on or off the beam.
-            */
+            // Get the hand pose and its rotation...
             var handPose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
-            var headPose = Controller.getPoseValue("Head");
-            var lookVector = Quat.getForward(headPose.rotation);
-            var pointingVector = Vec3.multiplyQbyV(handPose.rotation, Vec3.UNIT_Y);
+            var handRotation = Quat.multiply(MyAvatar.orientation, (this.hand === LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
 
-            // Reference vectors.
-            var upVector = Quat.getUp(headPose.rotation);
-            var rightVector = Quat.getRight(headPose.rotation);
+            // Basis vectors for comparison...
+            var cameraForward = Quat.getFront(Camera.orientation);
+            var cameraRight = Quat.getRight(Camera.orientation);
+            var cameraUp = Quat.getUp(Camera.orientation);
 
-            // Horizontal Comparison Vectors.
-            var hPoint = Vec3.subtract(pointingVector, projectVontoW(pointingVector, upVector));
-            var hLook = Vec3.subtract(lookVector, projectVontoW(lookVector, upVector));
+            // Get where the controller is pointing. "getUp" since the y axis is forward for controllers.
+            var pointingVector = Quat.getUp(handRotation);
 
-            var hAngle = toDegrees(Vec3.getAngle(hPoint, hLook));
-            var hRefAngle = toDegrees(Vec3.getAngle(hPoint, rightVector));
+            // Generate rotation between look vector and pointing vector...
+            var rotBetween = Quat.rotationBetween(cameraForward, pointingVector);
 
-            if (hRefAngle > 90) {
-                hAngle *= -1;
-            }
+            // Isolate pitch rotation.
+            var pitchRotation = cancelYawAndRoll(rotBetween);
 
-            // Vertical comparison Vectors
-            var vPoint = Vec3.subtract(pointingVector, projectVontoW(pointingVector, rightVector));
-            var vLook = Vec3.subtract(lookVector, projectVontoW(lookVector, rightVector));
+            // Reference angle for pitch (used to determine sign).
+            var pitchRef = cancelYawAndRoll(Quat.rotationBetween(cameraUp, pointingVector));
 
-            var vAngle = toDegrees(Vec3.getAngle(vPoint, vLook));
-            var vRefAngle = toDegrees(Vec3.getAngle(vPoint, upVector));
+            // Isolate yaw rotation.
+            var yawRotation = cancelPitchAndRoll(rotBetween);
 
-            if (vRefAngle > 90) {
+            // Reference angle for yaw (used to determine sign).
+            var yawRef = cancelPitchAndRoll(Quat.rotationBetween(cameraRight, pointingVector));
+
+            // Horizontal angle...
+            var hAngle = toDegrees(Quat.angle(yawRotation));
+            // Horizontal reference angle...
+            var hRef = toDegrees(Quat.angle(yawRef));
+            // Vertical angle...
+            var vAngle = toDegrees(Quat.angle(pitchRotation));
+            // Vertical reference angle...
+            var vRef = toDegrees(Quat.angle(pitchRef));
+
+            // Use the reference vectors to test...
+            if (vRef >= 90) {
                 vAngle *= -1;
             }
 
+            if (hRef >= 90) {
+                hAngle *= -1;
+            }
+
             if (CONSIDER_VERTICAL) {
+                // If this flag is true, uses horizontal AND vertical constraints.
                 this.outOfBounds = ((hAngle >= HORIZONTAL_BEAM_OFF || hAngle <= -HORIZONTAL_BEAM_OFF) || (vAngle >= VERTICAL_BEAM_OFF || vAngle <= VERTICAL_BEAM_OFF_NEG));
                 this.inBounds = ((hAngle <= HORIZONTAL_BEAM_ON && hAngle >= -HORIZONTAL_BEAM_ON) && (vAngle <= VERTICAL_BEAM_ON && vAngle >= VERTICAL_BEAM_ON_NEG));
             } else {
+                // Otherwise just the horizontal.
                 this.outOfBounds = (hAngle >= HORIZONTAL_BEAM_OFF || hAngle <= -HORIZONTAL_BEAM_OFF);
                 this.inBounds = (hAngle <= HORIZONTAL_BEAM_ON && hAngle >= -HORIZONTAL_BEAM_ON);
             }

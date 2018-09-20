@@ -92,6 +92,27 @@ projectVontoW = function (v, w) {
     return Vec3.multiply((Vec3.dot(v, w) / denominator), w);
 }
 
+cancelPitchAndYaw = function (q) {
+    var eulerAngles = Quat.safeEulerAngles(q);
+    eulerAngles.x = 0;             // Cancel pitch
+    eulerAngles.y = 0;             // Cancel yaw
+    return Quat.fromVec3Degrees(eulerAngles);
+}
+
+cancelYawAndRoll = function (q) {
+    var eulerAngles = Quat.safeEulerAngles(q);
+    eulerAngles.y = 0;            // Cancel Yaw.
+    eulerAngles.z = 0;            // Cancel roll.
+    return Quat.fromVec3Degrees(eulerAngles);
+}
+
+cancelPitchAndRoll = function (q) {
+    var eulerAngles = Quat.safeEulerAngles(q);
+    eulerAngles.x = 0;            // Cancel pitch.
+    eulerAngles.z = 0;            // Cancel roll.
+    return Quat.fromVec3Degrees(eulerAngles);
+}
+
 // Radians to degrees utility function.
 toDegrees = function (angle) {
     return angle * (180 / Math.PI);
