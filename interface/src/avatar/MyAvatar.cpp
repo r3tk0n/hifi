@@ -1977,7 +1977,7 @@ void MyAvatar::updateMotors() {
                     _haveSentSecondJump = true;
                 }
                 motorRotation = cancelOutRoll(handOrientation);
-            } else if (_isPushing && !_wasPushing
+            } else if (_isPushing && !_wasPushing && getFlyingHMDPref()
                     && glm::dot(handOrientation * Vectors::UNIT_NEG_Z, Vectors::UNIT_Y) >= COS_MAX_START_FLYING_ANGLE) {
                 // On ground but user is stationary and wants to fly.
                 _characterController.jump(); // Initiate flying.
