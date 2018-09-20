@@ -36,18 +36,6 @@
           "when": [ "!Application.SnapTurn" ]
         },
 
-        { "from": "Standard.RY",
-          "when": "Application.Grounded",
-          "to": "Actions.Up",
-          "filters":
-            [
-                { "type": "deadZone", "min": 0.6 },
-                "invert"
-            ]
-        },
-
-        { "from": "Standard.RY", "to": "Actions.Up", "filters": "invert"},
-
         { "from": "Standard.Back", "to": "Actions.CycleCamera" },
         { "from": "Standard.Start", "to": "Actions.ContextMenu" },
 

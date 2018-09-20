@@ -574,6 +574,12 @@ Script.include("/~/system/libraries/controllers.js");
         // Teleport actions.
         teleportMapping.from(Controller.Standard.LeftPrimaryThumb).peek().to(leftTeleporter.buttonPress);
         teleportMapping.from(Controller.Standard.RightPrimaryThumb).peek().to(rightTeleporter.buttonPress);
+        teleportMapping.from(Controller.Standard.RY)
+            .peek()
+            .clamp(-1, 0)
+            .invert()
+            .constrainToInteger()
+            .to(rightTeleporter.buttonPress);
     }
 
     var leftTeleporter = new Teleporter(LEFT_HAND);
