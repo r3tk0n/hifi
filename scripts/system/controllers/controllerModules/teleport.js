@@ -571,9 +571,7 @@ Script.include("/~/system/libraries/controllers.js");
         // Vive teleport button lock-out.
         registerViveTeleportMapping();
 
-        // Teleport actions.
-        teleportMapping.from(Controller.Standard.LeftPrimaryThumb).peek().to(leftTeleporter.buttonPress);
-        teleportMapping.from(Controller.Standard.RightPrimaryThumb).peek().to(rightTeleporter.buttonPress);
+        // Teleport action.
         teleportMapping.from(Controller.Standard.RY)
             .peek()
             .clamp(-1, 0)
