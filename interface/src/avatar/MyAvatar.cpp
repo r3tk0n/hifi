@@ -1957,6 +1957,12 @@ void MyAvatar::updateMotors() {
     }
 
     if (_motionBehaviors & AVATAR_MOTION_ACTION_MOTOR_ENABLED) {
+        _isPushingEnabled = true;
+
+        bool wasWaitingToFly = _isWaitingToFly;
+        bool isWaitingToFly = false;
+        const quint64 WAITING_TO_FLY_TIMEOUT = 2000000; // 2s
+
         if (qApp->isHMDMode() && getLeftHandPose().isValid()) {
             // Fly and walk per left hand orientation.
             const glm::quat LEFT_HAND_ZERO_ROT(glm::quat(glm::radians(glm::vec3(90.0f, -90.0f, 0.0f))));
@@ -1968,24 +1974,40 @@ void MyAvatar::updateMotors() {
                 _characterController.computeCollisionGroup() == BULLET_COLLISION_GROUP_COLLISIONLESS) {
                 // Fly per left hand orientation.
                 motorRotation = cancelOutRoll(handOrientation);
-            } else if (_characterController.getState() == CharacterController::State::InAir) {
-                // In air possibly after initiating flying.
-                if (_isPushing && !_haveSentSecondJump
-                        && glm::dot(handOrientation * Vectors::UNIT_NEG_Z, Vectors::UNIT_Y) >= COS_MAX_START_FLYING_ANGLE) {
-                    // Send a second jump so that start flying straight away.
-                    _characterController.jump();
-                    _haveSentSecondJump = true;
-                }
-                motorRotation = cancelOutRoll(handOrientation);
-            } else if (_isPushing && !_wasPushing && getFlyingHMDPref()
-                    && glm::dot(handOrientation * Vectors::UNIT_NEG_Z, Vectors::UNIT_Y) >= COS_MAX_START_FLYING_ANGLE) {
-                // On ground but user is stationary and wants to fly.
-                _characterController.jump(); // Initiate flying.
-                _haveSentSecondJump = false;
-                motorRotation = cancelOutRoll(handOrientation);
             } else {
-                // Walk on ground per left hand orientation.
-                motorRotation = cancelOutRollAndPitch(handOrientation);
+                float handPointedUpwardDot = glm::dot(handOrientation * Vectors::UNIT_NEG_Z, Vectors::UNIT_Y);
+                if (_characterController.getState() == CharacterController::State::InAir) {
+                    // In air possibly after initiating flying.
+                    if (_isPushing && !_haveSentSecondJump && handPointedUpwardDot >= COS_MAX_START_FLYING_ANGLE) {
+                        // Send a second jump so that start flying straight away.
+                        _characterController.jump();
+                        _haveSentSecondJump = true;
+                    }
+                    motorRotation = cancelOutRoll(handOrientation);
+                } else if (_isPushing && !_wasPushing && getFlyingHMDPref()
+                        && handPointedUpwardDot >= COS_MAX_START_FLYING_ANGLE) {
+                    // On ground but user is stationary and wants to fly. Start count-down.
+                    _startedWaitingToFly = usecTimestampNow();
+                    isWaitingToFly = true;
+                    _isPushingEnabled = false;
+                } else if (_isPushing && _isWaitingToFly && getFlyingHMDPref()
+                        && handPointedUpwardDot >= COS_MAX_START_FLYING_ANGLE) {
+                    // On ground but user is stationary and is waiting to fly.
+                    if (usecTimestampNow() - _startedWaitingToFly >= WAITING_TO_FLY_TIMEOUT) {
+                        _characterController.jump(); // Initiate flying.
+                        _haveSentSecondJump = false;
+                        motorRotation = cancelOutRoll(handOrientation);
+                    } else {
+                        isWaitingToFly = true;
+                        _isPushingEnabled = false;
+                    }
+                } else if (abs(handPointedUpwardDot) < COS_MAX_START_FLYING_ANGLE) {
+                    // Walk on ground per left hand orientation if not pointing upward or downward.
+                    motorRotation = cancelOutRollAndPitch(handOrientation);
+                } else {
+                    // On ground but left hand pointing up or down so don't walk.
+                    _isPushingEnabled = false;
+                }
             }
         } else {
             // Fly and walk per camera orientation.
@@ -2005,11 +2027,12 @@ void MyAvatar::updateMotors() {
             }
         }
 
+        _isWaitingToFly = isWaitingToFly;
         if (_isPushing || _isBraking || !_isBeingPushed) {
             _characterController.addMotor(_actionMotorVelocity, motorRotation, horizontalMotorTimescale, verticalMotorTimescale);
         } else {
             // _isBeingPushed must be true --> disable action motor by giving it a long timescale,
-            // otherwise it's attempt to "stand in in place" could defeat scripted motor/thrusts
+            // otherwise its attempt to "stand in place" could defeat scripted motor/thrusts
             _characterController.addMotor(_actionMotorVelocity, motorRotation, INVALID_MOTOR_TIMESCALE);
         }
     }
@@ -2747,7 +2770,7 @@ void MyAvatar::updateActionMotor(float deltaTime) {
     _isPushing = directionLength > EPSILON;
 
     // normalize direction
-    if (_isPushing) {
+    if (_isPushing && _isPushingEnabled) {
         direction /= directionLength;
     } else {
         direction = Vectors::ZERO;

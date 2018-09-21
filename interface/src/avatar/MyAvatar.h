@@ -1593,9 +1593,12 @@ private:
     bool _flyingPrefHMD { false };
     bool _wasPushing { false };
     bool _isPushing { false };
+    bool _isPushingEnabled { false };
     bool _isBeingPushed { false };
     bool _isBraking { false };
     bool _isAway { false };
+    bool _isWaitingToFly { false };
+    quint64 _startedWaitingToFly { 0 };
 
     float _boomLength { ZOOM_DEFAULT };
     float _yawSpeed; // degrees/sec
