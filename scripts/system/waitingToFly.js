@@ -41,17 +41,20 @@
                 };
             }
             Overlays.editOverlay(overlay, properties);
-        } else {
-            if (visible) {
+            if (fraction === 1) {
                 // Leave completed circle displayed for a short time while the take-off completes.
-                Overlays.editOverlay(overlay, {
-                    endAt: FULL_CIRCLE
-                });
                 Script.setTimeout(function () {
                     Overlays.editOverlay(overlay, {
                         visible: false
                     });
+                    visible = false;
                 }, HIDE_DELAY);
+            }
+        } else {
+            if (visible) {
+                Overlays.editOverlay(overlay, {
+                    visible: false
+                });
                 visible = false;
             }
         }

@@ -1961,6 +1961,7 @@ void MyAvatar::updateMotors() {
 
         bool wasWaitingToFly = _isWaitingToFly;
         bool isWaitingToFly = false;
+        bool hasStartedFlying = false;
         const quint64 WAITING_TO_FLY_TIMEOUT = 1000000; // 1s
 
         if (qApp->isHMDMode() && getLeftHandPose().isValid()) {
@@ -1997,6 +1998,7 @@ void MyAvatar::updateMotors() {
                         _characterController.jump(); // Initiate flying.
                         _haveSentSecondJump = false;
                         motorRotation = cancelOutRoll(handOrientation);
+                        hasStartedFlying = true;
                     } else {
                         isWaitingToFly = true;
                         _isPushingEnabled = false;
@@ -2037,7 +2039,7 @@ void MyAvatar::updateMotors() {
                 _waitingToFlySignalEmitted = now;
             }
         } else if (wasWaitingToFly) {
-            emit waitingToFly(0.0f);
+            emit waitingToFly(hasStartedFlying ? 1.0f : 0.0f);
         }
 
         if (_isPushing || _isBraking || !_isBeingPushed) {

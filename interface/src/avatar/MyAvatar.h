@@ -1506,8 +1506,8 @@ signals:
     /**jsdoc
      * Triggered when the user is waiting to fly (left hand pointed upward and left joystick forward) or has started flying.
      * @function MyAvatar.waitingToFly
-     * @param {number} fraction - The fraction of the wait time completed, <code>0.0</code> &ndash; <code>1.0</code>. Is 
-     *     <code>0.0</code> if stopped waiting (e.g., started flying).
+     * @param {number} fraction - The fraction of the wait time completed, <code>0.0</code> &ndash; <code>1.0</code>.  Is 
+     *     <code>0.0</code> if stopped waiting; <code>1.0</code> if completed waiting, i.e., started flying.
      * @returns {Signal}
      */
     void waitingToFly(float fraction);
