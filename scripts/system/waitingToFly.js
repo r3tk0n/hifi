@@ -14,7 +14,7 @@
         LOCAL_POSITION = { x: 0, y: 0.01, z: 0 },
         LOCAL_ROTATION = Quat.fromVec3Degrees({ x: 90, y: 180, z: 0 }),
         INNER_RADIUS = 0.05,
-        OUTER_RADIUS = 0.06,
+        OUTER_RADIUS = 0.07,
         FULL_CIRCLE = 360,
         HIDE_DELAY = 200,
         visible = false;
