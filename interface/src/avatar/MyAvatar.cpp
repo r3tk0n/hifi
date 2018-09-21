@@ -1216,6 +1216,9 @@ void MyAvatar::saveData() {
     settings.setValue("userHeight", getUserHeight());
     settings.setValue("flyingHMD", getFlyingHMDPref());
 
+    settings.setValue("maxFlyingSpeed", _maxFlyingSpeed);
+    settings.setValue("minFlyingSpeed", _minFlyingSpeed);
+
     settings.endGroup();
 }
 
@@ -1367,6 +1370,9 @@ void MyAvatar::loadData() {
     Setting::Handle<bool> firstRunVal { Settings::firstRun, true };
     setFlyingHMDPref(firstRunVal.get() ? false : settings.value("flyingHMD").toBool());
     setFlyingEnabled(getFlyingEnabled());
+
+    _maxFlyingSpeed = loadSetting(settings, "maxFlyingSpeed", _maxFlyingSpeed);
+    _minFlyingSpeed = loadSetting(settings, "minFlyingSpeed", _minFlyingSpeed);
 
     setDisplayName(settings.value("displayName").toString());
     setCollisionSoundURL(settings.value("collisionSoundURL", DEFAULT_AVATAR_COLLISION_SOUND_URL).toString());
@@ -2821,8 +2827,6 @@ void MyAvatar::updateActionMotor(float deltaTime) {
         */
 
         // we're flying --> constant speed depending on angle between direction camera and left hand is pointing.
-        const float MAX_AVATAR_FLYING_SPEED = 20.0f; // m/s Speed if hand pointing in same direction as camera.
-        const float MIN_AVATAR_FLYING_SPEED = 5.0f; // m/s Speed if hand pointing at right angles to or behind camera.
         const glm::quat LEFT_HAND_ZERO_ROT(glm::quat(glm::radians(glm::vec3(90.0f, -90.0f, 0.0f))));
         auto handDirection = (getLeftPalmRotation() * LEFT_HAND_ZERO_ROT) * Vectors::UNIT_NEG_Z;
         auto cameraDirection = qApp->getCamera().getOrientation() * Vectors::UNIT_NEG_Z;
@@ -2833,10 +2837,10 @@ void MyAvatar::updateActionMotor(float deltaTime) {
             float angle = acos(dotHandCamera);
             float fraction = 1.0f - angle / PI_OVER_TWO;
             motorSpeed = getSensorToWorldScale() 
-                * (MIN_AVATAR_FLYING_SPEED + fraction * (MAX_AVATAR_FLYING_SPEED - MIN_AVATAR_FLYING_SPEED));
+                * (_minFlyingSpeed + fraction * (_maxFlyingSpeed - _minFlyingSpeed));
         } else {
             // Hand pointing backward: use minimum flying speed.
-            motorSpeed = getSensorToWorldScale() * MIN_AVATAR_FLYING_SPEED;
+            motorSpeed = getSensorToWorldScale() * _minFlyingSpeed;
         }
         _actionMotorVelocity = motorSpeed * direction;
     } else {

@@ -1615,6 +1615,11 @@ private:
     float _yawSpeed; // degrees/sec
     float _pitchSpeed; // degrees/sec
 
+    const float DEFAULT_MAX_FLYING_SPEED = 20.0f; // m/s Speed if hand pointing in same direction as camera.
+    const float DEFAULT_MIN_FLYING_SPEED = 5.0f; // m/s Speed if hand pointing at right angles to or behind camera.
+    float _maxFlyingSpeed { DEFAULT_MAX_FLYING_SPEED };
+    float _minFlyingSpeed { DEFAULT_MIN_FLYING_SPEED };
+
     glm::vec3 _thrust { 0.0f };  // impulse accumulator for outside sources
 
     glm::vec3 _actionMotorVelocity; // target local-frame velocity of avatar (default controller actions)
