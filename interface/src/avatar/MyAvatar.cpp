@@ -2003,12 +2003,9 @@ void MyAvatar::updateMotors() {
                         isWaitingToFly = true;
                         _isPushingEnabled = false;
                     }
-                } else if (abs(handPointedUpwardDot) < COS_MAX_START_FLYING_ANGLE) {
-                    // Walk on ground per left hand orientation if not pointing upward or downward.
+                } else  {
+                    // Walk on ground per left hand orientation.
                     motorRotation = cancelOutRollAndPitch(handOrientation);
-                } else {
-                    // On ground but left hand pointing up or down so don't walk.
-                    _isPushingEnabled = false;
                 }
             }
         } else {
