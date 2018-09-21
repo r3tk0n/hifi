@@ -1607,6 +1607,7 @@ private:
     bool _isBraking { false };
     bool _isAway { false };
     bool _isWaitingToFly { false };
+    bool _isWaitingToFlyCancelled { false };
     quint64 _startedWaitingToFly { 0 };
     quint64 _waitingToFlySignalEmitted { 0 };
 

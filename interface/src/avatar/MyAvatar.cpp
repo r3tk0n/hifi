@@ -1960,6 +1960,7 @@ void MyAvatar::updateMotors() {
         _isPushingEnabled = true;
 
         bool wasWaitingToFly = _isWaitingToFly;
+        bool wasWaitingToFlyCancelled = _isWaitingToFlyCancelled;
         bool isWaitingToFly = false;
         bool hasStartedFlying = false;
         const quint64 WAITING_TO_FLY_TIMEOUT = 1000000; // 1s
@@ -1989,21 +1990,29 @@ void MyAvatar::updateMotors() {
                         && handPointedUpwardDot >= COS_MAX_START_FLYING_ANGLE) {
                     // On ground but user is stationary and wants to fly. Start count-down.
                     _startedWaitingToFly = usecTimestampNow();
+                    _isWaitingToFlyCancelled = false;
                     isWaitingToFly = true;
                     _isPushingEnabled = false;
-                } else if (_isPushing && _isWaitingToFly && getFlyingHMDPref()
-                        && handPointedUpwardDot >= COS_MAX_START_FLYING_ANGLE) {
-                    // On ground but user is stationary and is waiting to fly.
-                    if (usecTimestampNow() - _startedWaitingToFly >= WAITING_TO_FLY_TIMEOUT) {
-                        _characterController.jump(); // Initiate flying.
-                        _haveSentSecondJump = false;
-                        motorRotation = cancelOutRoll(handOrientation);
-                        hasStartedFlying = true;
-                    } else {
+                } else if (_isPushing && _isWaitingToFly && getFlyingHMDPref()) {
+                    // On ground but user is stationary and waiting to fly.
+                    if (handPointedUpwardDot >= COS_MAX_START_FLYING_ANGLE && !_isWaitingToFlyCancelled) {
+                        // Hand still pointing upward so continue countdown.
+                        if (usecTimestampNow() - _startedWaitingToFly >= WAITING_TO_FLY_TIMEOUT) {
+                            _characterController.jump(); // Initiate flying.
+                            _haveSentSecondJump = false;
+                            motorRotation = cancelOutRoll(handOrientation);
+                            hasStartedFlying = true;
+                        } else {
+                            isWaitingToFly = true;
+                            _isPushingEnabled = false;
+                        }
+                    } else  {
+                        // Hand stopped pointing upward. Cancel countdown but don't start walking.
                         isWaitingToFly = true;
+                        _isWaitingToFlyCancelled = true;
                         _isPushingEnabled = false;
                     }
-                } else  {
+                } else {
                     // Walk on ground per left hand orientation.
                     motorRotation = cancelOutRollAndPitch(handOrientation);
                 }
@@ -2027,7 +2036,7 @@ void MyAvatar::updateMotors() {
         }
 
         _isWaitingToFly = isWaitingToFly;
-        if (_isWaitingToFly) {
+        if (_isWaitingToFly && !_isWaitingToFlyCancelled) {
             const quint64 MIN_WAITING_TO_FLY_SIGNAL_INTERVAL = 25000;
             auto now = usecTimestampNow();
             if (now - _waitingToFlySignalEmitted >= MIN_WAITING_TO_FLY_SIGNAL_INTERVAL) {
@@ -2035,7 +2044,7 @@ void MyAvatar::updateMotors() {
                 emit waitingToFly(min(fraction, 1.0f));
                 _waitingToFlySignalEmitted = now;
             }
-        } else if (wasWaitingToFly) {
+        } else if (wasWaitingToFly && !wasWaitingToFlyCancelled) {
             emit waitingToFly(hasStartedFlying ? 1.0f : 0.0f);
         }
 
