@@ -2028,6 +2028,18 @@ void MyAvatar::updateMotors() {
         }
 
         _isWaitingToFly = isWaitingToFly;
+        if (_isWaitingToFly) {
+            const quint64 MIN_WAITING_TO_FLY_SIGNAL_INTERVAL = 25000;
+            auto now = usecTimestampNow();
+            if (now - _waitingToFlySignalEmitted >= MIN_WAITING_TO_FLY_SIGNAL_INTERVAL) {
+                float fraction = (double)(now - _startedWaitingToFly) / (double)WAITING_TO_FLY_TIMEOUT;
+                emit waitingToFly(min(fraction, 1.0f));
+                _waitingToFlySignalEmitted = now;
+            }
+        } else if (wasWaitingToFly) {
+            emit waitingToFly(0.0f);
+        }
+
         if (_isPushing || _isBraking || !_isBeingPushed) {
             _characterController.addMotor(_actionMotorVelocity, motorRotation, horizontalMotorTimescale, verticalMotorTimescale);
         } else {

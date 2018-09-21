@@ -1503,6 +1503,15 @@ signals:
      */
     void disableHandTouchForIDChanged(const QUuid& entityID, bool disable);
 
+    /**jsdoc
+     * Triggered when the user is waiting to fly (left hand pointed upward and left joystick forward) or has started flying.
+     * @function MyAvatar.waitingToFly
+     * @param {number} fraction - The fraction of the wait time completed, <code>0.0</code> &ndash; <code>1.0</code>. Is 
+     *     <code>0.0</code> if stopped waiting (e.g., started flying).
+     * @returns {Signal}
+     */
+    void waitingToFly(float fraction);
+
 private slots:
     void leaveDomain();
     void updateCollisionCapsuleCache();
@@ -1599,6 +1608,7 @@ private:
     bool _isAway { false };
     bool _isWaitingToFly { false };
     quint64 _startedWaitingToFly { 0 };
+    quint64 _waitingToFlySignalEmitted { 0 };
 
     float _boomLength { ZOOM_DEFAULT };
     float _yawSpeed; // degrees/sec
