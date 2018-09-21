@@ -1961,7 +1961,7 @@ void MyAvatar::updateMotors() {
 
         bool wasWaitingToFly = _isWaitingToFly;
         bool isWaitingToFly = false;
-        const quint64 WAITING_TO_FLY_TIMEOUT = 2000000; // 2s
+        const quint64 WAITING_TO_FLY_TIMEOUT = 1000000; // 1s
 
         if (qApp->isHMDMode() && getLeftHandPose().isValid()) {
             // Fly and walk per left hand orientation.
