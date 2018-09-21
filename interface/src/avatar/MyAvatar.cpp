@@ -2797,6 +2797,8 @@ void MyAvatar::updateActionMotor(float deltaTime) {
     }
 
     if (state == CharacterController::State::Hover) {
+        // FIXME: Remove old code and associated constants if new is adopted.
+        /*
         // we're flying --> complex acceleration curve that builds on top of current motor speed and caps at some max speed
 
         float motorSpeed = glm::length(_actionMotorVelocity);
@@ -2814,6 +2816,27 @@ void MyAvatar::updateActionMotor(float deltaTime) {
             } else if (motorSpeed > finalMaxMotorSpeed) {
                 motorSpeed = finalMaxMotorSpeed;
             }
+        }
+        _actionMotorVelocity = motorSpeed * direction;
+        */
+
+        // we're flying --> constant speed depending on angle between direction camera and left hand is pointing.
+        const float MAX_AVATAR_FLYING_SPEED = 20.0f; // m/s Speed if hand pointing in same direction as camera.
+        const float MIN_AVATAR_FLYING_SPEED = 5.0f; // m/s Speed if hand pointing at right angles to or behind camera.
+        const glm::quat LEFT_HAND_ZERO_ROT(glm::quat(glm::radians(glm::vec3(90.0f, -90.0f, 0.0f))));
+        auto handDirection = (getLeftPalmRotation() * LEFT_HAND_ZERO_ROT) * Vectors::UNIT_NEG_Z;
+        auto cameraDirection = qApp->getCamera().getOrientation() * Vectors::UNIT_NEG_Z;
+        float dotHandCamera = glm::dot(handDirection, cameraDirection);
+        float motorSpeed;
+        if (dotHandCamera >= 0) {
+            // Hand pointing forward: interpolate between minimum and maximum speeds per hand angle relative to camera.
+            float angle = acos(dotHandCamera);
+            float fraction = 1.0f - angle / PI_OVER_TWO;
+            motorSpeed = getSensorToWorldScale() 
+                * (MIN_AVATAR_FLYING_SPEED + fraction * (MAX_AVATAR_FLYING_SPEED - MIN_AVATAR_FLYING_SPEED));
+        } else {
+            // Hand pointing backward: use minimum flying speed.
+            motorSpeed = getSensorToWorldScale() * MIN_AVATAR_FLYING_SPEED;
         }
         _actionMotorVelocity = motorSpeed * direction;
     } else {
