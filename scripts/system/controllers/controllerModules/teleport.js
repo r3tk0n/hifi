@@ -129,7 +129,9 @@ Script.include("/~/system/libraries/controllers.js");
         var _this = this;
         this.init = false;
         this.hand = hand;
+        this.touchValue = 0;
         this.buttonValue = 0;
+        this.teleported = false;
         this.disabled = false; // used by the 'Hifi-Teleport-Disabler' message handler
         this.active = false;
         this.state = TELEPORTER_STATES.IDLE;
@@ -299,6 +301,12 @@ Script.include("/~/system/libraries/controllers.js");
                 && (_this.axisButtonStateX !== 0 || _this.axisButtonStateY !== 0);
         };
 
+        this.beamOn = function (value) {
+            if (value === 0 || !_this.teleportLocked()) {
+                _this.touchValue = value;
+            }
+        };
+
         this.buttonPress = function (value) {
             if (value === 0 || !_this.teleportLocked()) {
                 _this.buttonValue = value;
@@ -317,9 +325,10 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.isReady = function(controllerData, deltaTime) {
             var otherModule = this.getOtherModule();
-            if (!this.disabled && this.buttonValue !== 0 && !otherModule.active) {
+            if (!this.disabled && this.touchValue !== 0 && this.buttonValue === 0 && !otherModule.active) {
                 this.active = true;
                 this.enterTeleport();
+                this.teleported = false;
                 return makeRunningValues(true, [], []);
             }
             return makeRunningValues(false, [], []);
@@ -387,21 +396,23 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.teleport = function(newResult, target) {
             var result = newResult;
-            if (_this.buttonValue !== 0) {
+            if (this.touchValue === 1 && this.buttonValue === 0) {
                 return makeRunningValues(true, [], []);
             }
 
-            if (target === TARGET.NONE || target === TARGET.INVALID) {
+            if (target === TARGET.NONE || target === TARGET.INVALID || this.touchValue === 0) {
                 // Do nothing
-            } else if (target === TARGET.SEAT) {
+            } else if (target === TARGET.SEAT && !this.teleported) {
                 Entities.callEntityMethod(result.objectID, 'sit');
-            } else if (target === TARGET.SURFACE || target === TARGET.DISCREPANCY) {
+                this.teleported = true;
+            } else if ((target === TARGET.SURFACE || target === TARGET.DISCREPANCY) && !this.teleported) {
                 var offset = getAvatarFootOffset();
                 result.intersection.y += offset;
                 var shouldLandSafe = target === TARGET.DISCREPANCY;
                 MyAvatar.goToLocation(result.intersection, true, HMD.orientation, false, shouldLandSafe);
                 HMD.centerUI();
                 MyAvatar.centerBody();
+                this.teleported = true;
             }
 
             this.disableLasers();
@@ -570,6 +581,11 @@ Script.include("/~/system/libraries/controllers.js");
 
         // Vive teleport button lock-out.
         registerViveTeleportMapping();
+
+        // Teleport beam.
+        teleportMapping.from(Controller.Standard.RSTouch)
+            .peek()
+            .to(rightTeleporter.beamOn);
 
         // Teleport action.
         teleportMapping.from(Controller.Standard.RY)
