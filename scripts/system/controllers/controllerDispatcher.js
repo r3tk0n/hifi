@@ -56,6 +56,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
         this.activitySlots = {
             leftHand: false,
             rightHand: false,
+            exp5: false,
             rightHandTrigger: false,
             leftHandTrigger: false,
             rightHandEquip: false,

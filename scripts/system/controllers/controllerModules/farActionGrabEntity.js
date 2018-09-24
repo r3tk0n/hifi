@@ -397,59 +397,46 @@ Script.include("/~/system/libraries/Xform.js");
         this.active = false;
 
         this.updateBoundsChecks = function () {
+            var hardware = getCurrentHardware();
+            var onAngle = 0;
+            var offAngle = 0;
+            switch (hardware) {
+                case NONE:
+                    break;
+                case VIVE:
+                    onAngle = VIVE_BEAM_ON;
+                    offAngle = VIVE_BEAM_OFF;
+                    break;
+                case TOUCH:
+                    onAngle = TOUCH_BEAM_ON;
+                    offAngle = TOUCH_BEAM_OFF;
+                    break;
+                case MMR:
+                    break;
+                default:
+                    break;
+            }
+
             // Get the hand pose and its rotation...
             var handPose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
             var handRotation = Quat.multiply(MyAvatar.orientation, (this.hand === LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
+            //var headPose = Controller.getPoseValue("Head");
+            var headRot = Camera.orientation;
 
-            // Basis vectors for comparison...
-            var cameraForward = Quat.getFront(Camera.orientation);
-            var cameraRight = Quat.getRight(Camera.orientation);
-            var cameraUp = Quat.getUp(Camera.orientation);
+            var pointingVector = Vec3.multiplyQbyV(handRotation, Vec3.UNIT_Y);
+            var lookVector = Vec3.multiplyQbyV(headRot, FORWARD_VEC);
 
-            // Get where the controller is pointing. "getUp" since the y axis is forward for controllers.
-            var pointingVector = Quat.getUp(handRotation);
+            var angle = toDegrees(Vec3.getAngle(pointingVector, lookVector));
 
-            // Generate rotation between look vector and pointing vector...
-            var rotBetween = Quat.rotationBetween(cameraForward, pointingVector);
+            this.outOfBounds = (angle >= offAngle);
+            this.inBounds = (angle <= onAngle);
+        }
 
-            // Isolate pitch rotation.
-            var pitchRotation = cancelYawAndRoll(rotBetween);
-
-            // Reference angle for pitch (used to determine sign).
-            var pitchRef = cancelYawAndRoll(Quat.rotationBetween(cameraUp, pointingVector));
-
-            // Isolate yaw rotation.
-            var yawRotation = cancelPitchAndRoll(rotBetween);
-
-            // Reference angle for yaw (used to determine sign).
-            var yawRef = cancelPitchAndRoll(Quat.rotationBetween(cameraRight, pointingVector));
-
-            // Horizontal angle...
-            var hAngle = toDegrees(Quat.angle(yawRotation));
-            // Horizontal reference angle...
-            var hRef = toDegrees(Quat.angle(yawRef));
-            // Vertical angle...
-            var vAngle = toDegrees(Quat.angle(pitchRotation));
-            // Vertical reference angle...
-            var vRef = toDegrees(Quat.angle(pitchRef));
-
-            // Use the reference vectors to test...
-            if (vRef >= 90) {
-                vAngle *= -1;
-            }
-
-            if (hRef >= 90) {
-                hAngle *= -1;
-            }
-
-            if (CONSIDER_VERTICAL) {
-                // If this flag is true, uses horizontal AND vertical constraints.
-                this.outOfBounds = ((hAngle >= HORIZONTAL_BEAM_OFF || hAngle <= -HORIZONTAL_BEAM_OFF) || (vAngle >= VERTICAL_BEAM_OFF || vAngle <= VERTICAL_BEAM_OFF_NEG));
-                this.inBounds = ((hAngle <= HORIZONTAL_BEAM_ON && hAngle >= -HORIZONTAL_BEAM_ON) && (vAngle <= VERTICAL_BEAM_ON && vAngle >= VERTICAL_BEAM_ON_NEG));
+        this.isPointing = function () {
+            if (Controller.Hardware.OculusTouch) {
+                return Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Hardware.OculusTouch.RightIndexPoint : Controller.Hardware.OculusTouch.LeftIndexPoint);
             } else {
-                // Otherwise just the horizontal.
-                this.outOfBounds = (hAngle >= HORIZONTAL_BEAM_OFF || hAngle <= -HORIZONTAL_BEAM_OFF);
-                this.inBounds = (hAngle <= HORIZONTAL_BEAM_ON && hAngle >= -HORIZONTAL_BEAM_ON);
+                return true;
             }
         }
 
@@ -477,8 +464,11 @@ Script.include("/~/system/libraries/Xform.js");
             // Update internal variables checking if we're within bounds to activate...
             this.updateBoundsChecks();
 
+            // Check whether the index finger is pointed on hardware where that's a considered constraint...
+            var pointing = this.isPointing();
+
             // this.active will only be true if it's been set by another module for context switching...
-            if (this.inBounds || this.active) {
+            if (this.inBounds && pointing || this.active) {
                 this.prepareDistanceRotatingData(controllerData);
                 this.active = true;
                 return makeRunningValues(true, [], []);
