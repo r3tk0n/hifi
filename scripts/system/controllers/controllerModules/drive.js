@@ -20,34 +20,48 @@ Script.include("/~/system/libraries/controllers.js");
         var _this = this;
         this.hand = hand;
         this.active = false;
+        this.leftTeleport = null;
 
         var mappingName = null, driverMapping;
         var viveMapping = null, viveMapName = null, touchMapping = null, touchMapName = null, mmrMapName = null, mmrMapping = null;
 
         this.lastHardware = null;
 
-        this.getOtherModule = function () {
-            return (this.hand === RIGHT_HAND) ? leftDriver : rightDriver;
-        }
-
         this.onHardwareChanged = function () {
             // Update update mappings...
         }
 
+        this.sameHandTeleport = function () {
+            this.leftTeleport = getEnabledModuleByName("LeftTeleporter");
+        }
+
         this.isReady = function (controllerData, deltaTime) {
+            if (!HMD.active) {
+                // Don't run if the HMD isn't mounted.
+                return makeRunningValues(false, [], []);
+            }
+            this.sameHandTeleport();
+            // Don't enable if teleport is active.
+            if (this.leftTeleport) {
+                if (this.leftTeleport.active) {
+                    return makeRunningValues(false, [], []);
+                }
+            }
             var hardware = getCurrentHardware();
             switch (hardware) {
                 case NONE:
                     return makeRunningValues(false, [], []);
                 case VIVE:
                     if (Controller.getValue(Controller.Hardware.Vive.LS)) {
-                        print("Running drive module, Vive");
+                        //print("Running drive module, Vive");
+                        this.active = true;
                         return makeRunninValues(true, [], []);
                     }
                     break;
                 case TOUCH:
                     if (Controller.getValue(Controller.Hardware.OculusTouch.LSTouch)) {
-                        print("Running drive module, Touch.");
+                        //print("Running drive module, Touch.");
+                        this.active = true;
                         return makeRunningValues(true, [], []);
                     }
                     break;
@@ -110,7 +124,7 @@ Script.include("/~/system/libraries/controllers.js");
             viveMapName = 'Hifi-Vive-Drive-' + Math.random();
             viveMapping = Controller.newMapping(viveMapName);
             viveMapping.from(function () {
-                var amountPressed = Controller.getValue(Controller.Hardware.Vive.LS_Y);
+                var amountPressed = Controller.getValue(Controller.Hardware.Vive.LX);
                 var pose = Controller.getPoseValue(Controller.Standard.LeftHand);
                 if (pose.valid) {
                     var rotVec = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
@@ -121,7 +135,7 @@ Script.include("/~/system/libraries/controllers.js");
             }).to(Controller.Standard.LX);
 
             viveMapping.from(function () {
-                var amountPressed = Controller.getValue(Controller.Hardware.Vive.LS_Y);
+                var amountPressed = Controller.getValue(Controller.Hardware.Vive.LY);
                 var pose = Controller.getPoseValue(Controller.Standard.LeftHand);
                 if (pose.valid) {
                     var rotVec = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
@@ -173,8 +187,6 @@ Script.include("/~/system/libraries/controllers.js");
 
             if (hardware !== this.lastHardware) {
                 this.disableMappings();
-            } else {
-                return;
             }
 
             switch (hardware) {

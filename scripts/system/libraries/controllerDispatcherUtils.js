@@ -79,8 +79,8 @@ VERTICAL_BEAM_OFF_NEG = -11.25;       // How far "down" user must point to turn 
 // General case:
 VIVE_BEAM_ON = 7;
 VIVE_BEAM_OFF = 11.5;
-TOUCH_BEAM_ON = 22.5;
-TOUCH_BEAM_OFF = 22.5;
+TOUCH_BEAM_ON = 7.5;
+TOUCH_BEAM_OFF = 11.5;
 
 // Flags for which kind of tests we're doing:
 CONSIDER_VERTICAL = true;
@@ -109,6 +109,18 @@ getCurrentHardware = function () {
     // XXX Lookup and add case for Windows Mixed Reality...
 }
 
+lookPointAngle = function () {
+    // Get the hand pose and its rotation...
+    var handPose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+    var handRotation = Quat.multiply(MyAvatar.orientation, (this.hand === LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
+    //var headPose = Controller.getPoseValue("Head");
+    var headRot = Camera.orientation;
+
+    var pointingVector = Vec3.multiplyQbyV(handRotation, Vec3.UNIT_Y);
+    var lookVector = Vec3.multiplyQbyV(headRot, FORWARD_VEC);
+
+    return toDegrees(Vec3.getAngle(pointingVector, lookVector));
+}
 
 // Project vector 'v' onto vector 'w'.
 projectVontoW = function (v, w) {

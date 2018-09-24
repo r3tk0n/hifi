@@ -417,16 +417,7 @@ Script.include("/~/system/libraries/Xform.js");
                     break;
             }
 
-            // Get the hand pose and its rotation...
-            var handPose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
-            var handRotation = Quat.multiply(MyAvatar.orientation, (this.hand === LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
-            //var headPose = Controller.getPoseValue("Head");
-            var headRot = Camera.orientation;
-
-            var pointingVector = Vec3.multiplyQbyV(handRotation, Vec3.UNIT_Y);
-            var lookVector = Vec3.multiplyQbyV(headRot, FORWARD_VEC);
-
-            var angle = toDegrees(Vec3.getAngle(pointingVector, lookVector));
+            var angle = lookPointAngle();
 
             this.outOfBounds = (angle >= offAngle);
             this.inBounds = (angle <= onAngle);
@@ -480,6 +471,8 @@ Script.include("/~/system/libraries/Xform.js");
             }
         };
 
+        this.usedSecondary = false;
+
         this.run = function (controllerData) {
             // Update internal variables checking if we're within bounds to keep alive...
             this.updateBoundsChecks();
@@ -491,7 +484,8 @@ Script.include("/~/system/libraries/Xform.js");
             }
 
             // If the trigger's not clicked but we're grabbing something, we should release...
-            var ending = (!Uuid.isEqual(Uuid.NULL, this.grabbedThingID) && (controllerData.triggerClicks[this.hand] === 0));
+            var trigRelease = (this.usedSecondary ? (controllerData.secondaryValues[this.hand] < 0.3) : (controllerData.triggerClicks[this.hand] === 0));
+            var ending = (!Uuid.isEqual(Uuid.NULL, this.grabbedThingID) && (trigRelease));
 
             var angleDeactivation = (this.outOfBounds && Uuid.isEqual(Uuid.NULL, this.grabbedThingID));
 
@@ -550,7 +544,8 @@ Script.include("/~/system/libraries/Xform.js");
 
                 var rayPickInfo = controllerData.rayPicks[this.hand];
                 if (rayPickInfo.type === Picks.INTERSECTED_ENTITY) {
-                    if (controllerData.triggerClicks[this.hand]) {
+                    if (controllerData.triggerClicks[this.hand] || controllerData.secondaryValues[this.hand] > 0.3) {
+                        this.usedSecondary = !controllerData.triggerClicks[this.hand];
                         var entityID = rayPickInfo.objectID;
                         Selection.removeFromSelectedItemsList(DISPATCHER_HOVERING_LIST, "entity",
                             this.highlightedEntity);

@@ -143,6 +143,11 @@ Script.include("/~/system/libraries/controllers.js");
             return otherModule;
         };
 
+        this.getDriver = function () {
+            // Returns null if not found.
+            return getEnabledModuleByName("LeftDriver");
+        }
+
         this.teleportHeadCollisionPick;
         this.teleportHandCollisionPick;
         this.teleportParabolaHandVisuals;
@@ -315,9 +320,60 @@ Script.include("/~/system/libraries/controllers.js");
             this.state = TELEPORTER_STATES.TARGETTING;
         };
 
-        this.isReady = function(controllerData, deltaTime) {
+        this.shouldRun = function () {
+            var hardware = getCurrentHardware();
+            var value = 0;
+            var angle = lookPointAngle();
+
+            switch (hardware) {
+                case NONE:
+                    break;
+                case VIVE:
+                    if (angle < VIVE_BEAM_OFF) {
+                        return value;
+                    }
+                    value = Controller.getValue(this.hand === RIGHT_HAND ? Controller.Hardware.Vive.RSTouch : Controller.Standard.Vive.LSTouch);
+                    break;
+                case TOUCH:
+                    if (angle < TOUCH_BEAM_OFF) {
+                        return value;
+                    }
+                    value = Controller.getValue(this.hand === RIGHT_HAND ? Controller.Hardware.OculusTouch.RSTouch : Controller.Hardware.OculusTouch.LSTouch);
+                    break;
+                default:
+                    break;
+            }
+
+            return value;
+        }
+
+        this.shouldFire = function () {
+            var hardware = getCurrentHardware();
+            var value = 0;
+            switch (hardware) {
+                case NONE:
+                    break;
+                case VIVE:
+                    value = Controller.getValue(this.hand === RIGHT_HAND ? Controller.Hardware.Vive.RS : Controller.Hardware.Vive.LS);
+                    break;
+                case TOUCH:
+                    value = Controller.getValue(this.hand === RIGHT_HAND ? Controller.Hardware.OculusTouch.RS : Controller.Hardware.OculusTouch.LS);
+                    break;
+                default:
+                    break;
+            }
+            return value;
+        }
+
+        this.isReady = function (controllerData, deltaTime) {
+            if (!HMD.active) {
+                return makeRunningValues(false, [], []);
+            }
+            var driver = this.getDriver();
             var otherModule = this.getOtherModule();
-            if (!this.disabled && this.buttonValue !== 0 && !otherModule.active) {
+            var start = this.shouldRun();
+            //if (!this.disabled && this.buttonValue !== 0 && !otherModule.active) {
+            if (!this.disabled && this.shouldRun() && !otherModule.active) {
                 this.active = true;
                 this.enterTeleport();
                 return makeRunningValues(true, [], []);
@@ -325,7 +381,12 @@ Script.include("/~/system/libraries/controllers.js");
             return makeRunningValues(false, [], []);
         };
 
-        this.run = function(controllerData, deltaTime) {
+        this.run = function (controllerData, deltaTime) {
+            if (!_this.shouldRun()) {
+                this.disableLasers();
+                this.active = false;
+                return makeRunningValues(false, [], []);
+            }
 
             // Get current hand pose information to see if the pose is valid
             var pose = Controller.getPoseValue(handInfo[(_this.hand === RIGHT_HAND) ? 'right' : 'left'].controllerInput);
@@ -387,7 +448,7 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.teleport = function(newResult, target) {
             var result = newResult;
-            if (_this.buttonValue !== 0) {
+            if (!_this.shouldFire()) {
                 return makeRunningValues(true, [], []);
             }
 
