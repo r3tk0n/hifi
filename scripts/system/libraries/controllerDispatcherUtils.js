@@ -77,8 +77,10 @@ VERTICAL_BEAM_OFF = 11.25;           // How far "up" user must point to turn off
 VERTICAL_BEAM_OFF_NEG = -11.25;       // How far "down" user must point to turn off.
 
 // General case:
-BEAM_ON = 7;
-BEAM_OFF = 11.5;
+VIVE_BEAM_ON = 7;
+VIVE_BEAM_OFF = 11.5;
+TOUCH_BEAM_ON = 22.5;
+TOUCH_BEAM_OFF = 22.5;
 
 // Flags for which kind of tests we're doing:
 CONSIDER_VERTICAL = true;
@@ -86,9 +88,27 @@ CONSIDER_VERTICAL = true;
 // "Forward":
 FORWARD_VEC = { x: 0, y: 0, z: -1 };
 
+// Hardware constants, used for determining controller-specific choices.
+NONE = 0;       // No HMD
+VIVE = 1;       // HTC Vive
+TOUCH = 2;      // Oculus Touch
+MMR = 3;        // Microsoft Windows Mixed Reality
+
 /* End Experiment 5 Constants */
 
 /* Begin Experiment 5 Functions */
+
+getCurrentHardware = function () {
+    if (Controller.Hardware.Vive) {
+        return VIVE;
+    } else if (Controller.Hardware.OculusTouch) {
+        return TOUCH;
+    } else {
+        return NONE;
+    }
+    // XXX Lookup and add case for Windows Mixed Reality...
+}
+
 
 // Project vector 'v' onto vector 'w'.
 projectVontoW = function (v, w) {

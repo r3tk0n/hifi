@@ -20,26 +20,11 @@ Script.include("/~/system/libraries/controllers.js");
         var _this = this;
         this.hand = hand;
         this.active = false;
-        NONE = 0;       // No HMD
-        VIVE = 1;       // HTC Vive
-        TOUCH = 2;      // Oculus Touch
-        MMR = 3;        // Microsoft Windows Mixed Reality
 
         var mappingName = null, driverMapping;
         var viveMapping = null, viveMapName = null, touchMapping = null, touchMapName = null, mmrMapName = null, mmrMapping = null;
 
         this.lastHardware = null;
-
-        this.getCurrentHardware = function () {
-            if (Controller.Hardware.Vive) {
-                return VIVE;
-            } else if (Controller.Hardware.OculusTouch) {
-                return TOUCH;
-            } else {
-                return NONE;
-            }
-            // XXX Lookup and add case for Windows Mixed Reality...
-        }
 
         this.getOtherModule = function () {
             return (this.hand === RIGHT_HAND) ? leftDriver : rightDriver;
@@ -50,7 +35,7 @@ Script.include("/~/system/libraries/controllers.js");
         }
 
         this.isReady = function (controllerData, deltaTime) {
-            var hardware = this.getCurrentHardware();
+            var hardware = getCurrentHardware();
             switch (hardware) {
                 case NONE:
                     return makeRunningValues(false, [], []);
@@ -78,7 +63,7 @@ Script.include("/~/system/libraries/controllers.js");
         };
 
         this.shouldStop = function () {
-            var hardware = this.getCurrentHardware();
+            var hardware = getCurrentHardware();
             var stop = true;
             switch (hardware) {
                 case NONE:
@@ -184,7 +169,7 @@ Script.include("/~/system/libraries/controllers.js");
         }
 
         this.updateMappings = function () {
-            var hardware = this.getCurrentHardware();
+            var hardware = getCurrentHardware();
 
             if (hardware !== this.lastHardware) {
                 this.disableMappings();
