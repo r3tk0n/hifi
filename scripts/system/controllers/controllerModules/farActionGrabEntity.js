@@ -412,7 +412,7 @@ Script.include("/~/system/libraries/Xform.js");
             this.inBounds = (angle <= BEAM_ON);
 
             if (this.hand === RIGHT_HAND) {
-                print("angle: " + angle);
+                //print("angle: " + angle);
             }
 
             //// Use the reference vectors to test...

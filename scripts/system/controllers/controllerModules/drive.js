@@ -15,184 +15,118 @@ Script.include("/~/system/libraries/controllers.js");
 
 (function () {// BEGIN LOCAL_SCOPE
 
-    this.isGrabbing = false;
-    this.delay = 0.0;
-
     function Driver(hand) {
         //print("Loaded Driver...");
         var _this = this;
         this.hand = hand;
         this.active = false;
+        NONE = 0;       // No HMD
+        VIVE = 1;       // HTC Vive
+        TOUCH = 2;      // Oculus Touch
+        MMR = 3;        // Microsoft Windows Mixed Reality
 
-        var mappingName, driverMapping;
+        var mappingName = null, driverMapping;
+        var viveMapping = null, viveMapName = null, touchMapping = null, touchMapName = null, mmrMapName = null, mmrMapping = null;
+
+        this.lastHardware = null;
+
+        this.getCurrentHardware = function () {
+            if (Controller.Hardware.Vive) {
+                return VIVE;
+            } else if (Controller.Hardware.OculusTouch) {
+                return TOUCH;
+            } else {
+                return NONE;
+            }
+            // XXX Lookup and add case for Windows Mixed Reality...
+        }
 
         this.getOtherModule = function () {
             return (this.hand === RIGHT_HAND) ? leftDriver : rightDriver;
         }
 
-
-        this.justTeleported = false;
-
-        this.isPointingDown = function () {
-            var angle = getAngleFromGround(this.hand);
-            return (angle <= 45) ? true : false;
+        this.onHardwareChanged = function () {
+            // Update update mappings...
         }
-
-        this.isPointingUp = function () {
-            var angle = getAngleFromGround(this.hand);
-            return (angle >= 135) ? true : false;
-        }
-
-        this.isPointingToSide = function () {
-            var angle = getAngleFromLookVector(this.hand);
-            var absAngle = Math.abs(angle);
-
-            return (absAngle >= 67.5 && absAngle <= 112.5);
-        }
-
-        this.pointingToSide = false;
-        this.pointingDown = false;
-        this.pointingUp = false;
-        this.deltaAngle = 0.0;
-        this.startPos = Vec3.ZERO;
-        this.startAngle = 0.0;
 
         this.isReady = function (controllerData, deltaTime) {
-            if (this.justTeleported) {
-                if (controllerData.triggerValues[this.hand] > TRIGGER_OFF_VALUE) {
+            var hardware = this.getCurrentHardware();
+            switch (hardware) {
+                case NONE:
                     return makeRunningValues(false, [], []);
-                } else {
-                    this.justTeleported = false;
-                }
+                case VIVE:
+                    if (Controller.getValue(Controller.Hardware.Vive.LS)) {
+                        print("Running drive module, Vive");
+                        return makeRunninValues(true, [], []);
+                    }
+                    break;
+                case TOUCH:
+                    if (Controller.getValue(Controller.Hardware.OculusTouch.LSTouch)) {
+                        print("Running drive module, Touch.");
+                        return makeRunningValues(true, [], []);
+                    }
+                    break;
+                case MMR:
+                    // Not yet supported...
+                    return makeRunningValues(false, [], []);
+                default:
+                    // For other, unsupported types...
+                    return makeRunningValues(false, [], []);
             }
 
-            var otherModule = this.getOtherModule();
-            if (!EXP3_USE_DRIVE || otherModule.active) {
-                return makeRunningValues(false, [], []);
-            }
-
-            var farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
-            var teleport = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightTeleporter" : "LeftTeleporter");
-
-            // Head stability requirement (rotational velocity)
-            //var correctHeadAngularVelocity = (EXP3_USE_HEAD_VELOCITY) ? (controllerData.headAngularVelocity < EXP3_HEAD_MAX_ANGULAR_VELOCITY) : true;
-
-            // Hand stability requirement (linear velocity)
-            //var correctControllerLinearVelocity = (EXP3_USE_CTRLR_VELOCITY) ? (Vec3.length(controllerData.handLinearVelocity[this.hand]) <= EXP3_MAX_CTRLR_VELOCITY) : true;
-
-            var gripValue = Controller.getValue((hand == RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT);
-            var squeezed = gripValue > TRIGGER_ON_VALUE;
-            var released = gripValue < TRIGGER_OFF_VALUE;
-            var pose = Controller.getPoseValue((hand == RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
-            this.pointingDown = this.isPointingDown();
-            this.pointingUp = this.isPointingUp();
-            this.pointingToSide = this.isPointingToSide();
-
-            if (squeezed & !this.isGrabbing) {
-                var pose = Controller.getPoseValue(hand === RIGHT_HAND ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
-                this.startPos = pose.translation;
-                this.startAngle = controllerData.controllerRotAngles[this.hand];
-                this.isGrabbing = true;
-                this.active = true;
-                if (!this.pointingDown && !this.pointingUp && !this.pointingToSide) {
-                    Controller.enableMapping(mappingName);
-                }
-                return makeRunningValues(true, [], []);
-            }
-            this.delay = 0;
             return makeRunningValues(false, [], []);
         };
 
-        this.timerLimit = 1;
-        this.timer = 0;
-        this.total_angle = 0;
-
-        this.fromRads = function (v) {
-            return { x: toDegrees(v.x), y: toDegrees(v.y), z: toDegrees(v.z) };
+        this.shouldStop = function () {
+            var hardware = this.getCurrentHardware();
+            var stop = true;
+            switch (hardware) {
+                case NONE:
+                    // Nothing.
+                    break;
+                case VIVE:
+                    // If left pad is clicked, don't stop.
+                    if (Controller.getValue(Controller.Hardware.Vive.LS)) {
+                        stop = false;
+                    }
+                    break;
+                case TOUCH:
+                    // If left stick is touched, don't stop.
+                    if (Controller.getValue(Controller.Hardware.OculusTouch.LSTouch)) {
+                        stop = false;
+                    }
+                    break;
+                case MMR:
+                    // Not supported yet.
+                    break;
+                default:
+                    // Nothing.
+                    break;
+            }
+            return stop;
         }
 
         this.run = function (controllerData, deltaTime) {
-            var pose = Controller.getPoseValue(hand === RIGHT_HAND ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
-            var gripValue = Controller.getValue((this.hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT);
-            var squeezed = gripValue > TRIGGER_ON;
-            var released = gripValue < TRIGGER_OFF;
+            var stop = this.shouldStop();
 
-            if (this.isGrabbing && released) {
-                this.pointingToSide = false;
-                this.pointingDown = false;
-                this.pointingUp = false;
-                this.startPos = Vec3.ZERO;
-                this.deltaAngle = 0.0;
-                this.up = Vec3.ZERO;
-                this.right = Vec3.ZERO;
-                this.normal = Vec3.ZERO;
+            if (stop) {
+                print("Stopping drive module...");
                 this.active = false;
-                this.isGrabbing = false;
-                this.timer = 0;
-                this.timerLimit = 1;
-                this.total_angle = 0;
-                this.startAngle = 0.0;
-                driverMapping.disable();
-                //print("Release!");
+                this.disableMappings();
                 return makeRunningValues(false, [], []);
             }
 
-            // Driving snapturn...
-            if (squeezed && (this.pointingToSide || this.pointingDown || this.pointingUp)) {
-                var d = getRadialAngleDeltaFromAvatar(this.hand, this.startPos);
-                this.deltaAngle += d;
-
-                if (this.deltaAngle > DRIVE_ROT_ANGLE) {
-                    MyAvatar.orientation = Quat.multiply(MyAvatar.orientation, Quat.angleAxis(DRIVE_ROT_ANGLE * ROT_MULTIPLIER, Vec3.UNIT_Y));
-                    this.deltaAngle -= DRIVE_ROT_ANGLE;
-                } else if (this.deltaAngle < -DRIVE_ROT_ANGLE) {
-                    MyAvatar.orientation = Quat.multiply(MyAvatar.orientation, Quat.angleAxis(-DRIVE_ROT_ANGLE * ROT_MULTIPLIER, Vec3.UNIT_Y));
-                    this.deltaAngle += DRIVE_ROT_ANGLE;
-                } else {
-                    // Nothing.
-                }
-                this.startPos = pose.translation;
-            } else if (squeezed) {
-                // Avatar space...
-                var pose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
-                var rollVelocity = toDegrees(pose.angularVelocity.z * deltaTime);
-                this.total_angle += rollVelocity;
-                //print("total_angle: " + this.total_angle);
-
-                var absAngle = Math.abs(this.total_angle);          // Absolute value of the roll angle.
-                if (absAngle < DRIVE_DEADZONE) {
-                    return makeRunningValues(true, [], []);
-                } else if (absAngle < DRIVE_SLOW && absAngle > DRIVE_DEADZONE) {
-                    this.timerLimit = DRIVE_SLOW_UPDATE;
-                } else if (absAngle < DRIVE_MEDIUM && absAngle >= DRIVE_SLOW) {
-                    this.timerLimit = DRIVE_MID_UPDATE;
-                } else if (absAngle > DRIVE_MEDIUM) {
-                    this.timerLimit = DRIVE_FAST_UPDATE;
-                }
-
-                this.timer += deltaTime;
-                if (this.timer >= this.timerLimit) {
-                    this.timer = 0;
-                    if (this.total_angle > 0) {
-                        MyAvatar.orientation = Quat.multiply(MyAvatar.orientation, Quat.angleAxis(SNAP_TURN_ANGLE, Vec3.UNIT_Y));
-                    } else {
-                        MyAvatar.orientation = Quat.multiply(MyAvatar.orientation, Quat.angleAxis(-SNAP_TURN_ANGLE, Vec3.UNIT_Y));
-                    }
-
-                }
-            }
+            this.updateMappings();
 
             return makeRunningValues(true, [], []);
         };
 
-        this.registerMappings = function () {
-
-            mappingName = 'Hifi-Driver-Dev-' + Math.random();
-            driverMapping = Controller.newMapping(mappingName);
-
-            driverMapping.from(function () {
-                var amountPressed = Controller.getValue((_this.hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT);
-                var pose = Controller.getPoseValue((_this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+        this.buildViveMappings = function () {
+            viveMapName = 'Hifi-Vive-Drive-' + Math.random();
+            viveMapping = Controller.newMapping(viveMapName);
+            viveMapping.from(function () {
+                var amountPressed = Controller.getValue(Controller.Hardware.Vive.LS_Y);
+                var pose = Controller.getPoseValue(Controller.Standard.LeftHand);
                 if (pose.valid) {
                     var rotVec = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
                     var retMe = (projectVontoW(rotVec, Vec3.UNIT_X)).x;
@@ -201,9 +135,9 @@ Script.include("/~/system/libraries/controllers.js");
                 return 0;
             }).to(Controller.Standard.LX);
 
-            driverMapping.from(function () {
-                var amountPressed = Controller.getValue((_this.hand === RIGHT_HAND) ? Controller.Standard.RT : Controller.Standard.LT)
-                var pose = Controller.getPoseValue((_this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+            viveMapping.from(function () {
+                var amountPressed = Controller.getValue(Controller.Hardware.Vive.LS_Y);
+                var pose = Controller.getPoseValue(Controller.Standard.LeftHand);
                 if (pose.valid) {
                     var rotVec = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
                     var retMe = (projectVontoW(rotVec, Vec3.UNIT_Z)).z;
@@ -211,34 +145,118 @@ Script.include("/~/system/libraries/controllers.js");
                 }
                 return 0;
             }).to(Controller.Standard.LY);
+        }
+
+        this.buildTouchMappings = function () {
+            touchMapName = 'Hifi-Touch-Drive-' + Math.random();
+            touchMapping = Controller.newMapping(touchMapName);
+
+            // Forward and Backward...
+            touchMapping.from(function () {
+                var amountPressed = Controller.getValue(Controller.Hardware.OculusTouch.LY);
+                var pose = Controller.getPoseValue(Controller.Standard.LeftHand);
+                if (pose.valid && amountPressed > 0.3) {
+                    var rotVec = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
+                    var retMe = (projectVontoW(rotVec, Vec3.UNIT_X)).x;
+                    return retMe * amountPressed;
+                }
+                return 0;
+            }).to(Controller.Standard.LX);
+
+            touchMapping.from(function () {
+                var amountPressed = Controller.getValue(Controller.Hardware.OculusTouch.LY);
+                var pose = Controller.getPoseValue(Controller.Standard.LeftHand);
+                if (pose.valid && amountPressed > 0.3) {
+                    var rotVec = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
+                    var retMe = (projectVontoW(rotVec, Vec3.UNIT_Z)).z;
+                    return retMe * amountPressed;
+                }
+                return 0;
+            }).to(Controller.Standard.LY);
+
+            // Snapturn...
+            touchMapping.from(Controller.Hardware.OculusTouch.LX).deadZone(0.7).to(Controller.Standard.RX);
+        }
+
+        this.buildMMRMappings = function () {
+            mmrMapName = 'Hifi-MMR-Drive-' + Math.random();
+            mmrMapping = Controller.newMapping(mmrMapping);
+        }
+
+        this.updateMappings = function () {
+            var hardware = this.getCurrentHardware();
+
+            if (hardware !== this.lastHardware) {
+                this.disableMappings();
+            } else {
+                return;
+            }
+
+            switch (hardware) {
+                case NONE:
+                    // No HMD present.
+                    break;
+                case VIVE:
+                    // HTC Vive:
+                    if (!viveMapping) {
+                        this.buildViveMappings();
+                        // Add mappings here...
+                    }
+                    Controller.enableMapping(viveMapName);
+                    break;
+                case TOUCH:
+                    // Oculus Touch:
+                    if (!touchMapping) {
+                        this.buildTouchMappings();
+                    }
+                    Controller.enableMapping(touchMapName);
+                    break;
+                case MMR:
+                    // Microsoft Windows Mixed Reality:
+                    if (!mmrMapping) {
+                        this.buildMMRMappings();
+                    }
+                    Controller.enableMapping(mmrMapName);
+                    break;
+            }
+
+            this.lastHardware = hardware;
         };
+
+        this.disableMappings = function () {
+            if (viveMapping) {
+                viveMapping.disable();
+            }
+            if (touchMapping) {
+                touchMapping.disable();
+            }
+            if (mmrMapping) {
+                mmrMapping.disable();
+            }
+            this.lastHardware = null;
+        }
 
         this.cleanup = function () {
             // Clean up vars and stuff.
+            this.disableMappings();
         };
 
         this.parameters = makeDispatcherModuleParameters(
             600,
-            this.hand === RIGHT_HAND ? ["rightHand"] : ["leftHand"],
+            "exp5",
             [],
             100
         );
     } // END Driver(hand)
 
     var leftDriver = new Driver(LEFT_HAND);
-    var rightDriver = new Driver(RIGHT_HAND);
-    leftDriver.registerMappings();
-    rightDriver.registerMappings();
+    leftDriver.updateMappings();
 
     enableDispatcherModule("LeftDriver", leftDriver);
-    enableDispatcherModule("RightDriver", rightDriver);
 
     function cleanup() {
-        driverMapping.disable();
         leftDriver.cleanup();
-        rightDriver.cleanup();
         disableDispatcherModule("LeftDriver");
-        disableDispatcherModule("RightDriver");
     }
     Script.scriptEnding.connect(cleanup);
 }()); // END LOCAL_SCOPE
