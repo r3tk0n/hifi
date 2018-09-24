@@ -109,10 +109,9 @@ getCurrentHardware = function () {
     // XXX Lookup and add case for Windows Mixed Reality...
 }
 
-lookPointAngle = function () {
+lookPointAngle = function (hand) {
     // Get the hand pose and its rotation...
-    var handPose = Controller.getPoseValue((this.hand === RIGHT_HAND) ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
-    var handRotation = Quat.multiply(MyAvatar.orientation, (this.hand === LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
+    var handRotation = Quat.multiply(MyAvatar.orientation, (hand === LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
     //var headPose = Controller.getPoseValue("Head");
     var headRot = Camera.orientation;
 

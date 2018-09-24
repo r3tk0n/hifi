@@ -417,7 +417,7 @@ Script.include("/~/system/libraries/Xform.js");
                     break;
             }
 
-            var angle = lookPointAngle();
+            var angle = lookPointAngle(this.hand);
 
             this.outOfBounds = (angle >= offAngle);
             this.inBounds = (angle <= onAngle);

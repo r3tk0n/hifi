@@ -323,7 +323,7 @@ Script.include("/~/system/libraries/controllers.js");
         this.shouldRun = function () {
             var hardware = getCurrentHardware();
             var value = 0;
-            var angle = lookPointAngle();
+            var angle = lookPointAngle(this.hand);
 
             switch (hardware) {
                 case NONE:
