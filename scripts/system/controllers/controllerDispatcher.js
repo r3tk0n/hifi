@@ -25,7 +25,9 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
 
 (function() {
     Script.include("/~/system/libraries/pointersUtils.js");
+
     var NEAR_MAX_RADIUS = 0.1;
+    var NEAR_TABLET_MAX_RADIUS = 0.05;
 
     var TARGET_UPDATE_HZ = 60; // 50hz good enough, but we're using update
     var BASIC_TIMER_INTERVAL_MS = 1000 / TARGET_UPDATE_HZ;
@@ -49,6 +51,8 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
         this.tabletID = null;
         this.blacklist = [];
         this.pointerManager = new PointerManager();
+        this.miniTabletID = null;
+        this.niniTabletHand = LEFT_HAND;
 
         // a module can occupy one or more "activity" slots while it's running.  If all the required slots for a module are
         // not set to false (not in use), a module cannot start.  When a module is using a slot, that module's name
@@ -228,6 +232,24 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
                 if (controllerLocations[h].valid) {
                     var nearbyOverlays =
                         Overlays.findOverlays(controllerLocations[h].position, NEAR_MAX_RADIUS * sensorScaleFactor);
+
+                    // Tablet and mini-tablet must be within NEAR_TABLET_MAX_RADIUS in order to be grabbed.
+                    // Mini tablet can only be grabbed the hand it's displayed on.
+                    var tabletIndex = nearbyOverlays.indexOf(HMD.tabletID);
+                    var miniTabletIndex = nearbyOverlays.indexOf(_this.miniTabletID);
+                    if (tabletIndex !== -1 || miniTabletIndex !== -1) {
+                        var closebyOverlays =
+                            Overlays.findOverlays(controllerLocations[h].position, NEAR_TABLET_MAX_RADIUS * sensorScaleFactor);
+                        // Assumes that the tablet and mini-tablet are not displayed at the same time.
+                        if (tabletIndex !== -1 && closebyOverlays.indexOf(HMD.tabletID) === -1) {
+                            nearbyOverlays.splice(tabletIndex, 1);
+                        }
+                        if (miniTabletIndex !== -1
+                                && (closebyOverlays.indexOf(_this.miniTabletID) === -1) || h !== _this.miniTabletHand) {
+                            nearbyOverlays.splice(miniTabletIndex, 1);
+                        }
+                    }
+
                     nearbyOverlays.sort(function (a, b) {
                         var aPosition = Overlays.getProperty(a, "position");
                         var aDistance = Vec3.distance(aPosition, controllerLocations[h].position);
@@ -235,6 +257,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
                         var bDistance = Vec3.distance(bPosition, controllerLocations[h].position);
                         return aDistance - bDistance;
                     });
+
                     nearbyOverlayIDs.push(nearbyOverlays);
                 } else {
                     nearbyOverlayIDs.push([]);
@@ -472,14 +495,14 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             filter: Picks.PICK_ENTITIES | Picks.PICK_OVERLAYS,
             enabled: true
         });
-        this.handleHandMessage = function(channel, message, sender) {
-            var data;
+        this.handleHandMessage = function(channel, data, sender) {
+            var message;
             if (sender === MyAvatar.sessionUUID) {
                 try {
                     if (channel === 'Hifi-Hand-RayPick-Blacklist') {
-                        data = JSON.parse(message);
-                        var action = data.action;
-                        var id = data.id;
+                        message = JSON.parse(data);
+                        var action = message.action;
+                        var id = message.id;
                         var index = _this.blacklist.indexOf(id);
 
                         if (action === 'add' && index === -1) {
@@ -493,10 +516,14 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
                                 _this.setBlacklist();
                             }
                         }
+                    } else if (channel === 'Hifi-MiniTablet-Details') {
+                        message = JSON.parse(data);
+                        _this.miniTabletID = message.overlay;
+                        _this.miniTabletHand = message.hand;
                     }
 
                 } catch (e) {
-                    print("WARNING: handControllerGrab.js -- error parsing Hifi-Hand-RayPick-Blacklist message: " + message);
+                    print("WARNING: handControllerGrab.js -- error parsing message: " + data);
                 }
             }
         };
@@ -531,6 +558,7 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
     Entities.mousePressOnEntity.connect(mousePress);
     var controllerDispatcher = new ControllerDispatcher();
     Messages.subscribe('Hifi-Hand-RayPick-Blacklist');
+    Messages.subscribe('Hifi-MiniTablet-Details');
     Messages.messageReceived.connect(controllerDispatcher.handleHandMessage);
     Script.scriptEnding.connect(controllerDispatcher.cleanup);
     Script.setTimeout(controllerDispatcher.update, BASIC_TIMER_INTERVAL_MS);
