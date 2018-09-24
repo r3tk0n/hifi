@@ -320,60 +320,15 @@ Script.include("/~/system/libraries/controllers.js");
             this.state = TELEPORTER_STATES.TARGETTING;
         };
 
-        this.shouldRun = function () {
-            var hardware = getCurrentHardware();
-            var value = 0;
-            var angle = lookPointAngle(this.hand);
-
-            switch (hardware) {
-                case NONE:
-                    break;
-                case VIVE:
-                    if (angle < VIVE_BEAM_OFF) {
-                        return value;
-                    }
-                    value = Controller.getValue(this.hand === RIGHT_HAND ? Controller.Hardware.Vive.RSTouch : Controller.Standard.Vive.LSTouch);
-                    break;
-                case TOUCH:
-                    if (angle < TOUCH_BEAM_OFF) {
-                        return value;
-                    }
-                    value = Controller.getValue(this.hand === RIGHT_HAND ? Controller.Hardware.OculusTouch.RSTouch : Controller.Hardware.OculusTouch.LSTouch);
-                    break;
-                default:
-                    break;
-            }
-
-            return value;
-        }
-
-        this.shouldFire = function () {
-            var hardware = getCurrentHardware();
-            var value = 0;
-            switch (hardware) {
-                case NONE:
-                    break;
-                case VIVE:
-                    value = Controller.getValue(this.hand === RIGHT_HAND ? Controller.Hardware.Vive.RS : Controller.Hardware.Vive.LS);
-                    break;
-                case TOUCH:
-                    value = Controller.getValue(this.hand === RIGHT_HAND ? Controller.Hardware.OculusTouch.RS : Controller.Hardware.OculusTouch.LS);
-                    break;
-                default:
-                    break;
-            }
-            return value;
-        }
-
         this.isReady = function (controllerData, deltaTime) {
             if (!HMD.active) {
                 return makeRunningValues(false, [], []);
             }
             var driver = this.getDriver();
             var otherModule = this.getOtherModule();
-            var start = this.shouldRun();
+            var start = controllerData.stickClicks[this.hand];
             //if (!this.disabled && this.buttonValue !== 0 && !otherModule.active) {
-            if (!this.disabled && this.shouldRun() && !otherModule.active) {
+            if (!this.disabled && start) {
                 this.active = true;
                 this.enterTeleport();
                 return makeRunningValues(true, [], []);
@@ -382,12 +337,6 @@ Script.include("/~/system/libraries/controllers.js");
         };
 
         this.run = function (controllerData, deltaTime) {
-            if (!_this.shouldRun()) {
-                this.disableLasers();
-                this.active = false;
-                return makeRunningValues(false, [], []);
-            }
-
             // Get current hand pose information to see if the pose is valid
             var pose = Controller.getPoseValue(handInfo[(_this.hand === RIGHT_HAND) ? 'right' : 'left'].controllerInput);
             var mode = pose.valid ? _this.hand : 'head';
@@ -443,12 +392,12 @@ Script.include("/~/system/libraries/controllers.js");
             } else if (teleportLocationType === TARGET.SEAT) {
                 this.setTeleportState(mode, "collision", "seat");
             }
-            return this.teleport(result, teleportLocationType);
+            return this.teleport(result, teleportLocationType, controllerData);
         };
 
-        this.teleport = function(newResult, target) {
+        this.teleport = function(newResult, target, controllerData) {
             var result = newResult;
-            if (!_this.shouldFire()) {
+            if (controllerData.stickClicks[this.hand]) {
                 return makeRunningValues(true, [], []);
             }
 

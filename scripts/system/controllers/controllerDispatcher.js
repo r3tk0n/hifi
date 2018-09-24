@@ -98,6 +98,10 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
         this.rightTriggerClicked = 0;
         this.leftSecondaryValue = 0;
         this.rightSecondaryValue = 0;
+        this.leftStickClicked = 0;
+        this.rightStickClicked = 0;
+        this.leftStickTouched = 0;
+        this.rightStickTouched = 0;
 
         this.leftTriggerPress = function (value) {
             _this.leftTriggerValue = value;
@@ -117,6 +121,18 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
         this.rightSecondaryPress = function (value) {
             _this.rightSecondaryValue = value;
         };
+        this.leftStickClick = function (value) {
+            _this.leftStickClicked = value;
+        };
+        this.rightStickClick = function (value) {
+            _this.rightStickClicked = value;
+        }
+        this.leftStickTouch = function (value) {
+            _this.leftStickTouched = value;
+        }
+        this.rightStickTouch = function (value) {
+            _this.rightStickTouched = value;
+        }
 
         this.dataGatherers = {};
         this.dataGatherers.leftControllerLocation = function () {
@@ -299,7 +315,9 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
             var controllerData = {
                 triggerValues: [_this.leftTriggerValue, _this.rightTriggerValue],
                 triggerClicks: [_this.leftTriggerClicked, _this.rightTriggerClicked],
+                stickTouch: [_this.leftStickTouched, _this.rightStickTouched],
                 secondaryValues: [_this.leftSecondaryValue, _this.rightSecondaryValue],
+                stickClicks: [_this.leftStickClicked, _this.rightStickClicked],
                 controllerLocations: controllerLocations,
                 nearbyEntityProperties: nearbyEntityProperties,
                 nearbyEntityPropertiesByID: nearbyEntityPropertiesByID,
@@ -400,6 +418,10 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
         mapping.from([Controller.Standard.LB]).peek().to(_this.leftSecondaryPress);
         mapping.from([Controller.Standard.LeftGrip]).peek().to(_this.leftSecondaryPress);
         mapping.from([Controller.Standard.RightGrip]).peek().to(_this.rightSecondaryPress);
+        mapping.from([Controller.Standard.LS]).peek().to(_this.leftStickClick);
+        mapping.from([Controller.Standard.RS]).peek().to(_this.rightStickClick);
+        mapping.from([Controller.Standard.LSTouch]).peek().to(_this.leftStickTouch);
+        mapping.from([Controller.Standard.RSTouch]).peek().to(_this.rightStickTouch);
 
         Controller.enableMapping(MAPPING_NAME);
 

@@ -28,7 +28,8 @@ Script.include("/~/system/libraries/controllers.js");
         this.lastHardware = null;
 
         this.onHardwareChanged = function () {
-            // Update update mappings...
+            _this.updateMappings();
+            _this.changed = true;
         }
 
         this.sameHandTeleport = function () {
@@ -40,68 +41,35 @@ Script.include("/~/system/libraries/controllers.js");
                 // Don't run if the HMD isn't mounted.
                 return makeRunningValues(false, [], []);
             }
-            this.sameHandTeleport();
-            // Don't enable if teleport is active.
-            if (this.leftTeleport) {
-                if (this.leftTeleport.active) {
-                    return makeRunningValues(false, [], []);
-                }
-            }
-            var hardware = getCurrentHardware();
-            switch (hardware) {
-                case NONE:
-                    return makeRunningValues(false, [], []);
-                case VIVE:
-                    if (Controller.getValue(Controller.Hardware.Vive.LS)) {
-                        //print("Running drive module, Vive");
-                        this.active = true;
-                        return makeRunninValues(true, [], []);
-                    }
-                    break;
-                case TOUCH:
-                    if (Controller.getValue(Controller.Hardware.OculusTouch.LSTouch)) {
-                        //print("Running drive module, Touch.");
-                        this.active = true;
-                        return makeRunningValues(true, [], []);
-                    }
-                    break;
-                case MMR:
-                    // Not yet supported...
-                    return makeRunningValues(false, [], []);
-                default:
-                    // For other, unsupported types...
-                    return makeRunningValues(false, [], []);
-            }
-
-            return makeRunningValues(false, [], []);
+            return makeRunningValues(true, [], []);
         };
 
         this.shouldStop = function () {
-            var hardware = getCurrentHardware();
-            var stop = true;
-            switch (hardware) {
-                case NONE:
-                    // Nothing.
-                    break;
-                case VIVE:
-                    // If left pad is clicked, don't stop.
-                    if (Controller.getValue(Controller.Hardware.Vive.LS)) {
-                        stop = false;
-                    }
-                    break;
-                case TOUCH:
-                    // If left stick is touched, don't stop.
-                    if (Controller.getValue(Controller.Hardware.OculusTouch.LSTouch)) {
-                        stop = false;
-                    }
-                    break;
-                case MMR:
-                    // Not supported yet.
-                    break;
-                default:
-                    // Nothing.
-                    break;
-            }
+            //var hardware = getCurrentHardware();
+            var stop = false;
+            //switch (hardware) {
+            //    case NONE:
+            //        // Nothing.
+            //        break;
+            //    case VIVE:
+            //        // If left pad is clicked, don't stop.
+            //        if (Controller.getValue(Controller.Hardware.Vive.LS)) {
+            //            stop = false;
+            //        }
+            //        break;
+            //    case TOUCH:
+            //        // If left stick is touched, don't stop.
+            //        if (Controller.getValue(Controller.Hardware.OculusTouch.LSTouch)) {
+            //            stop = false;
+            //        }
+            //        break;
+            //    case MMR:
+            //        // Not supported yet.
+            //        break;
+            //    default:
+            //        // Nothing.
+            //        break;
+            //}
             return stop;
         }
 
@@ -115,7 +83,7 @@ Script.include("/~/system/libraries/controllers.js");
                 return makeRunningValues(false, [], []);
             }
 
-            this.updateMappings();
+            //this.updateMappings();
 
             return makeRunningValues(true, [], []);
         };
@@ -123,8 +91,9 @@ Script.include("/~/system/libraries/controllers.js");
         this.buildViveMappings = function () {
             viveMapName = 'Hifi-Vive-Drive-' + Math.random();
             viveMapping = Controller.newMapping(viveMapName);
+            viveMapping.from(Controller.Hardware.Vive.LY).peek().to(_this.viveAxis);
             viveMapping.from(function () {
-                var amountPressed = Controller.getValue(Controller.Hardware.Vive.LX);
+                var amountPressed = _this.viveLY;
                 var pose = Controller.getPoseValue(Controller.Standard.LeftHand);
                 if (pose.valid) {
                     var rotVec = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
@@ -135,7 +104,7 @@ Script.include("/~/system/libraries/controllers.js");
             }).to(Controller.Standard.LX);
 
             viveMapping.from(function () {
-                var amountPressed = Controller.getValue(Controller.Hardware.Vive.LY);
+                var amountPressed = _this.viveLY;
                 var pose = Controller.getPoseValue(Controller.Standard.LeftHand);
                 if (pose.valid) {
                     var rotVec = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
@@ -146,13 +115,25 @@ Script.include("/~/system/libraries/controllers.js");
             }).to(Controller.Standard.LY);
         }
 
+        this.viveLY = 0;
+        this.touchLY = 0;
+
+        this.viveAxis = function (value) {
+            _this.viveLY = value;
+        }
+
+        this.touchAxis = function (value) {
+            _this.touchLY = value;
+        }
+
         this.buildTouchMappings = function () {
             touchMapName = 'Hifi-Touch-Drive-' + Math.random();
             touchMapping = Controller.newMapping(touchMapName);
 
             // Forward and Backward...
+            touchMapping.from(Controller.Hardware.OculusTouch.LY).peek().to(_this.touchAxis);
             touchMapping.from(function () {
-                var amountPressed = Controller.getValue(Controller.Hardware.OculusTouch.LY);
+                var amountPressed = _this.touchLY;
                 var pose = Controller.getPoseValue(Controller.Standard.LeftHand);
                 if (pose.valid && amountPressed > 0.3) {
                     var rotVec = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
@@ -163,7 +144,7 @@ Script.include("/~/system/libraries/controllers.js");
             }).to(Controller.Standard.LX);
 
             touchMapping.from(function () {
-                var amountPressed = Controller.getValue(Controller.Hardware.OculusTouch.LY);
+                var amountPressed = _this.touchLY;
                 var pose = Controller.getPoseValue(Controller.Standard.LeftHand);
                 if (pose.valid && amountPressed > 0.3) {
                     var rotVec = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
@@ -250,7 +231,7 @@ Script.include("/~/system/libraries/controllers.js");
     leftDriver.updateMappings();
 
     enableDispatcherModule("LeftDriver", leftDriver);
-
+    Controller.hardwareChanged.connect(leftDriver.onHardwareChanged);
     function cleanup() {
         leftDriver.cleanup();
         disableDispatcherModule("LeftDriver");
