@@ -449,20 +449,22 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
         Controller.enableMapping(MAPPING_NAME);
 
         this.leftPointer = this.pointerManager.createPointer(false, PickType.Ray, {
-            joint: "_CAMERA_RELATIVE_CONTROLLER_LEFTHAND",
+            joint: "LeftHand",
             filter: Picks.PICK_OVERLAYS | Picks.PICK_ENTITIES,
-            triggers: [{action: Controller.Standard.LTClick, button: "Focus"}, {action: Controller.Standard.LTClick, button: "Primary"}],
-            posOffset: getGrabPointSphereOffset(Controller.Standard.LeftHand, true),
+            triggers: [{ action: Controller.Standard.LTClick, button: "Focus" }, { action: Controller.Standard.LTClick, button: "Primary" }],
+            //posOffset: getGrabPointSphereOffset(Controller.Standard.LeftHand, true),
+            posOffset: getFingertipOffset(LEFT_HAND),
             hover: true,
             scaleWithAvatar: true,
             distanceScaleEnd: true,
             hand: LEFT_HAND
         });
         this.rightPointer = this.pointerManager.createPointer(false, PickType.Ray, {
-            joint: "_CAMERA_RELATIVE_CONTROLLER_RIGHTHAND",
+            joint: "RightHand",
             filter: Picks.PICK_OVERLAYS | Picks.PICK_ENTITIES,
-            triggers: [{action: Controller.Standard.RTClick, button: "Focus"}, {action: Controller.Standard.RTClick, button: "Primary"}],
-            posOffset: getGrabPointSphereOffset(Controller.Standard.RightHand, true),
+            triggers: [{ action: Controller.Standard.RTClick, button: "Focus" }, { action: Controller.Standard.RTClick, button: "Primary" }],
+            //posOffset: getGrabPointSphereOffset(Controller.Standard.RightHand, true),
+            posOffset: getFingertipOffset(RIGHT_HAND),
             hover: true,
             scaleWithAvatar: true,
             distanceScaleEnd: true,

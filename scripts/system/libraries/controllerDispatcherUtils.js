@@ -205,6 +205,45 @@ toRadians = function (angle) {
     return angle * (Math.PI / 180);
 }
 
+// Get the fingertip joint index (varies by avatar).
+getFingertipJointIndex = function (hand) {
+    var index = -1;
+    var handJoint = (hand === RIGHT_HAND) ? "RightHandIndex" : "LeftHandIndex";
+
+    for (x = 10; x > 0; x--) {
+        index = MyAvatar.getJointIndex(handJoint + x);
+        if (index !== -1) {
+            break;              // If it's not -1, we've found our furthest index for a finger joint from the palm.
+        }
+    }
+
+    return index;               // Will be -1 if the avatar has no index finger joints.
+}
+
+// Calculate the offset of the fingertip from the hand joint.
+getFingertipOffset = function (hand) {
+    var fingerIndex = getFingertipJointIndex(hand);
+
+    if (fingerIndex === -1) {
+        return Vec3.ZERO;
+    }
+
+    var handIndex = MyAvatar.getJointIndex(hand === RIGHT_HAND ? "RightHand" : "LeftHand");
+
+    var fingerTipPos = MyAvatar.getAbsoluteDefaultJointTranslationInObjectFrame(fingerIndex);
+    var handPos = MyAvatar.getAbsoluteDefaultJointTranslationInObjectFrame(handIndex);
+
+    var offset = Vec3.subtract(fingerTipPos, handPos);
+
+    var rotation = MyAvatar.getAbsoluteDefaultJointRotationInObjectFrame(handIndex);
+
+    var rotatedOffset = Vec3.multiplyQbyV(Quat.inverse(rotation), offset);
+
+    var fingerAdjustment = Vec3.multiply(MyAvatar.scale, { x: 0, y: 0.01, z: 0 });      // Bump it forward by a centimeter.
+
+    return Vec3.sum(rotatedOffset, fingerAdjustment);
+}
+
 /* End Experiment 5 Functions */
 
 MSECS_PER_SEC = 1000.0;
