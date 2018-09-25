@@ -95,7 +95,7 @@ Script.include("/~/system/libraries/controllers.js");
             viveMapping.from(function () {
                 var amountPressed = _this.viveLY;
                 var pose = Controller.getPoseValue(Controller.Standard.LeftHand);
-                if (pose.valid) {
+                if (pose.valid && amountPressed > 0.3) {
                     var rotVec = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
                     var retMe = (projectVontoW(rotVec, Vec3.UNIT_X)).x;
                     return retMe * amountPressed;
@@ -106,13 +106,16 @@ Script.include("/~/system/libraries/controllers.js");
             viveMapping.from(function () {
                 var amountPressed = _this.viveLY;
                 var pose = Controller.getPoseValue(Controller.Standard.LeftHand);
-                if (pose.valid) {
+                if (pose.valid && amountPressed > 0.3) {
                     var rotVec = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
                     var retMe = (projectVontoW(rotVec, Vec3.UNIT_Z)).z;
                     return retMe * amountPressed;
                 }
                 return 0;
             }).to(Controller.Standard.LY);
+
+            // Snapturn
+            viveMapping.from(Controller.Hardware.Vive.LX).deadZone(0.7).to(Controller.Standard.RX);
         }
 
         this.viveLY = 0;
