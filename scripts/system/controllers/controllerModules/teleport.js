@@ -320,13 +320,58 @@ Script.include("/~/system/libraries/controllers.js");
             this.state = TELEPORTER_STATES.TARGETTING;
         };
 
+        this.outOfBounds = false;
+        this.inBounds = false;
+
+        this.updateBoundsChecks = function () {
+            var hardware = getCurrentHardware();
+            var onAngle = 0;
+            var offAngle = 0;
+            switch (hardware) {
+                case NONE:
+                    break;
+                case VIVE:
+                    onAngle = VIVE_BEAM_ON;
+                    offAngle = VIVE_BEAM_OFF;
+                    break;
+                case TOUCH:
+                    onAngle = TOUCH_BEAM_ON;
+                    offAngle = TOUCH_BEAM_OFF;
+                    break;
+                case MMR:
+                    break;
+                default:
+                    break;
+            }
+            if (SIGNED_ANGLES) {
+                if (CONSIDER_VERTICAL) {
+                    var vAngle = lookPointAngleVertical(this.hand);
+                    var hAngle = lookPointAngleHorizontal(this.hand);
+                    print("vAngle: " + vAngle + "\nhAngle: " + hAngle);
+                    this.inBounds = (vAngle <= VERTICAL_BEAM_ON || vAngle >= VERTICAL_BEAM_ON_NEG) && (hAngle <= HORIZONTAL_BEAM_ON || hAngle >= HORIZONTAL_BEAM_ON_NEG);
+                    this.outOfBounds = (vAngle >= VERTICAL_BEAM_OFF || vAngle <= VERTICAL_BEAM_OFF_NEG) || (hAngle >= HORIZONTAL_BEAM_OFF || hAngle <= HORIZONTAL_BEAM_OFF_NEG);
+                } else {
+                    var hAngle = lookPointAngleHorizontal(this.hand);
+                    this.inBounds = (hAngle <= HORIZONTAL_BEAM_ON || hAngle >= HORIZONTAL_BEAM_ON_NEG);
+                    this.outOfBounds = (hAngle >= HORIZONTAL_BEAM_OFF || hAngle <= HORIZONTAL_BEAM_OFF_NEG);
+                }
+            } else {
+                var angle = lookPointAngle(this.hand);
+
+                this.outOfBounds = (angle >= offAngle);
+                this.inBounds = (angle <= onAngle);
+            }
+        }
+
         this.isReady = function (controllerData, deltaTime) {
             if (!HMD.active) {
                 return makeRunningValues(false, [], []);
             }
             var driver = this.getDriver();
             var otherModule = this.getOtherModule();
-            var start = controllerData.stickClicks[this.hand];
+            this.updateBoundsChecks();
+            var button = controllerData.stickTouch[this.hand];
+            var start = (this.inBounds && button);
             //if (!this.disabled && this.buttonValue !== 0 && !otherModule.active) {
             if (!this.disabled && start) {
                 this.farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
@@ -343,6 +388,14 @@ Script.include("/~/system/libraries/controllers.js");
         this.farGrab = null;
 
         this.run = function (controllerData, deltaTime) {
+            this.updateBoundsChecks();
+            var ending = (!controllerData.stickTouch[this.hand]);
+            //print("Bounds: " + this.inBounds + ", " + this.outOfBounds);
+            if (ending) {
+                this.active = false;
+                this.disableLasers();
+                return makeRunningValues(false, [], []);
+            }
             // Get current hand pose information to see if the pose is valid
             var pose = Controller.getPoseValue(handInfo[(_this.hand === RIGHT_HAND) ? 'right' : 'left'].controllerInput);
             var mode = pose.valid ? _this.hand : 'head';
@@ -403,7 +456,7 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.teleport = function(newResult, target, controllerData) {
             var result = newResult;
-            if (controllerData.stickClicks[this.hand]) {
+            if (!controllerData.stickClicks[this.hand]) {
                 return makeRunningValues(true, [], []);
             }
 
