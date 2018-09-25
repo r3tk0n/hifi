@@ -416,11 +416,23 @@ Script.include("/~/system/libraries/Xform.js");
                 default:
                     break;
             }
+            if (SIGNED_ANGLES) {
+                if (CONSIDER_VERTICAL) {
+                    var vAngle = lookPointAngleVertical(this.hand);
+                    var hAngle = lookPointAngleHorizontal(this.hand);
+                    this.inBounds = (vAngle <= VERTICAL_BEAM_ON || vAngle >= VERTICAL_BEAM_ON_NEG) && (hAngle <= HORIZONTAL_BEAM_ON || hAngle >= HORIZONTAL_BEAM_ON_NEG);
+                    this.outOfBounds = (vAngle >= VERTICAL_BEAM_OFF || vAngle <= VERTICAL_BEAM_OFF_NEG) || (hAngle >= HORIZONTAL_BEAM_OFF || hAngle <= HORIZONTAL_BEAM_OFF_NEG);
+                } else {
+                    var hAngle = lookPointAngleHorizontal(this.hand);
+                    this.inBounds = (hAngle <= HORIZONTAL_BEAM_ON || hAngle >= HORIZONTAL_BEAM_ON_NEG);
+                    this.outOfBounds = (hAngle >= HORIZONTAL_BEAM_OFF || hAngle <= HORIZONTAL_BEAM_OFF_NEG);
+                }
+            } else {
+                var angle = lookPointAngle(this.hand);
 
-            var angle = lookPointAngle(this.hand);
-
-            this.outOfBounds = (angle >= offAngle);
-            this.inBounds = (angle <= onAngle);
+                this.outOfBounds = (angle >= offAngle);
+                this.inBounds = (angle <= onAngle);
+            }
         }
 
         this.isPointing = function () {
@@ -477,7 +489,7 @@ Script.include("/~/system/libraries/Xform.js");
             // Update internal variables checking if we're within bounds to keep alive...
             this.updateBoundsChecks();
             // Do we need to switch to teleport? Only if teleport's active and we're not grabbing something...
-            var contextSwitch = (this.sameHandTeleportModule.active && Uuid.isEqual(Uuid.NULL, this.grabbedThingID));
+            var contextSwitch = controllerData.stickClicks[this.hand];
             if (contextSwitch && this.sameHandTeleportModule) {
                 //print((this.hand === RIGHT_HAND ? "RightHand" : "LeftHand") + " context switch from fargrab.");
                 this.sameHandTeleportModule.active = true;
@@ -485,7 +497,7 @@ Script.include("/~/system/libraries/Xform.js");
 
             // If the trigger's not clicked but we're grabbing something, we should release...
             var trigRelease = (this.usedSecondary ? (controllerData.secondaryValues[this.hand] < 0.3) : (controllerData.triggerClicks[this.hand] === 0));
-            var ending = (!Uuid.isEqual(Uuid.NULL, this.grabbedThingID) && (trigRelease));
+            var ending = (!Uuid.isEqual(Uuid.NULL, this.grabbedThingID) && (trigRelease) || !this.active || contextSwitch);
 
             var angleDeactivation = (this.outOfBounds && Uuid.isEqual(Uuid.NULL, this.grabbedThingID));
 

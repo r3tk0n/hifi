@@ -68,12 +68,14 @@
 // plane to activate/deactivate beams.
 HORIZONTAL_BEAM_ON = 7.5;
 HORIZONTAL_BEAM_OFF = 22.5;
+HORIZONTAL_BEAM_ON_NEG = -7.5;
+HORIZONTAL_BEAM_OFF_NEG = -22.5;
 
 // These four values deal with how far user can point from the look vector on the vertical
 // plane to activate/deactivate beams.
-VERTICAL_BEAM_ON = 12;              // How far "up" user must point to turn on.
+VERTICAL_BEAM_ON = 22.5;              // How far "up" user must point to turn on.
 VERTICAL_BEAM_ON_NEG = -7.5;        // How far "down" user must point to turn on.
-VERTICAL_BEAM_OFF = 11.25;           // How far "up" user must point to turn off.
+VERTICAL_BEAM_OFF = 25;           // How far "up" user must point to turn off.
 VERTICAL_BEAM_OFF_NEG = -11.25;       // How far "down" user must point to turn off.
 
 // General case:
@@ -83,6 +85,7 @@ TOUCH_BEAM_ON = 7.5;
 TOUCH_BEAM_OFF = 11.5;
 
 // Flags for which kind of tests we're doing:
+SIGNED_ANGLES = true;
 CONSIDER_VERTICAL = true;
 
 // "Forward":
@@ -107,6 +110,47 @@ getCurrentHardware = function () {
         return NONE;
     }
     // XXX Lookup and add case for Windows Mixed Reality...
+}
+
+lookPointAngleVertical = function (hand) {
+    // Get the hand pose and its rotation...
+    var handRotation = Quat.multiply(MyAvatar.orientation, (hand === LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
+    //var headPose = Controller.getPoseValue("Head");
+    var headRot = Camera.orientation;
+    var cameraUp = Vec3.multiplyQbyV(headRot, Vec3.UNIT_Y);
+    var right = Vec3.multiplyQbyV(MyAvatar.orientation, Vec3.UNIT_X);
+
+    var pointingVector = Vec3.multiplyQbyV(handRotation, Vec3.UNIT_Y);
+    var lookVector = Vec3.multiplyQbyV(headRot, FORWARD_VEC);
+
+    var pointingProjection = Vec3.subtract(pointingVector, projectVontoW(pointingVector, right));
+    var lookProjection = Vec3.subtract(lookVector, projectVontoW(lookVector, right));
+
+    var angle = toDegrees(Vec3.getAngle(pointingProjection, lookProjection));
+    var ref = toDegrees(Vec3.getAngle(pointingProjection, cameraUp));
+
+    return (ref < 90) ? angle : -angle;
+}
+
+lookPointAngleHorizontal = function (hand) {
+    // Get the hand pose and its rotation...
+    var handRotation = Quat.multiply(MyAvatar.orientation, (hand === LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
+    //var headPose = Controller.getPoseValue("Head");
+    var headRot = Camera.orientation;
+    var cameraRight = Vec3.multiplyQbyV(Camera.orientation, Vec3.UNIT_X);
+    var up = Vec3.multiplyQbyV(MyAvatar.orientation, Vec3.UNIT_Y);
+    var right = Vec3.multiplyQbyV(MyAvatar.orientation, Vec3.UNIT_X);
+
+    var pointingVector = Vec3.multiplyQbyV(handRotation, Vec3.UNIT_Y);
+    var lookVector = Vec3.multiplyQbyV(headRot, FORWARD_VEC);
+
+    var pointingProjection = Vec3.subtract(pointingVector, projectVontoW(pointingVector, up));
+    var lookProjection = Vec3.subtract(lookVector, projectVontoW(lookVector, up));
+
+    var angle = toDegrees(Vec3.getAngle(pointingProjection, lookProjection));
+    var ref = toDegrees(Vec3.getAngle(pointingProjection, cameraRight));
+
+    return (ref < 90) ? angle : -angle;
 }
 
 lookPointAngle = function (hand) {

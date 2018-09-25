@@ -329,12 +329,18 @@ Script.include("/~/system/libraries/controllers.js");
             var start = controllerData.stickClicks[this.hand];
             //if (!this.disabled && this.buttonValue !== 0 && !otherModule.active) {
             if (!this.disabled && start) {
+                this.farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
+                if (this.farGrab) {
+                    this.farGrab.active = false;
+                }
                 this.active = true;
                 this.enterTeleport();
                 return makeRunningValues(true, [], []);
             }
             return makeRunningValues(false, [], []);
         };
+
+        this.farGrab = null;
 
         this.run = function (controllerData, deltaTime) {
             // Get current hand pose information to see if the pose is valid
