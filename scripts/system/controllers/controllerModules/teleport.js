@@ -371,7 +371,7 @@ Script.include("/~/system/libraries/controllers.js");
             var otherModule = this.getOtherModule();
             this.updateBoundsChecks();
             
-            var start = controllerData.stickClicks[this.hand] && this.inBounds;
+            var start = controllerData.stickTouch[this.hand] && this.inBounds;
             //if (!this.disabled && this.buttonValue !== 0 && !otherModule.active) {
             if (!this.disabled && start) {
                 this.farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
@@ -388,7 +388,11 @@ Script.include("/~/system/libraries/controllers.js");
         this.farGrab = null;
 
         this.run = function (controllerData, deltaTime) {
-            //this.updateBoundsChecks();
+            if (!controllerData.stickTouch[this.hand]) {
+                this.disableLasers();
+                this.active = false;
+                return makeRunningValues(false, [], []);
+            }
 
             // Get current hand pose information to see if the pose is valid
             var pose = Controller.getPoseValue(handInfo[(_this.hand === RIGHT_HAND) ? 'right' : 'left'].controllerInput);
@@ -450,7 +454,7 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.teleport = function(newResult, target, controllerData) {
             var result = newResult;
-            if (controllerData.stickClicks[this.hand]) {
+            if (!controllerData.stickClicks[this.hand]) {
                 return makeRunningValues(true, [], []);
             }
 
