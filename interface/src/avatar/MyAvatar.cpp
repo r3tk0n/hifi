@@ -1959,13 +1959,19 @@ void MyAvatar::updateMotors() {
             const float MAX_START_FLYING_ANGLE = 40.0f; // Max offset from vertical that hand can be pointed to start flying.
             const float COS_MAX_START_FLYING_ANGLE = glm::cos(glm::radians(MAX_START_FLYING_ANGLE));
             glm::quat handOrientation = getLeftPalmRotation() * LEFT_HAND_ZERO_ROT;
+            float handPointedUpwardDot = glm::dot(handOrientation * Vectors::UNIT_NEG_Z, Vectors::UNIT_Y);
+            const glm::quat FLY_UP_ROT(glm::quat(glm::radians(glm::vec3(90.0f, 0.0f, 0.0f))));
             if (_characterController.getState() == CharacterController::State::Hover ||
                 _characterController.getState() == CharacterController::State::Takeoff ||
                 _characterController.computeCollisionGroup() == BULLET_COLLISION_GROUP_COLLISIONLESS) {
-                // Fly per left hand orientation.
-                motorRotation = cancelOutRoll(handOrientation);
+                if (handPointedUpwardDot >= COS_MAX_START_FLYING_ANGLE) {
+                    // Fly directly upward.
+                    motorRotation = FLY_UP_ROT;
+                } else {
+                    // Fly per head orientation.
+                    motorRotation = cancelOutRoll(getMyHead()->getHeadOrientation());
+                }
             } else {
-                float handPointedUpwardDot = glm::dot(handOrientation * Vectors::UNIT_NEG_Z, Vectors::UNIT_Y);
                 if (_characterController.getState() == CharacterController::State::InAir) {
                     // In air possibly after initiating flying.
                     if (_isPushing && !_haveSentSecondJump && handPointedUpwardDot >= COS_MAX_START_FLYING_ANGLE) {
@@ -1973,7 +1979,13 @@ void MyAvatar::updateMotors() {
                         _characterController.jump();
                         _haveSentSecondJump = true;
                     }
-                    motorRotation = cancelOutRoll(handOrientation);
+                    if (handPointedUpwardDot >= COS_MAX_START_FLYING_ANGLE) {
+                        // Fly directly upward.
+                        motorRotation = FLY_UP_ROT;
+                    } else {
+                        // Fly per head orientation.
+                        motorRotation = cancelOutRoll(getMyHead()->getHeadOrientation());
+                    }
                 } else if (_isPushing && !_wasPushing && getFlyingHMDPref()
                         && handPointedUpwardDot >= COS_MAX_START_FLYING_ANGLE) {
                     // On ground but user is stationary and wants to fly. Start count-down.
@@ -1988,7 +2000,7 @@ void MyAvatar::updateMotors() {
                         if (usecTimestampNow() - _startedWaitingToFly >= WAITING_TO_FLY_TIMEOUT) {
                             _characterController.jump(); // Initiate flying.
                             _haveSentSecondJump = false;
-                            motorRotation = cancelOutRoll(handOrientation);
+                            motorRotation = FLY_UP_ROT;
                             hasStartedFlying = true;
                         } else {
                             isWaitingToFly = true;
@@ -2002,7 +2014,7 @@ void MyAvatar::updateMotors() {
                     }
                 } else {
                     // Walk on ground per left hand orientation.
-                    motorRotation = cancelOutRollAndPitch(handOrientation);
+                    motorRotation = cancelOutRollAndPitch(getMyHead()->getHeadOrientation());
                 }
             }
         } else {
