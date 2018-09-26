@@ -370,9 +370,6 @@ Script.include("/~/system/libraries/controllers.js");
             var driver = this.getDriver();
             var otherModule = this.getOtherModule();
             this.updateBoundsChecks();
-            if (this.hand === RIGHT_HAND) {
-                print("this.inbounds: " + this.inBounds);
-            }
             
             var start = controllerData.stickClicks[this.hand] && this.inBounds;
             //if (!this.disabled && this.buttonValue !== 0 && !otherModule.active) {
