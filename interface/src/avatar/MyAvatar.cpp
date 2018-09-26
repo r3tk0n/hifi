@@ -137,8 +137,8 @@ MyAvatar::MyAvatar(QThread* thread) :
     _userHeightSetting(QStringList() << AVATAR_SETTINGS_GROUP_NAME << "userHeight", DEFAULT_AVATAR_HEIGHT),
     _flyingHMDSetting(QStringList() << AVATAR_SETTINGS_GROUP_NAME << "flyingHMD", _flyingPrefHMD),
     _avatarEntityCountSetting(QStringList() << AVATAR_SETTINGS_GROUP_NAME << "avatarEntityData" << "size", _flyingPrefHMD),
-    _minFlyingSpeedSetting(QStringList() << AVATAR_SETTINGS_GROUP_NAME << "minFlyingSpeed", _minFlyingSpeed),
-    _maxFlyingSpeedSetting(QStringList() << AVATAR_SETTINGS_GROUP_NAME << "maxFlyingSpeed", _maxFlyingSpeed)
+    _maxFlyingSpeedSetting(QStringList() << AVATAR_SETTINGS_GROUP_NAME << "maxFlyingSpeed", _maxFlyingSpeed),
+    _minFlyingSpeedSetting(QStringList() << AVATAR_SETTINGS_GROUP_NAME << "minFlyingSpeed", _minFlyingSpeed)
 {
     _clientTraitsHandler = std::unique_ptr<ClientTraitsHandler>(new ClientTraitsHandler(this));
 
