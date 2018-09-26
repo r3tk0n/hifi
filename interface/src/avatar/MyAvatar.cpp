@@ -72,9 +72,7 @@ const float YAW_SPEED_DEFAULT = 100.0f;   // degrees/sec
 const float PITCH_SPEED_DEFAULT = 75.0f; // degrees/sec
 
 // FIXME: Remove old code and associated constants if new is adopted.
-/*
 const float MAX_BOOST_SPEED = 0.5f * DEFAULT_AVATAR_MAX_WALKING_SPEED; // action motor gets additive boost below this speed
-*/
 const float MIN_AVATAR_SPEED = 0.05f;
 const float MIN_AVATAR_SPEED_SQUARED = MIN_AVATAR_SPEED * MIN_AVATAR_SPEED; // speed is set to zero below this
 
@@ -2798,7 +2796,6 @@ void MyAvatar::updateActionMotor(float deltaTime) {
 
     if (state == CharacterController::State::Hover) {
         // FIXME: Remove old code and associated constants if new is adopted.
-        /*
         // we're flying --> complex acceleration curve that builds on top of current motor speed and caps at some max speed
 
         float motorSpeed = glm::length(_actionMotorVelocity);
@@ -2818,8 +2815,9 @@ void MyAvatar::updateActionMotor(float deltaTime) {
             }
         }
         _actionMotorVelocity = motorSpeed * direction;
-        */
 
+        // FIXME: Remove new code and associated settings etc. if old code is retained.
+        /*
         // we're flying --> constant speed depending on angle between direction camera and left hand is pointing.
         const glm::quat LEFT_HAND_ZERO_ROT(glm::quat(glm::radians(glm::vec3(90.0f, -90.0f, 0.0f))));
         auto handDirection = (getLeftPalmRotation() * LEFT_HAND_ZERO_ROT) * Vectors::UNIT_NEG_Z;
@@ -2837,6 +2835,7 @@ void MyAvatar::updateActionMotor(float deltaTime) {
             motorSpeed = getSensorToWorldScale() * _minFlyingSpeed;
         }
         _actionMotorVelocity = motorSpeed * direction;
+        */
     } else {
         // we're interacting with a floor --> simple horizontal speed and exponential decay
         const glm::vec2 currentVel = { direction.x, direction.z };
