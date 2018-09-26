@@ -131,6 +131,9 @@ getCurrentHardware = function () {
 }
 
 lookPointAngleVertical = function (hand) {
+    if (!(hand === RIGHT_HAND ? MyAvatar.rightHandPose.valid : MyAvatar.leftHandPose.valid)) {
+        return 200;
+    }
     // Get the hand pose and its rotation...
     var handRotation = Quat.multiply(MyAvatar.orientation, (hand === LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
     //var headPose = Controller.getPoseValue("Head");
@@ -151,6 +154,9 @@ lookPointAngleVertical = function (hand) {
 }
 
 lookPointAngleHorizontal = function (hand) {
+    if (!(hand === RIGHT_HAND ? MyAvatar.rightHandPose.valid : MyAvatar.leftHandPose.valid)) {
+        return 200;
+    }
     // Get the hand pose and its rotation...
     var handRotation = Quat.multiply(MyAvatar.orientation, (hand === LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
     //var headPose = Controller.getPoseValue("Head");
@@ -172,6 +178,9 @@ lookPointAngleHorizontal = function (hand) {
 }
 
 lookPointAngle = function (hand) {
+    if (!(hand === RIGHT_HAND ? MyAvatar.rightHandPose.valid : MyAvatar.leftHandPose.valid)) {
+        return 200;
+    }
     // Get the hand pose and its rotation...
     var handRotation = Quat.multiply(MyAvatar.orientation, (hand === LEFT_HAND) ? MyAvatar.leftHandPose.rotation : MyAvatar.rightHandPose.rotation);
     //var headPose = Controller.getPoseValue("Head");

@@ -420,7 +420,7 @@ Script.include("/~/system/libraries/Xform.js");
                 if (CONSIDER_VERTICAL) {
                     var vAngle = lookPointAngleVertical(this.hand);
                     var hAngle = lookPointAngleHorizontal(this.hand);
-                    this.inBounds = (vAngle <= VERTICAL_BEAM_ON || vAngle >= VERTICAL_BEAM_ON_NEG) && (hAngle <= HORIZONTAL_BEAM_ON || hAngle >= HORIZONTAL_BEAM_ON_NEG);
+                    this.inBounds = (vAngle <= VERTICAL_BEAM_ON && vAngle >= VERTICAL_BEAM_ON_NEG) && (hAngle <= HORIZONTAL_BEAM_ON && hAngle >= HORIZONTAL_BEAM_ON_NEG);
                     this.outOfBounds = (vAngle >= VERTICAL_BEAM_OFF || vAngle <= VERTICAL_BEAM_OFF_NEG) || (hAngle >= HORIZONTAL_BEAM_OFF || hAngle <= HORIZONTAL_BEAM_OFF_NEG);
                 } else {
                     var hAngle = lookPointAngleHorizontal(this.hand);
