@@ -91,74 +91,138 @@ Script.include("/~/system/libraries/controllers.js");
         this.buildViveMappings = function () {
             viveMapName = 'Hifi-Vive-Drive-' + Math.random();
             viveMapping = Controller.newMapping(viveMapName);
-            viveMapping.from(Controller.Hardware.Vive.LY).peek().to(_this.viveAxis);
+
+            // Peek the values on the Y axes for calculating our controller-relative stuff...
+            viveMapping.from(Controller.Hardware.Vive.LY).peek().to(_this.viveAxisLY);
+            viveMapping.from(Controller.Hardware.Vive.RY).peek().to(_this.viveAxisRY);
+
+            // Controller-oriented movement...
             viveMapping.from(function () {
-                var amountPressed = _this.viveLY;
-                var pose = Controller.getPoseValue(Controller.Standard.LeftHand);
-                if (pose.valid && amountPressed > 0.3) {
-                    var rotVec = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
-                    var retMe = (projectVontoW(rotVec, Vec3.UNIT_X)).x;
-                    return retMe * amountPressed;
+                var LY = _this.viveLY;
+                var RY = _this.viveRY;
+
+                var leftVec = Vec3.ZERO;
+                var rightVec = Vec3.ZERO;
+                var leftProj = 0;
+                var rightProj = 0;
+
+                if (notDeadzone(LY)) {
+                    leftVec = getPointVector(LEFT_HAND);
+                    leftProj = projectVontoW(leftVec, Vec3.UNIT_X).x;
                 }
-                return 0;
+                if (notDeadzone(RY)) {
+                    rightVec = getPointVector(RIGHT_HAND);
+                    rightProj = projectVontoW(rightVec, Vec3.UNIT_X).x;
+                }
+
+                var retMe = (leftProj * LY) + (rightProj * RY);
+                return retMe;
             }).to(Controller.Standard.LX);
 
             viveMapping.from(function () {
-                var amountPressed = _this.viveLY;
-                var pose = Controller.getPoseValue(Controller.Standard.LeftHand);
-                if (pose.valid && amountPressed > 0.3) {
-                    var rotVec = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
-                    var retMe = (projectVontoW(rotVec, Vec3.UNIT_Z)).z;
-                    return retMe * amountPressed;
+                var LY = _this.viveLY;
+                var RY = _this.viveRY;
+
+                var leftVec = Vec3.ZERO;
+                var rightVec = Vec3.ZERO;
+                var leftProj = 0;
+                var rightProj = 0;
+
+                if (notDeadzone(LY)) {
+                    leftVec = getPointVector(LEFT_HAND);
+                    leftProj = projectVontoW(leftVec, Vec3.UNIT_Z).z;
                 }
-                return 0;
+                if (notDeadzone(RY)) {
+                    rightVec = getPointVector(RIGHT_HAND);
+                    rightProj = projectVontoW(rightVec, Vec3.UNIT_Z).z;
+                }
+
+                var retMe = (leftProj * LY) + (rightProj * RY);
+                return retMe;
             }).to(Controller.Standard.LY);
 
             // Snapturn
+            viveMapping.from(Controller.Hardware.Vive.LX).deadZone(0.7).to(Controller.Standard.LX);
             viveMapping.from(Controller.Hardware.Vive.LX).deadZone(0.7).to(Controller.Standard.RX);
         }
 
         this.viveLY = 0;
+        this.viveRY = 0;
         this.touchLY = 0;
+        this.touchRY = 0;
 
-        this.viveAxis = function (value) {
+        this.viveAxisLY = function (value) {
             _this.viveLY = value;
         }
 
-        this.touchAxis = function (value) {
+        this.viveAxisRY = function (value) {
+            _this.viveRY = value;
+        }
+
+        this.touchAxisLY = function (value) {
             _this.touchLY = value;
+        }
+
+        this.touchAxisRY = function (value) {
+            _this.touchRY = value;
         }
 
         this.buildTouchMappings = function () {
             touchMapName = 'Hifi-Touch-Drive-' + Math.random();
             touchMapping = Controller.newMapping(touchMapName);
 
-            // Forward and Backward...
-            touchMapping.from(Controller.Hardware.OculusTouch.LY).peek().to(_this.touchAxis);
+            // Peek the values on the Y axes for calculating our controller-relative stuff...
+            touchMapping.from(Controller.Hardware.OculusTouch.LY).peek().to(_this.touchAxisLY);
+            touchMapping.from(Controller.Hardware.OculusTouch.RY).peek().to(_this.touchAxisRY);
+
+            // Controller-oriented movement...
             touchMapping.from(function () {
-                var amountPressed = _this.touchLY;
-                var pose = Controller.getPoseValue(Controller.Standard.LeftHand);
-                if (pose.valid && amountPressed > 0.3) {
-                    var rotVec = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
-                    var retMe = (projectVontoW(rotVec, Vec3.UNIT_X)).x;
-                    return retMe * amountPressed;
+                var LY = _this.touchLY;
+                var RY = _this.touchRY;
+
+                var leftVec = Vec3.ZERO;
+                var rightVec = Vec3.ZERO;
+                var leftProj = 0;
+                var rightProj = 0;
+
+                if (notDeadzone(LY)) {
+                    leftVec = getPointVector(LEFT_HAND);
+                    leftProj = projectVontoW(leftVec, Vec3.UNIT_X).x;
                 }
-                return 0;
+                if (notDeadzone(RY)) {
+                    rightVec = getPointVector(RIGHT_HAND);
+                    rightProj = projectVontoW(rightVec, Vec3.UNIT_X).x;
+                }
+
+                var retMe = (leftProj * LY) + (rightProj * RY);
+                return retMe;
             }).to(Controller.Standard.LX);
 
             touchMapping.from(function () {
-                var amountPressed = _this.touchLY;
-                var pose = Controller.getPoseValue(Controller.Standard.LeftHand);
-                if (pose.valid && amountPressed > 0.3) {
-                    var rotVec = Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
-                    var retMe = (projectVontoW(rotVec, Vec3.UNIT_Z)).z;
-                    return retMe * amountPressed;
+                var LY = _this.touchLY;
+                var RY = _this.touchRY;
+
+                var leftVec = Vec3.ZERO;
+                var rightVec = Vec3.ZERO;
+                var leftProj = 0;
+                var rightProj = 0;
+
+                if (notDeadzone(LY)) {
+                    leftVec = getPointVector(LEFT_HAND);
+                    leftProj = projectVontoW(leftVec, Vec3.UNIT_Z).z;
                 }
-                return 0;
+                if (notDeadzone(RY)) {
+                    rightVec = getPointVector(RIGHT_HAND);
+                    rightProj = projectVontoW(rightVec, Vec3.UNIT_Z).z;
+                }
+
+                var retMe = (leftProj * LY) + (rightProj * RY);
+                return retMe;
             }).to(Controller.Standard.LY);
 
             // Snapturn...
-            touchMapping.from(Controller.Hardware.OculusTouch.LX).deadZone(0.7).to(Controller.Standard.RX);
+            touchMapping.from(Controller.Hardware.OculusTouch.LX).deadZone(0.7).to(Controller.Standard.LX);
+            touchMapping.from(Controller.Hardware.OculusTouch.RX).deadZone(0.7).to(Controller.Standard.RX);
         }
 
         this.buildMMRMappings = function () {

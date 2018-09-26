@@ -64,6 +64,9 @@
 
 /* Begin Experiment 5 Constants */
 
+// Controller binding constants...
+STICK_DEADZONE = 0.3;
+
 // These two values deal with how far user can point from the look vector on the horizontal
 // plane to activate/deactivate beams.
 HORIZONTAL_BEAM_ON = 7.5;
@@ -100,6 +103,21 @@ MMR = 3;        // Microsoft Windows Mixed Reality
 /* End Experiment 5 Constants */
 
 /* Begin Experiment 5 Functions */
+
+getPointVector = function (hand) {
+    var pose = Controller.getPoseValue(hand === RIGHT_HAND ? Controller.Standard.RightHand : Controller.Standard.LeftHand);
+    if (pose.valid) {
+        return Vec3.multiplyQbyV(pose.rotation, Vec3.UNIT_Y);
+    }
+    return Vec3.ZERO;
+}
+
+notDeadzone = function (value) {
+    if (value >= STICK_DEADZONE || value <= -STICK_DEADZONE) {
+        return true;
+    }
+    return false;
+}
 
 getCurrentHardware = function () {
     if (Controller.Hardware.Vive) {
