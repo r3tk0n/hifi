@@ -1993,8 +1993,9 @@ void MyAvatar::updateMotors() {
                     _isPushingEnabled = false;
                 } else if (_isPushing && _isWaitingToFly && getFlyingHMDPref()) {
                     // On ground but user is stationary and waiting to fly.
-                    if (handPointedUpwardDot >= COS_MAX_START_FLYING_ANGLE && !_isWaitingToFlyCancelled) {
-                        // Hand still pointing upward so continue countdown.
+                    if (handPointedUpwardDot >= COS_MAX_START_FLYING_ANGLE && !_isWaitingToFlyCancelled
+                            && getDriveKey(TRANSLATE_Z) > 0.0f) {
+                        // Hand still pointing upward so continue countdown if joystick is forward.
                         if (usecTimestampNow() - _startedWaitingToFly >= WAITING_TO_FLY_TIMEOUT) {
                             _characterController.jump(); // Initiate flying.
                             _haveSentSecondJump = false;
