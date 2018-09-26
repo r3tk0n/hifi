@@ -1956,7 +1956,7 @@ void MyAvatar::updateMotors() {
         if (qApp->isHMDMode() && getLeftHandPose().isValid()) {
             // Fly and walk per left hand orientation.
             const glm::quat LEFT_HAND_ZERO_ROT(glm::quat(glm::radians(glm::vec3(90.0f, -90.0f, 0.0f))));
-            const float MAX_START_FLYING_ANGLE = 30.0f; // Max offset from vertical that hand can be pointed to start flying.
+            const float MAX_START_FLYING_ANGLE = 40.0f; // Max offset from vertical that hand can be pointed to start flying.
             const float COS_MAX_START_FLYING_ANGLE = glm::cos(glm::radians(MAX_START_FLYING_ANGLE));
             glm::quat handOrientation = getLeftPalmRotation() * LEFT_HAND_ZERO_ROT;
             if (_characterController.getState() == CharacterController::State::Hover ||
