@@ -21,6 +21,7 @@ Script.include("/~/system/libraries/controllers.js");
         this.hand = hand;
         this.active = false;
         this.leftTeleport = null;
+        this.rightTeleport = null;
 
         var mappingName = null, driverMapping;
         var viveMapping = null, viveMapName = null, touchMapping = null, touchMapName = null, mmrMapName = null, mmrMapping = null;
@@ -32,8 +33,12 @@ Script.include("/~/system/libraries/controllers.js");
             _this.changed = true;
         }
 
-        this.sameHandTeleport = function () {
+        this.getLeftTeleport = function () {
             this.leftTeleport = getEnabledModuleByName("LeftTeleporter");
+        }
+
+        this.getRightTeleport = function () {
+            this.rightTeleport = getEnabledModuleByName("RightTeleporter");
         }
 
         this.isReady = function (controllerData, deltaTime) {
@@ -41,6 +46,14 @@ Script.include("/~/system/libraries/controllers.js");
                 // Don't run if the HMD isn't mounted.
                 return makeRunningValues(false, [], []);
             }
+
+            this.getLeftTeleport();
+            this.getRightTeleport();
+
+            if (!this.leftTeleport || !this.rightTeleport) {
+                return makeRunningValues(false, [], []);
+            }
+
             return makeRunningValues(true, [], []);
         };
 
@@ -95,6 +108,8 @@ Script.include("/~/system/libraries/controllers.js");
             // Peek the values on the Y axes for calculating our controller-relative stuff...
             viveMapping.from(Controller.Hardware.Vive.LY).peek().to(_this.viveAxisLY);
             viveMapping.from(Controller.Hardware.Vive.RY).peek().to(_this.viveAxisRY);
+            viveMapping.from(Controller.Hardware.Vive.LX).peek().to(_this.viveAxisLX);
+            viveMapping.from(Controller.Hardware.Vive.RX).peek().to(_this.viveAxisRX);
 
             // Controller-oriented movement...
             viveMapping.from(function () {
@@ -106,11 +121,11 @@ Script.include("/~/system/libraries/controllers.js");
                 var leftProj = 0;
                 var rightProj = 0;
 
-                if (notDeadzone(LY)) {
+                if (notDeadzone(LY) && !_this.leftTeleport.active) {
                     leftVec = getPointVector(LEFT_HAND);
                     leftProj = projectVontoW(leftVec, Vec3.UNIT_X).x;
                 }
-                if (notDeadzone(RY)) {
+                if (notDeadzone(RY) && !_this.rightTeleport.active) {
                     rightVec = getPointVector(RIGHT_HAND);
                     rightProj = projectVontoW(rightVec, Vec3.UNIT_X).x;
                 }
@@ -128,11 +143,11 @@ Script.include("/~/system/libraries/controllers.js");
                 var leftProj = 0;
                 var rightProj = 0;
 
-                if (notDeadzone(LY)) {
+                if (notDeadzone(LY) && !_this.leftTeleport.active) {
                     leftVec = getPointVector(LEFT_HAND);
                     leftProj = projectVontoW(leftVec, Vec3.UNIT_Z).z;
                 }
-                if (notDeadzone(RY)) {
+                if (notDeadzone(RY) && !_this.rightTeleport.active) {
                     rightVec = getPointVector(RIGHT_HAND);
                     rightProj = projectVontoW(rightVec, Vec3.UNIT_Z).z;
                 }
@@ -141,9 +156,30 @@ Script.include("/~/system/libraries/controllers.js");
                 return retMe;
             }).to(Controller.Standard.LY);
 
-            // Snapturn
-            viveMapping.from(Controller.Hardware.Vive.LX).deadZone(0.7).to(Controller.Standard.LX);
-            viveMapping.from(Controller.Hardware.Vive.LX).deadZone(0.7).to(Controller.Standard.RX);
+            //// Snapturn
+            //viveMapping.from(function () {
+            //    if (_this.viveLX || _this.viveRX) {
+            //        var mag = (_this.viveLX > _this.viveRX) ? _this.viveLX : _this.viveRX;
+            //        if (Math.abs(mag) > STICK_DEADZONE) {
+            //            return mag;
+            //        }
+
+            //    }
+            //    return 0;
+            //}).to(Controller.Standard.RX);
+            //viveMapping.from(Controller.Hardware.Vive.LX).deadZone(0.05).to(Controller.Standard.LX);
+            //viveMapping.from(Controller.Hardware.Vive.RX).deadZone(0.05).to(Controller.Standard.RX);
+        }
+
+        this.viveLX = 0;
+        this.viveRX = 0;
+        
+        this.viveAxisLX = function (value) {
+            _this.viveLX = value;
+        }
+
+        this.viveAxisRX = function (value) {
+            _this.viveRX = value;
         }
 
         this.viveLY = 0;
@@ -185,11 +221,11 @@ Script.include("/~/system/libraries/controllers.js");
                 var leftProj = 0;
                 var rightProj = 0;
 
-                if (notDeadzone(LY)) {
+                if (notDeadzone(LY) && !_this.rightTeleport.active) {
                     leftVec = getPointVector(LEFT_HAND);
                     leftProj = projectVontoW(leftVec, Vec3.UNIT_X).x;
                 }
-                if (notDeadzone(RY)) {
+                if (notDeadzone(RY) && !_this.rightTeleport.active) {
                     rightVec = getPointVector(RIGHT_HAND);
                     rightProj = projectVontoW(rightVec, Vec3.UNIT_X).x;
                 }
@@ -207,11 +243,11 @@ Script.include("/~/system/libraries/controllers.js");
                 var leftProj = 0;
                 var rightProj = 0;
 
-                if (notDeadzone(LY)) {
+                if (notDeadzone(LY) && !_this.leftTeleport.active) {
                     leftVec = getPointVector(LEFT_HAND);
                     leftProj = projectVontoW(leftVec, Vec3.UNIT_Z).z;
                 }
-                if (notDeadzone(RY)) {
+                if (notDeadzone(RY) && !_this.rightTeleport.active) {
                     rightVec = getPointVector(RIGHT_HAND);
                     rightProj = projectVontoW(rightVec, Vec3.UNIT_Z).z;
                 }

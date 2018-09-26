@@ -489,10 +489,10 @@ Script.include("/~/system/libraries/Xform.js");
             // Update internal variables checking if we're within bounds to keep alive...
             this.updateBoundsChecks();
             // Do we need to switch to teleport? Only if teleport's active and we're not grabbing something...
-            var contextSwitch = controllerData.stickClicks[this.hand];
+            var contextSwitch = controllerData.stickTouch[this.hand] && Uuid.isEqual(Uuid.NULL, this.grabbedThingID);
             if (contextSwitch && this.sameHandTeleportModule) {
                 //print((this.hand === RIGHT_HAND ? "RightHand" : "LeftHand") + " context switch from fargrab.");
-                this.sameHandTeleportModule.active = true;
+                //this.sameHandTeleportModule.active = true;
             }
 
             // If the trigger's not clicked but we're grabbing something, we should release...
