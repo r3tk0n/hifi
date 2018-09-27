@@ -41,6 +41,60 @@ Script.include("/~/system/libraries/controllers.js");
             this.rightTeleport = getEnabledModuleByName("RightTeleporter");
         }
 
+        this.viveLY = 0;
+        this.viveRY = 0;
+        this.viveLX = 0;
+        this.viveRX = 0;
+        this.touchLY = 0;
+        this.touchRY = 0;
+
+        this.viveAxisLX = function (value) {
+            _this.viveLX = value;
+        }
+
+        this.viveAxisRX = function (value) {
+            _this.viveRX = value;
+        }
+
+        this.viveAxisLY = function (value) {
+            _this.viveLY = value;
+        }
+
+        this.viveAxisRY = function (value) {
+            _this.viveRY = value;
+        }
+
+        this.touchAxisLY = function (value) {
+            _this.touchLY = value;
+        }
+
+        this.touchAxisRY = function (value) {
+            _this.touchRY = value;
+        }
+
+        this.shouldStop = function () {
+            // Not used atm.
+            var stop = false;
+            return stop;
+        }
+
+        this.leftStickClick = false;
+        this.rightStickClick = false;
+
+        this.shouldMoveLeftHand = function () {
+            if (Controller.Hardware.Vive) {
+                return _this.leftStickClick;
+            }
+            return true;
+        }
+
+        this.shouldMoveRightHand = function () {
+            if (Controller.Hardware.Vive) {
+                return _this.rightStickClick;
+            }
+            return true;
+        }
+
         this.isReady = function (controllerData, deltaTime) {
             if (!HMD.active) {
                 // Don't run if the HMD isn't mounted.
@@ -57,35 +111,6 @@ Script.include("/~/system/libraries/controllers.js");
             return makeRunningValues(true, [], []);
         };
 
-        this.shouldStop = function () {
-            //var hardware = getCurrentHardware();
-            var stop = false;
-            //switch (hardware) {
-            //    case NONE:
-            //        // Nothing.
-            //        break;
-            //    case VIVE:
-            //        // If left pad is clicked, don't stop.
-            //        if (Controller.getValue(Controller.Hardware.Vive.LS)) {
-            //            stop = false;
-            //        }
-            //        break;
-            //    case TOUCH:
-            //        // If left stick is touched, don't stop.
-            //        if (Controller.getValue(Controller.Hardware.OculusTouch.LSTouch)) {
-            //            stop = false;
-            //        }
-            //        break;
-            //    case MMR:
-            //        // Not supported yet.
-            //        break;
-            //    default:
-            //        // Nothing.
-            //        break;
-            //}
-            return stop;
-        }
-
         this.run = function (controllerData, deltaTime) {
             var stop = this.shouldStop();
 
@@ -95,6 +120,9 @@ Script.include("/~/system/libraries/controllers.js");
                 this.disableMappings();
                 return makeRunningValues(false, [], []);
             }
+
+            _this.leftStickClick = controllerData.stickClicks[LEFT_HAND];
+            _this.rightStickClick = controllerData.stickClicks[RIGHT_HAND];
 
             //this.updateMappings();
 
@@ -121,11 +149,11 @@ Script.include("/~/system/libraries/controllers.js");
                 var leftProj = 0;
                 var rightProj = 0;
 
-                if (notDeadzone(LY) && !_this.leftTeleport.active) {
+                if (notDeadzone(LY) && !_this.leftTeleport.active && _this.shouldMoveLeftHand()) {
                     leftVec = getPointVector(LEFT_HAND);
                     leftProj = projectVontoW(leftVec, Vec3.UNIT_X).x;
                 }
-                if (notDeadzone(RY) && !_this.rightTeleport.active) {
+                if (notDeadzone(RY) && !_this.rightTeleport.active && _this.shouldMoveRightHand()) {
                     rightVec = getPointVector(RIGHT_HAND);
                     rightProj = projectVontoW(rightVec, Vec3.UNIT_X).x;
                 }
@@ -143,11 +171,11 @@ Script.include("/~/system/libraries/controllers.js");
                 var leftProj = 0;
                 var rightProj = 0;
 
-                if (notDeadzone(LY) && !_this.leftTeleport.active) {
+                if (notDeadzone(LY) && !_this.leftTeleport.active && _this.shouldMoveLeftHand()) {
                     leftVec = getPointVector(LEFT_HAND);
                     leftProj = projectVontoW(leftVec, Vec3.UNIT_Z).z;
                 }
-                if (notDeadzone(RY) && !_this.rightTeleport.active) {
+                if (notDeadzone(RY) && !_this.rightTeleport.active && _this.shouldMoveRightHand()) {
                     rightVec = getPointVector(RIGHT_HAND);
                     rightProj = projectVontoW(rightVec, Vec3.UNIT_Z).z;
                 }
@@ -157,50 +185,18 @@ Script.include("/~/system/libraries/controllers.js");
             }).to(Controller.Standard.LY);
 
             //// Snapturn
-            //viveMapping.from(function () {
-            //    if (_this.viveLX || _this.viveRX) {
-            //        var mag = (_this.viveLX > _this.viveRX) ? _this.viveLX : _this.viveRX;
-            //        if (Math.abs(mag) > STICK_DEADZONE) {
-            //            return mag;
-            //        }
-
-            //    }
-            //    return 0;
-            //}).to(Controller.Standard.RX);
-            //viveMapping.from(Controller.Hardware.Vive.LX).deadZone(0.05).to(Controller.Standard.LX);
-            //viveMapping.from(Controller.Hardware.Vive.RX).deadZone(0.05).to(Controller.Standard.RX);
-        }
-
-        this.viveLX = 0;
-        this.viveRX = 0;
-        
-        this.viveAxisLX = function (value) {
-            _this.viveLX = value;
-        }
-
-        this.viveAxisRX = function (value) {
-            _this.viveRX = value;
-        }
-
-        this.viveLY = 0;
-        this.viveRY = 0;
-        this.touchLY = 0;
-        this.touchRY = 0;
-
-        this.viveAxisLY = function (value) {
-            _this.viveLY = value;
-        }
-
-        this.viveAxisRY = function (value) {
-            _this.viveRY = value;
-        }
-
-        this.touchAxisLY = function (value) {
-            _this.touchLY = value;
-        }
-
-        this.touchAxisRY = function (value) {
-            _this.touchRY = value;
+            viveMapping.from(function () {
+                if (_this.leftStickClick && Math.abs(_this.viveLX) > 0.05) {
+                    return _this.viveLX;
+                }
+                return 0;
+            }).when(_this.leftStickClick).deadZone(0.05).to(Controller.Standard.RX);
+            viveMapping.from(function () {
+                if (_this.rightStickClick && Math.abs(_this.viveRX) > 0.05) {
+                    return _this.viveRX;
+                }
+                return 0;
+            }).when(_this.rightStickClick).deadZone(0.05).to(Controller.Standard.RX);
         }
 
         this.buildTouchMappings = function () {

@@ -371,7 +371,7 @@ Script.include("/~/system/libraries/controllers.js");
             var otherModule = this.getOtherModule();
             this.updateBoundsChecks();
             
-            var start = controllerData.stickTouch[this.hand] && this.inBounds;
+            var start = controllerData.stickTouch[this.hand] && this.inBounds && !controllerData.stickClicks[this.hand];
             //if (!this.disabled && this.buttonValue !== 0 && !otherModule.active) {
             if (!this.disabled && start) {
                 this.farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
