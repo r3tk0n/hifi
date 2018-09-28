@@ -363,6 +363,9 @@ Script.include("/~/system/libraries/controllers.js");
             this.state = TELEPORTER_STATES.TARGETTING;
         };
 
+        this.wasDriving = false;
+        this.counter = 0;
+
         this.isReady = function (controllerData, deltaTime) {
             if (!HMD.active) {
                 return makeRunningValues(false, [], []);
@@ -370,7 +373,19 @@ Script.include("/~/system/libraries/controllers.js");
             var driver = this.getDriver();
             var otherModule = this.getOtherModule();
             this.updateBoundsChecks();
-            
+
+            if (this.wasDriving) {
+                if (counter <= NO_TELEPORT) {
+                    counter += deltaTime;
+                    return makeRunningValues(false, [], []);
+                }
+                // Otherwise the timer's run out, reset and disable it.
+                this.wasDriving = false;
+                return makeRunningValues(false, [], []);
+            } else {
+                counter = 0;
+            }
+
             var start = controllerData.stickTouch[this.hand] && this.inBounds && !controllerData.stickClicks[this.hand];
             //if (!this.disabled && this.buttonValue !== 0 && !otherModule.active) {
             if (!this.disabled && start) {

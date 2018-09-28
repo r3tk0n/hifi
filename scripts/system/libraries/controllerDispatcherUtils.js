@@ -91,6 +91,9 @@ TOUCH_BEAM_OFF = 11.5;
 SIGNED_ANGLES = true;
 CONSIDER_VERTICAL = true;
 
+// Timer constants.
+NO_TELEPORT = 0.1;          // in seconds
+
 // "Forward":
 FORWARD_VEC = { x: 0, y: 0, z: -1 };
 

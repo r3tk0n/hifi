@@ -152,10 +152,16 @@ Script.include("/~/system/libraries/controllers.js");
                 if (notDeadzone(LY) && !_this.leftTeleport.active && _this.shouldMoveLeftHand()) {
                     leftVec = getPointVector(LEFT_HAND);
                     leftProj = projectVontoW(leftVec, Vec3.UNIT_X).x;
+                    // Teleport timing control...
+                    _this.leftTeleport.wasDriving = true;
+                    _this.leftTeleport.counter = 0;
                 }
                 if (notDeadzone(RY) && !_this.rightTeleport.active && _this.shouldMoveRightHand()) {
                     rightVec = getPointVector(RIGHT_HAND);
                     rightProj = projectVontoW(rightVec, Vec3.UNIT_X).x;
+                    // Teleport timing control...
+                    _this.rightTeleport.wasDriving = true;
+                    _this.rightTeleport.counter = 0;
                 }
 
                 var retMe = (leftProj * LY) + (rightProj * RY);
@@ -174,10 +180,16 @@ Script.include("/~/system/libraries/controllers.js");
                 if (notDeadzone(LY) && !_this.leftTeleport.active && _this.shouldMoveLeftHand()) {
                     leftVec = getPointVector(LEFT_HAND);
                     leftProj = projectVontoW(leftVec, Vec3.UNIT_Z).z;
+                    // Teleport timing control...
+                    _this.leftTeleport.wasDriving = true;
+                    _this.leftTeleport.counter = 0;
                 }
                 if (notDeadzone(RY) && !_this.rightTeleport.active && _this.shouldMoveRightHand()) {
                     rightVec = getPointVector(RIGHT_HAND);
                     rightProj = projectVontoW(rightVec, Vec3.UNIT_Z).z;
+                    // Teleport timing control...
+                    _this.rightTeleport.wasDriving = true;
+                    _this.rightTeleport.counter = 0;
                 }
 
                 var retMe = (leftProj * LY) + (rightProj * RY);
@@ -217,13 +229,19 @@ Script.include("/~/system/libraries/controllers.js");
                 var leftProj = 0;
                 var rightProj = 0;
 
-                if (notDeadzone(LY) && !_this.rightTeleport.active) {
+                if (notDeadzone(LY) && !_this.leftTeleport.active) {
                     leftVec = getPointVector(LEFT_HAND);
                     leftProj = projectVontoW(leftVec, Vec3.UNIT_X).x;
+                    // Teleport timing control...
+                    _this.leftTeleport.wasDriving = true;
+                    _this.leftTeleport.counter = 0;
                 }
                 if (notDeadzone(RY) && !_this.rightTeleport.active) {
                     rightVec = getPointVector(RIGHT_HAND);
                     rightProj = projectVontoW(rightVec, Vec3.UNIT_X).x;
+                    // Teleport timing control...
+                    _this.rightTeleport.wasDriving = true;
+                    _this.rightTeleport.counter = 0;
                 }
 
                 var retMe = (leftProj * LY) + (rightProj * RY);
@@ -242,10 +260,16 @@ Script.include("/~/system/libraries/controllers.js");
                 if (notDeadzone(LY) && !_this.leftTeleport.active) {
                     leftVec = getPointVector(LEFT_HAND);
                     leftProj = projectVontoW(leftVec, Vec3.UNIT_Z).z;
+                    // Teleport timing control...
+                    _this.leftTeleport.wasDriving = true;
+                    _this.leftTeleport.counter = 0;
                 }
                 if (notDeadzone(RY) && !_this.rightTeleport.active) {
                     rightVec = getPointVector(RIGHT_HAND);
                     rightProj = projectVontoW(rightVec, Vec3.UNIT_Z).z;
+                    // Teleport timing control...
+                    _this.rightTeleport.wasDriving = true;
+                    _this.rightTeleport.counter = 0;
                 }
 
                 var retMe = (leftProj * LY) + (rightProj * RY);
