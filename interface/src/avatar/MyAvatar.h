@@ -1751,6 +1751,7 @@ private:
     bool _goToPending { false };
     bool _physicsSafetyPending { false };
     bool _goToSafe { true };
+    bool _goToFeetAjustment { false };
     glm::vec3 _goToPosition;
     glm::quat _goToOrientation;
 
@@ -1826,6 +1827,7 @@ private:
 
     bool _haveReceivedHeightLimitsFromDomain { false };
     int _disableHandTouchCount { 0 };
+    bool _skeletonModelLoaded { false };
 
     bool _haveSentSecondJump { false };
 
