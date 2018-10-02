@@ -91,6 +91,9 @@ TOUCH_BEAM_OFF = 11.5;
 SIGNED_ANGLES = true;
 CONSIDER_VERTICAL = true;
 
+// Timer constants
+TELEPORT_DELAY = 0.1;               // 100ms, as per Brad's spec.
+
 // "Forward":
 FORWARD_VEC = { x: 0, y: 0, z: -1 };
 
@@ -99,6 +102,13 @@ NONE = 0;       // No HMD
 VIVE = 1;       // HTC Vive
 TOUCH = 2;      // Oculus Touch
 MMR = 3;        // Microsoft Windows Mixed Reality
+
+// Vive actions
+DEADZONE = 0;
+NORTH = 1;
+SOUTH = 2;
+EAST = 4;
+WEST = 8;
 
 /* End Experiment 5 Constants */
 

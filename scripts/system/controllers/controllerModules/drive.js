@@ -78,19 +78,21 @@ Script.include("/~/system/libraries/controllers.js");
             return stop;
         }
 
+        this.leftQuadrant = DEADZONE;
+        this.rightQuadrant = DEADZONE;
         this.leftStickClick = false;
         this.rightStickClick = false;
 
         this.shouldMoveLeftHand = function () {
             if (Controller.Hardware.Vive) {
-                return _this.leftStickClick;
+                return _this.leftStickClick && (_this.leftQuadrant === NORTH || _this.leftQuadrant === SOUTH);
             }
             return true;
         }
 
         this.shouldMoveRightHand = function () {
             if (Controller.Hardware.Vive) {
-                return _this.rightStickClick;
+                return _this.rightStickClick && (_this.rightQuadrant === NORTH || _this.rightQuadrant === SOUTH);
             }
             return true;
         }
@@ -111,6 +113,59 @@ Script.include("/~/system/libraries/controllers.js");
             return makeRunningValues(true, [], []);
         };
 
+        this.checkQuadrantLeft = function () {
+            var x = this.viveLX;
+            var y = this.viveLY;
+            var result = DEADZONE;
+
+            if (Math.abs(y) > Math.abs(x) && y > STICK_DEADZONE) {
+                //result |= NORTH;
+                return NORTH;
+            }
+            if (Math.abs(y) > Math.abs(x) && y < STICK_DEADZONE) {
+                //result |= SOUTH;
+                return SOUTH;
+            }
+            if (Math.abs(x) > Math.abs(y) && x > STICK_DEADZONE) {
+                //result |= EAST;
+                return EAST;
+            }
+            if (Math.abs(x) > Math.abs(y) && x < STICK_DEADZONE) {
+                return WEST;
+            }
+
+            return result;
+        }
+
+        this.checkQuadrantRight = function () {
+            var x = this.viveRX;
+            var y = this.viveRY;
+            var result = DEADZONE;
+
+            if (Math.abs(y) > Math.abs(x) && y > STICK_DEADZONE) {
+                //result |= NORTH;
+                return NORTH;
+            }
+            if (Math.abs(y) > Math.abs(x) && y < STICK_DEADZONE) {
+                //result |= SOUTH;
+                return SOUTH;
+            }
+            if (Math.abs(x) > Math.abs(y) && x > STICK_DEADZONE) {
+                //result |= EAST;
+                return EAST;
+            }
+            if (Math.abs(x) > Math.abs(y) && x < STICK_DEADZONE) {
+                return WEST;
+            }
+
+            return result;
+        }
+        
+        this.updateQuadrants = function () {
+            this.leftQuadrant = this.checkQuadrantLeft();
+            this.rightQuadrant = this.checkQuadrantRight();
+        }
+
         this.run = function (controllerData, deltaTime) {
             var stop = this.shouldStop();
 
@@ -123,6 +178,10 @@ Script.include("/~/system/libraries/controllers.js");
 
             _this.leftStickClick = controllerData.stickClicks[LEFT_HAND];
             _this.rightStickClick = controllerData.stickClicks[RIGHT_HAND];
+
+            if (Controller.Hardware.Vive) {
+                this.updateQuadrants();
+            }
 
             //this.updateMappings();
 
@@ -184,15 +243,15 @@ Script.include("/~/system/libraries/controllers.js");
                 return retMe;
             }).to(Controller.Standard.LY);
 
-            //// Snapturn
+            // Snapturn
             viveMapping.from(function () {
-                if (_this.leftStickClick && Math.abs(_this.viveLX) > 0.05) {
+                if (_this.leftStickClick && Math.abs(_this.viveLX) > 0.05 && (_this.leftQuadrant === WEST || _this.leftQuadrant === EAST)) {
                     return _this.viveLX;
                 }
                 return 0;
             }).when(_this.leftStickClick).deadZone(0.05).to(Controller.Standard.RX);
             viveMapping.from(function () {
-                if (_this.rightStickClick && Math.abs(_this.viveRX) > 0.05) {
+                if (_this.rightStickClick && Math.abs(_this.viveRX) > 0.05 && (_this.rightQuadrant === WEST || _this.rightQuadrant === EAST)) {
                     return _this.viveRX;
                 }
                 return 0;
