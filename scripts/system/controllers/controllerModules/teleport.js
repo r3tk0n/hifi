@@ -372,8 +372,9 @@ Script.include("/~/system/libraries/controllers.js");
             }
 
             // If we're not touching the stick, reset the timer...
-            if (!controllerData.stickTouch[this.hand]) {
+            if (!controllerData.stickTouch[this.hand] || controllerData.stickClicks[this.hand]) {
                 this.timer = 0;
+                return makeRunningValues(false, [], []);
             }
 
             // Delay before teleport (TELEPORT_DELAY defined in controllerDispatcherUtils.js).
@@ -395,6 +396,7 @@ Script.include("/~/system/libraries/controllers.js");
                 }
                 this.active = true;
                 this.enterTeleport();
+                this.timer = 0;
                 return makeRunningValues(true, [], []);
             }
             return makeRunningValues(false, [], []);
