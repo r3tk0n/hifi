@@ -32,7 +32,6 @@
         tablet = Tablet.getTablet("com.highfidelity.interface.tablet.system"),
         DEBUG = false;
 
-    // #region Utilities =======================================================================================================
 
     function debug(message) {
         if (!DEBUG) {
@@ -75,9 +74,6 @@
         return hand === LEFT_HAND ? RIGHT_HAND : LEFT_HAND;
     }
 
-    // #endregion
-
-    // #region UI ==============================================================================================================
 
     UI = function () {
 
@@ -235,13 +231,9 @@
 
 
         function updateMiniTabletID() {
-            // Send mini-tablet overlay ID to controllerDispatcher so that it can use a smaller near grab distance.
-            Messages.sendLocalMessage("Hifi-MiniTablet-Details", JSON.stringify({
-                overlay: miniOverlay,
-                hand: uiHand
-            }));
-            // Send mini-tablet UI overlay ID to stylusInput so that styluses can be used on it.
-            Messages.sendLocalMessage("Hifi-MiniTablet-UI-ID", miniUIOverlay);
+            HMD.miniTabletID = miniOverlay;
+            HMD.miniTabletScreenID = miniUIOverlay;
+            HMD.miniTabletHand = miniOverlay ? uiHand : -1;
         }
 
         function playSound(sound, volume) {
@@ -285,14 +277,14 @@
             Overlays.editOverlay(miniOverlay, {
                 parentID: MyAvatar.SELF_ID,
                 parentJointIndex: handJointIndex(hand),
-                localPosition: Vec3.multiply(MyAvatar.scale, MINI_POSITIONS[hand]),
+                localPosition: Vec3.multiply(MyAvatar.sensorToWorldScale, MINI_POSITIONS[hand]),
                 localRotation: MINI_ROTATIONS[hand],
                 dimensions: Vec3.multiply(initialScale, MINI_DIMENSIONS),
                 grabbable: true,
                 visible: true
             });
             Overlays.editOverlay(miniUIOverlay, {
-                localPosition: Vec3.multiply(MyAvatar.scale, MINI_UI_LOCAL_POSITION),
+                localPosition: Vec3.multiply(MyAvatar.sensorToWorldScale, MINI_UI_LOCAL_POSITION),
                 localRotation: MINI_UI_LOCAL_ROTATION,
                 dimensions: Vec3.multiply(initialScale, MINI_UI_DIMENSIONS),
                 dpi: MINI_UI_DPI / initialScale,
@@ -354,7 +346,8 @@
                 localRotation,
                 localPosition;
 
-            tabletScaleFactor = MyAvatar.scale * (1 + scaleFactor * (miniTargetWidth - miniInitialWidth) / miniInitialWidth);
+            tabletScaleFactor = MyAvatar.sensorToWorldScale
+                * (1 + scaleFactor * (miniTargetWidth - miniInitialWidth) / miniInitialWidth);
             dimensions = Vec3.multiply(tabletScaleFactor, MINI_DIMENSIONS);
             localRotation = Quat.mix(miniExpandLocalRotation, miniTargetLocalRotation, scaleFactor);
             localPosition =
@@ -452,7 +445,7 @@
         function create() {
             miniOverlay = Overlays.addOverlay("model", {
                 url: MINI_MODEL,
-                dimensions: Vec3.multiply(MyAvatar.scale, MINI_DIMENSIONS),
+                dimensions: Vec3.multiply(MyAvatar.sensorToWorldScale, MINI_DIMENSIONS),
                 solid: true,
                 grabbable: true,
                 showKeyboardFocusHighlight: false,
@@ -462,10 +455,10 @@
             miniUIOverlay = Overlays.addOverlay("web3d", {
                 url: MINI_UI_HTML,
                 parentID: miniOverlay,
-                localPosition: Vec3.multiply(MyAvatar.scale, MINI_UI_LOCAL_POSITION),
+                localPosition: Vec3.multiply(MyAvatar.sensorToWorldScale, MINI_UI_LOCAL_POSITION),
                 localRotation: MINI_UI_LOCAL_ROTATION,
-                dimensions: Vec3.multiply(MyAvatar.scale, MINI_UI_DIMENSIONS),
-                dpi: MINI_UI_DPI / MyAvatar.scale,
+                dimensions: Vec3.multiply(MyAvatar.sensorToWorldScale, MINI_UI_DIMENSIONS),
+                dpi: MINI_UI_DPI / MyAvatar.sensorToWorldScale,
                 alpha: 0, // Hide overlay while its content is being created.
                 grabbable: false,
                 showKeyboardFocusHighlight: false,
@@ -511,9 +504,6 @@
 
     };
 
-    // #endregion
-
-    // #region State Machine ===================================================================================================
 
     State = function () {
 
@@ -535,8 +525,6 @@
             STATE_MACHINE,
             miniState = MINI_DISABLED,
             miniHand,
-            updateTimer = null,
-            UPDATE_INTERVAL = 25,
 
             // Mini tablet scaling.
             MINI_SCALE_DURATION = 250,
@@ -572,10 +560,7 @@
 
         function enterMiniDisabled() {
             // Stop updates.
-            if (updateTimer !== null) {
-                Script.clearTimeout(updateTimer);
-                updateTimer = null;
-            }
+            Script.update.disconnect(updateState);
 
             // Stop monitoring mute changes.
             Audio.mutedChanged.disconnect(ui.updateMutedStatus);
@@ -593,7 +578,7 @@
             Audio.mutedChanged.connect(ui.updateMutedStatus);
 
             // Start updates.
-            updateTimer = Script.setTimeout(updateState, UPDATE_INTERVAL);
+            Script.update.connect(updateState);
         }
 
         function shouldShowMini(hand) {
@@ -657,7 +642,7 @@
                 handOrientation =
                     Quat.multiply(MyAvatar.orientation, MyAvatar.getAbsoluteJointRotationInObjectFrame(jointIndex));
                 uiPositionAndOrientation = ui.getUIPositionAndRotation(hand);
-                miniPosition = Vec3.sum(handPosition, Vec3.multiply(MyAvatar.scale,
+                miniPosition = Vec3.sum(handPosition, Vec3.multiply(MyAvatar.sensorToWorldScale,
                     Vec3.multiplyQbyV(handOrientation, uiPositionAndOrientation.position)));
                 miniOrientation = Quat.multiply(handOrientation, uiPositionAndOrientation.rotation);
                 miniToCameraDirection = Vec3.normalize(Vec3.subtract(Camera.position, miniPosition));
@@ -714,7 +699,7 @@
         function scaleMiniDown() {
             var scaleFactor = (Date.now() - miniScaleStart) / MINI_SCALE_DURATION;
             if (scaleFactor < 1) {
-                ui.size((1 - scaleFactor) * MyAvatar.scale);
+                ui.size((1 - scaleFactor) * MyAvatar.sensorToWorldScale);
                 miniScaleTimer = Script.setTimeout(scaleMiniDown, MINI_SCALE_TIMEOUT);
                 return;
             }
@@ -743,12 +728,12 @@
         function scaleMiniUp() {
             var scaleFactor = (Date.now() - miniScaleStart) / MINI_SCALE_DURATION;
             if (scaleFactor < 1) {
-                ui.size(scaleFactor * MyAvatar.scale);
+                ui.size(scaleFactor * MyAvatar.sensorToWorldScale);
                 miniScaleTimer = Script.setTimeout(scaleMiniUp, MINI_SCALE_TIMEOUT);
                 return;
             }
             miniScaleTimer = null;
-            ui.size(MyAvatar.scale);
+            ui.size(MyAvatar.sensorToWorldScale);
             setState(MINI_VISIBLE);
         }
 
@@ -943,7 +928,6 @@
             if (STATE_MACHINE[STATE_STRINGS[miniState]].update) {
                 STATE_MACHINE[STATE_STRINGS[miniState]].update();
             }
-            updateTimer = Script.setTimeout(updateState, UPDATE_INTERVAL);
         }
 
         function create() {
@@ -966,7 +950,6 @@
             MINI_VISIBLE: MINI_VISIBLE,
             MINI_EXPANDING: MINI_EXPANDING,
             TABLET_OPEN: TABLET_OPEN,
-            updateState: updateState,
             setState: setState,
             getState: getState,
             getHand: getHand,
@@ -974,9 +957,6 @@
         };
     };
 
-    // #endregion
-
-    // #region External Events =================================================================================================
 
     function onMessageReceived(channel, data, senderID, localOnly) {
         var message,
@@ -997,7 +977,7 @@
             return;
         }
 
-        if (message.action === "grab" && message.grabbedEntity === HMD.tabletID) {
+        if (message.action === "grab" && message.grabbedEntity === HMD.tabletID && HMD.active) {
             // Tablet may have been grabbed after it replaced expanded mini tablet.
             miniState.setState(miniState.MINI_HIDDEN);
         } else if (message.action === "grab" && miniState.getState() === miniState.MINI_VISIBLE) {
@@ -1009,7 +989,9 @@
 
     function onWentAway() {
         // Mini tablet only available when user is not away.
-        miniState.setState(miniState.MINI_HIDDEN);
+        if (HMD.active) {
+            miniState.setState(miniState.MINI_HIDDEN);
+        }
     }
 
     function onDisplayModeChanged() {
@@ -1021,9 +1003,6 @@
         }
     }
 
-    // #endregion
-
-    // #region Set-up and tear-down ============================================================================================
 
     function setUp() {
         miniState = new State();
@@ -1053,7 +1032,5 @@
 
     setUp();
     Script.scriptEnding.connect(tearDown);
-
-    // #endregion
 
 }());
