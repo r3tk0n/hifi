@@ -85,14 +85,14 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.shouldMoveLeftHand = function () {
             if (Controller.Hardware.Vive) {
-                return _this.leftStickClick && (_this.leftQuadrant === NORTH || _this.leftQuadrant === SOUTH);
+                return _this.leftStickClick && (_this.startedQuadrantRight !== DEADZONE);
             }
             return true;
         }
 
         this.shouldMoveRightHand = function () {
             if (Controller.Hardware.Vive) {
-                return _this.rightStickClick && (_this.rightQuadrant === NORTH || _this.rightQuadrant === SOUTH);
+                return _this.rightStickClick && (_this.startedQuadrantRight !== DEADZONE);
             }
             return true;
         }
@@ -166,6 +166,9 @@ Script.include("/~/system/libraries/controllers.js");
             this.rightQuadrant = this.checkQuadrantRight();
         }
 
+        this.startedQuadrantLeft = DEADZONE;
+        this.startedQuadrantRight = DEADZONE;
+
         this.run = function (controllerData, deltaTime) {
             var stop = this.shouldStop();
 
@@ -176,11 +179,17 @@ Script.include("/~/system/libraries/controllers.js");
                 return makeRunningValues(false, [], []);
             }
 
-            _this.leftStickClick = controllerData.stickClicks[LEFT_HAND];
-            _this.rightStickClick = controllerData.stickClicks[RIGHT_HAND];
+            this.leftStickClick = controllerData.stickClicks[LEFT_HAND];
+            this.rightStickClick = controllerData.stickClicks[RIGHT_HAND];
 
             if (Controller.Hardware.Vive) {
                 this.updateQuadrants();
+                if (this.startedQuadrantLeft === DEADZONE) {
+                    this.startedQuadrantLeft = this.leftQuadrant;
+                }
+                if (this.startedQuadrantRight === DEADZONE) {
+                    this.startedQuadrantRight = this.rightQuadrant;
+                }
             }
 
             //this.updateMappings();
@@ -200,8 +209,24 @@ Script.include("/~/system/libraries/controllers.js");
 
             // Controller-oriented movement...
             viveMapping.from(function () {
-                var LY = _this.viveLY;
                 var RY = _this.viveRY;
+
+                var leftVec = Vec3.ZERO;
+                var rightVec = Vec3.ZERO;
+                var leftProj = 0;
+                var rightProj = 0;
+
+                if (notDeadzone(RY) && !_this.rightTeleport.active && _this.shouldMoveRightHand()) {
+                    rightVec = getPointVector(RIGHT_HAND);
+                    rightProj = projectVontoW(rightVec, Vec3.UNIT_X).x;
+                }
+
+                var retMe = (rightProj * RY);
+                return retMe;
+            }).to(Controller.Standard.LX);
+
+            viveMapping.from(function () {
+                var LY = _this.viveLY;
 
                 var leftVec = Vec3.ZERO;
                 var rightVec = Vec3.ZERO;
@@ -212,18 +237,30 @@ Script.include("/~/system/libraries/controllers.js");
                     leftVec = getPointVector(LEFT_HAND);
                     leftProj = projectVontoW(leftVec, Vec3.UNIT_X).x;
                 }
-                if (notDeadzone(RY) && !_this.rightTeleport.active && _this.shouldMoveRightHand()) {
-                    rightVec = getPointVector(RIGHT_HAND);
-                    rightProj = projectVontoW(rightVec, Vec3.UNIT_X).x;
-                }
 
-                var retMe = (leftProj * LY) + (rightProj * RY);
+                var retMe = (leftProj * LY);
                 return retMe;
             }).to(Controller.Standard.LX);
 
             viveMapping.from(function () {
-                var LY = _this.viveLY;
                 var RY = _this.viveRY;
+
+                var leftVec = Vec3.ZERO;
+                var rightVec = Vec3.ZERO;
+                var leftProj = 0;
+                var rightProj = 0;
+
+                if (notDeadzone(RY) && !_this.rightTeleport.active && _this.shouldMoveRightHand()) {
+                    rightVec = getPointVector(RIGHT_HAND);
+                    rightProj = projectVontoW(rightVec, Vec3.UNIT_Z).z;
+                }
+
+                var retMe = (rightProj * RY);
+                return retMe;
+            }).to(Controller.Standard.LY);
+
+            viveMapping.from(function () {
+                var LY = _this.viveLY;
 
                 var leftVec = Vec3.ZERO;
                 var rightVec = Vec3.ZERO;
@@ -234,12 +271,8 @@ Script.include("/~/system/libraries/controllers.js");
                     leftVec = getPointVector(LEFT_HAND);
                     leftProj = projectVontoW(leftVec, Vec3.UNIT_Z).z;
                 }
-                if (notDeadzone(RY) && !_this.rightTeleport.active && _this.shouldMoveRightHand()) {
-                    rightVec = getPointVector(RIGHT_HAND);
-                    rightProj = projectVontoW(rightVec, Vec3.UNIT_Z).z;
-                }
 
-                var retMe = (leftProj * LY) + (rightProj * RY);
+                var retMe = (leftProj * LY);
                 return retMe;
             }).to(Controller.Standard.LY);
 
