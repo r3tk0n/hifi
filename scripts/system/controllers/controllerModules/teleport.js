@@ -359,6 +359,9 @@ Script.include("/~/system/libraries/controllers.js");
             }
         }
 
+        this.timer = 0;
+        this.touched = 0;
+
         this.enterTeleport = function() {
             this.state = TELEPORTER_STATES.TARGETTING;
         };
@@ -367,6 +370,18 @@ Script.include("/~/system/libraries/controllers.js");
             if (!HMD.active) {
                 return makeRunningValues(false, [], []);
             }
+
+            // If we're not touching the stick, reset the timer...
+            if (!controllerData.stickTouch[this.hand]) {
+                this.timer = 0;
+            }
+
+            // Delay before teleport (TELEPORT_DELAY defined in controllerDispatcherUtils.js).
+            if (this.timer < TELEPORT_DELAY) {
+                this.timer += deltaTime;
+                return makeRunningValues(false, [], []);
+            }
+
             var driver = this.getDriver();
             var otherModule = this.getOtherModule();
             this.updateBoundsChecks();
