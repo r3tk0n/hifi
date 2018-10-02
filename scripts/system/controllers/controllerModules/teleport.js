@@ -366,13 +366,22 @@ Script.include("/~/system/libraries/controllers.js");
             this.state = TELEPORTER_STATES.TARGETTING;
         };
 
+        this.driving = false;
+
         this.isReady = function (controllerData, deltaTime) {
             if (!HMD.active) {
                 return makeRunningValues(false, [], []);
             }
 
+            // If we were driving...
+            if (this.driving && controllerData.stickTouch[this.hand]) {
+                return makeRunningValues(false, [], []);
+            } else {
+                this.driving = false;
+            }
+
             // If we're not touching the stick, reset the timer...
-            if (!controllerData.stickTouch[this.hand] || controllerData.stickClicks[this.hand]) {
+            if (!controllerData.stickTouch[this.hand]) {
                 this.timer = 0;
                 return makeRunningValues(false, [], []);
             }
@@ -380,6 +389,13 @@ Script.include("/~/system/libraries/controllers.js");
             // Delay before teleport (TELEPORT_DELAY defined in controllerDispatcherUtils.js).
             if (this.timer < TELEPORT_DELAY) {
                 this.timer += deltaTime;
+                return makeRunningValues(false, [], []);
+            }
+
+            // If we've clicked before teleport activated, driving...
+            if (controllerData.stickClicks[this.hand]) {
+                this.driving = true;
+                this.timer = 0;
                 return makeRunningValues(false, [], []);
             }
 
