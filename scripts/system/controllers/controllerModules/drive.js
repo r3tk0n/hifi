@@ -85,14 +85,14 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.shouldMoveLeftHand = function () {
             if (Controller.Hardware.Vive) {
-                return _this.leftStickClick && (_this.startedQuadrantRight !== DEADZONE);
+                return _this.leftStickClick && (_this.startedQuadrantLeft === NORTH || _this.startedQuadrantLeft === SOUTH);
             }
             return true;
         }
 
         this.shouldMoveRightHand = function () {
             if (Controller.Hardware.Vive) {
-                return _this.rightStickClick && (_this.startedQuadrantRight !== DEADZONE);
+                return _this.rightStickClick && (_this.startedQuadrantRight=== NORTH || _this.startedQuadrantRight === SOUTH);
             }
             return true;
         }
@@ -184,10 +184,16 @@ Script.include("/~/system/libraries/controllers.js");
 
             if (Controller.Hardware.Vive) {
                 this.updateQuadrants();
-                if (this.startedQuadrantLeft === DEADZONE) {
+                if (!_this.leftStickClick) {
+                    this.startedQuadrantLeft = DEADZONE;
+                }
+                if (!_this.rightStickClick) {
+                    this.startedQuadrantRight = DEADZONE;
+                }
+                if ((this.startedQuadrantLeft === DEADZONE || this.leftQuadrant === DEADZONE) && !_this.leftStickClick) {
                     this.startedQuadrantLeft = this.leftQuadrant;
                 }
-                if (this.startedQuadrantRight === DEADZONE) {
+                if ((this.startedQuadrantRight === DEADZONE || this.rightQuadrant === DEADZONE) && !_this.rightStickClick) {
                     this.startedQuadrantRight = this.rightQuadrant;
                 }
             }
@@ -211,9 +217,7 @@ Script.include("/~/system/libraries/controllers.js");
             viveMapping.from(function () {
                 var RY = _this.viveRY;
 
-                var leftVec = Vec3.ZERO;
                 var rightVec = Vec3.ZERO;
-                var leftProj = 0;
                 var rightProj = 0;
 
                 if (notDeadzone(RY) && !_this.rightTeleport.active && _this.shouldMoveRightHand()) {
@@ -229,9 +233,7 @@ Script.include("/~/system/libraries/controllers.js");
                 var LY = _this.viveLY;
 
                 var leftVec = Vec3.ZERO;
-                var rightVec = Vec3.ZERO;
                 var leftProj = 0;
-                var rightProj = 0;
 
                 if (notDeadzone(LY) && !_this.leftTeleport.active && _this.shouldMoveLeftHand()) {
                     leftVec = getPointVector(LEFT_HAND);
@@ -245,9 +247,7 @@ Script.include("/~/system/libraries/controllers.js");
             viveMapping.from(function () {
                 var RY = _this.viveRY;
 
-                var leftVec = Vec3.ZERO;
                 var rightVec = Vec3.ZERO;
-                var leftProj = 0;
                 var rightProj = 0;
 
                 if (notDeadzone(RY) && !_this.rightTeleport.active && _this.shouldMoveRightHand()) {
@@ -263,9 +263,7 @@ Script.include("/~/system/libraries/controllers.js");
                 var LY = _this.viveLY;
 
                 var leftVec = Vec3.ZERO;
-                var rightVec = Vec3.ZERO;
                 var leftProj = 0;
-                var rightProj = 0;
 
                 if (notDeadzone(LY) && !_this.leftTeleport.active && _this.shouldMoveLeftHand()) {
                     leftVec = getPointVector(LEFT_HAND);
@@ -278,13 +276,13 @@ Script.include("/~/system/libraries/controllers.js");
 
             // Snapturn
             viveMapping.from(function () {
-                if (_this.leftStickClick && Math.abs(_this.viveLX) > 0.05 && (_this.leftQuadrant === WEST || _this.leftQuadrant === EAST)) {
+                if (_this.leftStickClick && Math.abs(_this.viveLX) > 0.05 && (_this.startedQuadrantLeft === WEST || _this.startedQuadrantLeft === EAST)) {
                     return _this.viveLX;
                 }
                 return 0;
             }).when(_this.leftStickClick).deadZone(0.05).to(Controller.Standard.RX);
             viveMapping.from(function () {
-                if (_this.rightStickClick && Math.abs(_this.viveRX) > 0.05 && (_this.rightQuadrant === WEST || _this.rightQuadrant === EAST)) {
+                if (_this.rightStickClick && Math.abs(_this.viveRX) > 0.05 && (_this.startedQuadrantRight === WEST || _this.startedQuadrantRight === EAST)) {
                     return _this.viveRX;
                 }
                 return 0;
