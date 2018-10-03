@@ -87,15 +87,18 @@ Script.include("/~/system/libraries/controllers.js");
             if (Controller.Hardware.Vive) {
                 return _this.leftStickClick && (_this.startedQuadrantLeft === NORTH || _this.startedQuadrantLeft === SOUTH);
             }
-            return true;
+            return !this.disabledLeft;
         }
 
         this.shouldMoveRightHand = function () {
             if (Controller.Hardware.Vive) {
                 return _this.rightStickClick && (_this.startedQuadrantRight=== NORTH || _this.startedQuadrantRight === SOUTH);
             }
-            return true;
+            return !this.disabledRight;
         }
+
+        this.disabledLeft = false;
+        this.disabledRight = false;
 
         this.isReady = function (controllerData, deltaTime) {
             if (!HMD.active) {
@@ -196,6 +199,14 @@ Script.include("/~/system/libraries/controllers.js");
                 if ((this.startedQuadrantRight === DEADZONE || this.rightQuadrant === DEADZONE) && !_this.rightStickClick) {
                     this.startedQuadrantRight = this.rightQuadrant;
                 }
+            }
+
+            if (this.disabledLeft && !this.leftTeleport.active && (_this.touchLY < STICK_DEADZONE)) {
+                this.disabledLeft = false;
+            }
+
+            if (this.disabledRight && !this.rightTeleport.active && (_this.touchRY < STICK_DEADZONE)) {
+                this.disabledRight = false;
             }
 
             //this.updateMappings();
@@ -300,50 +311,66 @@ Script.include("/~/system/libraries/controllers.js");
             // Controller-oriented movement...
             touchMapping.from(function () {
                 var LY = _this.touchLY;
-                var RY = _this.touchRY;
 
                 var leftVec = Vec3.ZERO;
-                var rightVec = Vec3.ZERO;
                 var leftProj = 0;
-                var rightProj = 0;
 
-                if (notDeadzone(LY) && !_this.rightTeleport.active) {
+                if (notDeadzone(LY) && !_this.leftTeleport.active && _this.shouldMoveLeftHand()) {
                     leftVec = getPointVector(LEFT_HAND);
                     leftProj = projectVontoW(leftVec, Vec3.UNIT_X).x;
                 }
-                if (notDeadzone(RY) && !_this.rightTeleport.active) {
+
+                var retMe = (leftProj * LY);
+                return retMe;
+            }).to(Controller.Standard.LX);
+
+            touchMapping.from(function () {
+                var RY = _this.touchRY;
+
+                var rightVec = Vec3.ZERO;
+                var rightProj = 0;
+
+                if (notDeadzone(RY) && !_this.rightTeleport.active && _this.shouldMoveRightHand()) {
                     rightVec = getPointVector(RIGHT_HAND);
                     rightProj = projectVontoW(rightVec, Vec3.UNIT_X).x;
                 }
 
-                var retMe = (leftProj * LY) + (rightProj * RY);
+                var retMe = (rightProj * RY);
                 return retMe;
             }).to(Controller.Standard.LX);
 
             touchMapping.from(function () {
                 var LY = _this.touchLY;
-                var RY = _this.touchRY;
 
                 var leftVec = Vec3.ZERO;
-                var rightVec = Vec3.ZERO;
                 var leftProj = 0;
-                var rightProj = 0;
 
-                if (notDeadzone(LY) && !_this.leftTeleport.active) {
+                if (notDeadzone(LY) && !_this.leftTeleport.active && _this.shouldMoveLeftHand()) {
                     leftVec = getPointVector(LEFT_HAND);
                     leftProj = projectVontoW(leftVec, Vec3.UNIT_Z).z;
                 }
-                if (notDeadzone(RY) && !_this.rightTeleport.active) {
+
+                var retMe = (leftProj * LY);
+                return retMe;
+            }).to(Controller.Standard.LY);
+
+            touchMapping.from(function () {
+                var RY = _this.touchRY;
+
+                var rightVec = Vec3.ZERO;
+                var rightProj = 0;
+
+                if (notDeadzone(RY) && !_this.rightTeleport.active && _this.shouldMoveRightHand()) {
                     rightVec = getPointVector(RIGHT_HAND);
                     rightProj = projectVontoW(rightVec, Vec3.UNIT_Z).z;
                 }
 
-                var retMe = (leftProj * LY) + (rightProj * RY);
+                var retMe = (rightProj * RY);
                 return retMe;
             }).to(Controller.Standard.LY);
 
             // Snapturn...
-            touchMapping.from(Controller.Hardware.OculusTouch.LX).deadZone(0.7).to(Controller.Standard.LX);
+            touchMapping.from(Controller.Hardware.OculusTouch.LX).deadZone(0.7).to(Controller.Standard.RX);
             touchMapping.from(Controller.Hardware.OculusTouch.RX).deadZone(0.7).to(Controller.Standard.RX);
         }
 

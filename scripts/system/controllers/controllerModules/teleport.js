@@ -137,6 +137,7 @@ Script.include("/~/system/libraries/controllers.js");
         this.currentResult = null;
         this.capsuleThreshold = 0.05;
         this.pickHeightOffset = 0.05;
+        var touchMappingName, touchMapping;
 
         this.getOtherModule = function() {
             var otherModule = this.hand === RIGHT_HAND ? leftTeleporter : rightTeleporter;
@@ -162,6 +163,7 @@ Script.include("/~/system/libraries/controllers.js");
             Pointers.removePointer(_this.teleportParabolaHeadCollisions);
             Picks.removePick(_this.teleportHandCollisionPick);
             Picks.removePick(_this.teleportHeadCollisionPick);
+            Controller.disableMapping(touchMappingName);
         };
 
         this.initPointers = function () {
@@ -373,6 +375,10 @@ Script.include("/~/system/libraries/controllers.js");
                 return makeRunningValues(false, [], []);
             }
 
+            if (!this.touchMapped) {
+                this.registerTouchMappings();
+            }
+
             // If we were driving...
             if (this.driving && controllerData.stickTouch[this.hand]) {
                 return makeRunningValues(false, [], []);
@@ -403,7 +409,7 @@ Script.include("/~/system/libraries/controllers.js");
             var otherModule = this.getOtherModule();
             this.updateBoundsChecks();
             
-            var start = controllerData.stickTouch[this.hand] && this.inBounds && !controllerData.stickClicks[this.hand];
+            var start = controllerData.stickTouch[this.hand] && this.inBounds && !controllerData.stickClicks[this.hand] && this.yAxis < STICK_DEADZONE;
             //if (!this.disabled && this.buttonValue !== 0 && !otherModule.active) {
             if (!this.disabled && start) {
                 this.farGrab = getEnabledModuleByName((this.hand === RIGHT_HAND) ? "RightFarActionGrabEntity" : "LeftFarActionGrabEntity");
@@ -413,6 +419,13 @@ Script.include("/~/system/libraries/controllers.js");
                 this.active = true;
                 this.enterTeleport();
                 this.timer = 0;
+                if (driver) {
+                    if (this.hand === RIGHT_HAND) {
+                        driver.disabledRight = true;
+                    } else {
+                        driver.disabledLeft = true;
+                    }
+                }
                 return makeRunningValues(true, [], []);
             }
             return makeRunningValues(false, [], []);
@@ -420,8 +433,35 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.farGrab = null;
 
+        this.touchMapped = false;
+
+        this.yAxis = 0;
+
+        this.touchY = function (value) {
+            _this.yAxis = value;
+        }
+
+        this.registerTouchMappings = function () {
+            if (Controller.Hardware.OculusTouch && !this.touchMapped) {
+                touchMappingName = 'Hifi-Teleport-Touch-Dev-' + Math.random();
+                touchMapping = Controller.newMapping(touchMappingName);
+                touchMapping.from(this.hand === LEFT_HAND ? Controller.Hardware.OculusTouch.LY : Controller.Hardware.OculusTouch.RY).peek().to(_this.touchY);
+                this.touchMapped = true;
+                touchMapping.enable();
+                Controller.enableMapping(touchMappingName);
+            }
+        }
+
         this.run = function (controllerData, deltaTime) {
+            var driver = this.getDriver();
             if (!controllerData.stickTouch[this.hand]) {
+                if (driver) {
+                    if (this.hand === RIGHT_HAND) {
+                        driver.disabledRight = false;
+                    } else {
+                        driver.disabledLeft = false;
+                    }
+                }
                 this.disableLasers();
                 this.active = false;
                 return makeRunningValues(false, [], []);
@@ -487,7 +527,16 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.teleport = function(newResult, target, controllerData) {
             var result = newResult;
-            if (!controllerData.stickClicks[this.hand]) {
+
+            var keepGoing = false;
+
+            if (Controller.Hardware.OculusTouch) {
+                keepGoing = (this.yAxis < STICK_DEADZONE && !controllerData.stickClicks[this.hand]);
+            } else {
+                keepGoing = !controllerData.stickClicks[this.hand];
+            }
+
+            if (keepGoing) {
                 return makeRunningValues(true, [], []);
             }
 
