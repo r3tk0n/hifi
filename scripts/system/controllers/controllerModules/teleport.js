@@ -146,7 +146,7 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.getDriver = function () {
             // Returns null if not found.
-            return getEnabledModuleByName("LeftDriver");
+            return getEnabledModuleByName(_this.hand === RIGHT_HAND ? "RightDriver" : "LeftDriver");
         }
 
         this.teleportHeadCollisionPick;
@@ -420,11 +420,7 @@ Script.include("/~/system/libraries/controllers.js");
                 this.enterTeleport();
                 this.timer = 0;
                 if (driver) {
-                    if (this.hand === RIGHT_HAND) {
-                        driver.disabledRight = true;
-                    } else {
-                        driver.disabledLeft = true;
-                    }
+                    driver.disabled = true;
                 }
                 return makeRunningValues(true, [], []);
             }
@@ -456,11 +452,7 @@ Script.include("/~/system/libraries/controllers.js");
             var driver = this.getDriver();
             if (!controllerData.stickTouch[this.hand]) {
                 if (driver) {
-                    if (this.hand === RIGHT_HAND) {
-                        driver.disabledRight = false;
-                    } else {
-                        driver.disabledLeft = false;
-                    }
+                    driver.disabled = false;
                 }
                 this.disableLasers();
                 this.active = false;
