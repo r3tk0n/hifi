@@ -27,8 +27,8 @@ Script.include("/~/system/libraries/controllers.js");
         this.lastHardware = null;
 
         this.onHardwareChanged = function () {
-            _this.updateMappings();
-            _this.changed = true;
+            this.updateMappings();
+            this.changed = true;
         }
 
         this.teleport = null;
@@ -67,8 +67,11 @@ Script.include("/~/system/libraries/controllers.js");
                 return makeRunningValues(false, [], []);
             }
 
+            this.updateMappings();
             return makeRunningValues(true, [], []);
         };
+
+        this.debugQuadrant = false;
 
         this.checkQuadrant = function () {
             var x = this.viveX;
@@ -77,23 +80,27 @@ Script.include("/~/system/libraries/controllers.js");
 
             if (Math.abs(y) > Math.abs(x) && y > STICK_DEADZONE) {
                 //result |= NORTH;
+                if (this.debugQuadrant) { print("North.") };
                 return NORTH;
             }
             if (Math.abs(y) > Math.abs(x) && y < STICK_DEADZONE) {
                 //result |= SOUTH;
+                if (this.debugQuadrant) { print("South.") };
                 return SOUTH;
             }
             if (Math.abs(x) > Math.abs(y) && x > STICK_DEADZONE) {
                 //result |= EAST;
+                if (this.debugQuadrant) { print("East.") };
                 return EAST;
             }
             if (Math.abs(x) > Math.abs(y) && x < STICK_DEADZONE) {
+                if (this.debugQuadrant) { print("West.") };
                 return WEST;
             }
 
             return result;
         }
-        
+
         this.updateQuadrants = function () {
             this.currentQuadrant = this.checkQuadrant();
         }
@@ -123,8 +130,7 @@ Script.include("/~/system/libraries/controllers.js");
                     this.startedQuadrant = this.currentQuadrant;
                 }
             }
-
-            if (this.disabled && !this.teleport.active && (_this.touchY < STICK_DEADZONE)) {
+            if (this.disabled && !_this.teleport.active && (_this.touchY < STICK_DEADZONE)) {
                 this.disabled = false;
             }
 
@@ -150,9 +156,11 @@ Script.include("/~/system/libraries/controllers.js");
             viveMapName = (this.hand === RIGHT_HAND) ? "Drive-Vive-Mapping-Right" : "Drive-Vive-Mapping-Left";
             viveMapping = Controller.newMapping(viveMapName);
 
-            //// Peek the values on the Y axes for calculating our controller-relative stuff...
-            viveMapping.from(_this.hand === RIGHT_HAND ? Controller.Hardware.Vive.RY : Controller.Hardware.Vive.LY).peek().to(_this.viveY);
-            viveMapping.from(_this.hand === RIGHT_HAND ? Controller.Hardware.Vive.RX : Controller.Hardware.Vive.LX).peek().to(_this.viveX);
+            print("Building Vive mapping...");
+
+            // Peek the values on the Y axes for calculating our controller-relative stuff...
+            viveMapping.from(_this.hand === RIGHT_HAND ? Controller.Hardware.Vive.RY : Controller.Hardware.Vive.LY).peek().to(_this.viveAxisY);
+            viveMapping.from(_this.hand === RIGHT_HAND ? Controller.Hardware.Vive.RX : Controller.Hardware.Vive.LX).peek().to(_this.viveAxisX);
 
             // Controller-oriented movement...
             viveMapping.from(function () {
@@ -190,6 +198,7 @@ Script.include("/~/system/libraries/controllers.js");
                 if (_this.stickClick && Math.abs(_this.viveX) > 0.05 && (_this.startedQuadrant === WEST || _this.startedQuadrant === EAST)) {
                     return _this.viveX;
                 }
+                return 0;
             }).when(_this.stickClick).deadZone(0.05).to(Controller.Standard.RX);
         }
 
@@ -270,6 +279,7 @@ Script.include("/~/system/libraries/controllers.js");
                         this.buildViveMappings();
                         // Add mappings here...
                     }
+                    //print("Enabling mapping...");
                     Controller.enableMapping(viveMapName);
                     break;
                 case TOUCH:
@@ -311,7 +321,7 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.parameters = makeDispatcherModuleParameters(
             600,
-            (this.hand === RIGHT_HAND) ? "exp5Right" : "exp5Left",
+            (this.hand === RIGHT_HAND) ? ["exp5Right"] : ["exp5Left"],
             [],
             100
         );
@@ -319,15 +329,17 @@ Script.include("/~/system/libraries/controllers.js");
 
     var leftDriver = new Driver(LEFT_HAND);
     var rightDriver = new Driver(RIGHT_HAND);
-    leftDriver.updateMappings();
-    rightDriver.updateMappings();
 
     enableDispatcherModule("LeftDriver", leftDriver);
     enableDispatcherModule("RightDriver", rightDriver);
+
     Controller.hardwareChanged.connect(leftDriver.onHardwareChanged);
+    Controller.hardwareChanged.connect(rightDriver.onHardwareChanged);
     function cleanup() {
         leftDriver.cleanup();
         rightDriver.cleanup();
+        Controller.hardwareChanged.disconnect(leftDriver.onHardwareChanged);
+        Controller.hardwareChanged.disconnect(rightDriver.onHardwareChanged);
         disableDispatcherModule("LeftDriver");
         disableDispatcherModule("RightDriver");
     }
