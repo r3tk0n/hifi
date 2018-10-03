@@ -20,8 +20,6 @@ Script.include("/~/system/libraries/controllers.js");
         var _this = this;
         this.hand = hand;
         this.active = false;
-        this.leftTeleport = null;
-        this.rightTeleport = null;
 
         var mappingName = null, driverMapping;
         var viveMapping = null, viveMapName = null, touchMapping = null, touchMapName = null, mmrMapName = null, mmrMapping = null;
@@ -33,43 +31,10 @@ Script.include("/~/system/libraries/controllers.js");
             _this.changed = true;
         }
 
-        this.getLeftTeleport = function () {
-            this.leftTeleport = getEnabledModuleByName("LeftTeleporter");
-        }
+        this.teleport = null;
 
-        this.getRightTeleport = function () {
-            this.rightTeleport = getEnabledModuleByName("RightTeleporter");
-        }
-
-        this.viveLY = 0;
-        this.viveRY = 0;
-        this.viveLX = 0;
-        this.viveRX = 0;
-        this.touchLY = 0;
-        this.touchRY = 0;
-
-        this.viveAxisLX = function (value) {
-            _this.viveLX = value;
-        }
-
-        this.viveAxisRX = function (value) {
-            _this.viveRX = value;
-        }
-
-        this.viveAxisLY = function (value) {
-            _this.viveLY = value;
-        }
-
-        this.viveAxisRY = function (value) {
-            _this.viveRY = value;
-        }
-
-        this.touchAxisLY = function (value) {
-            _this.touchLY = value;
-        }
-
-        this.touchAxisRY = function (value) {
-            _this.touchRY = value;
+        this.getTeleport = function () {
+            this.teleport = getEnabledModuleByName(_this.hand === RIGHT_HAND ? "RightTeleporter" : "LeftTeleporter");
         }
 
         this.shouldStop = function () {
@@ -78,27 +43,17 @@ Script.include("/~/system/libraries/controllers.js");
             return stop;
         }
 
-        this.leftQuadrant = DEADZONE;
-        this.rightQuadrant = DEADZONE;
-        this.leftStickClick = false;
-        this.rightStickClick = false;
+        this.stickClick = false;
+        this.currentQuadrant = DEADZONE;
 
-        this.shouldMoveLeftHand = function () {
+        this.shouldMove = function () {
             if (Controller.Hardware.Vive) {
-                return _this.leftStickClick && (_this.startedQuadrantLeft === NORTH || _this.startedQuadrantLeft === SOUTH);
+                return _this.stickClick && (_this.startedQuadrant === NORTH || _this.startedQuadrant === SOUTH);
             }
-            return !this.disabledLeft;
+            return !this.disabled;
         }
 
-        this.shouldMoveRightHand = function () {
-            if (Controller.Hardware.Vive) {
-                return _this.rightStickClick && (_this.startedQuadrantRight=== NORTH || _this.startedQuadrantRight === SOUTH);
-            }
-            return !this.disabledRight;
-        }
-
-        this.disabledLeft = false;
-        this.disabledRight = false;
+        this.disabled = false;
 
         this.isReady = function (controllerData, deltaTime) {
             if (!HMD.active) {
@@ -106,43 +61,18 @@ Script.include("/~/system/libraries/controllers.js");
                 return makeRunningValues(false, [], []);
             }
 
-            this.getLeftTeleport();
-            this.getRightTeleport();
+            this.getTeleport();
 
-            if (!this.leftTeleport || !this.rightTeleport) {
+            if (!this.teleport) {
                 return makeRunningValues(false, [], []);
             }
 
             return makeRunningValues(true, [], []);
         };
 
-        this.checkQuadrantLeft = function () {
-            var x = this.viveLX;
-            var y = this.viveLY;
-            var result = DEADZONE;
-
-            if (Math.abs(y) > Math.abs(x) && y > STICK_DEADZONE) {
-                //result |= NORTH;
-                return NORTH;
-            }
-            if (Math.abs(y) > Math.abs(x) && y < STICK_DEADZONE) {
-                //result |= SOUTH;
-                return SOUTH;
-            }
-            if (Math.abs(x) > Math.abs(y) && x > STICK_DEADZONE) {
-                //result |= EAST;
-                return EAST;
-            }
-            if (Math.abs(x) > Math.abs(y) && x < STICK_DEADZONE) {
-                return WEST;
-            }
-
-            return result;
-        }
-
-        this.checkQuadrantRight = function () {
-            var x = this.viveRX;
-            var y = this.viveRY;
+        this.checkQuadrant = function () {
+            var x = this.viveX;
+            var y = this.viveY;
             var result = DEADZONE;
 
             if (Math.abs(y) > Math.abs(x) && y > STICK_DEADZONE) {
@@ -165,48 +95,37 @@ Script.include("/~/system/libraries/controllers.js");
         }
         
         this.updateQuadrants = function () {
-            this.leftQuadrant = this.checkQuadrantLeft();
-            this.rightQuadrant = this.checkQuadrantRight();
+            this.currentQuadrant = this.checkQuadrant();
         }
 
-        this.startedQuadrantLeft = DEADZONE;
-        this.startedQuadrantRight = DEADZONE;
+        this.startedQuadrant = DEADZONE;
 
         this.run = function (controllerData, deltaTime) {
             var stop = this.shouldStop();
 
             if (stop) {
                 print("Stopping drive module...");
+                this.startedQuadrant = DEADZONE;
+                this.currentQuadrant = DEADZONE;
                 this.active = false;
                 this.disableMappings();
                 return makeRunningValues(false, [], []);
             }
 
-            this.leftStickClick = controllerData.stickClicks[LEFT_HAND];
-            this.rightStickClick = controllerData.stickClicks[RIGHT_HAND];
+            this.stickClick = controllerData.stickClicks[this.hand];
 
             if (Controller.Hardware.Vive) {
                 this.updateQuadrants();
-                if (!_this.leftStickClick) {
-                    this.startedQuadrantLeft = DEADZONE;
+                if (!_this.stickClick) {
+                    this.startedQuadrant = DEADZONE;
                 }
-                if (!_this.rightStickClick) {
-                    this.startedQuadrantRight = DEADZONE;
-                }
-                if ((this.startedQuadrantLeft === DEADZONE || this.leftQuadrant === DEADZONE) && !_this.leftStickClick) {
-                    this.startedQuadrantLeft = this.leftQuadrant;
-                }
-                if ((this.startedQuadrantRight === DEADZONE || this.rightQuadrant === DEADZONE) && !_this.rightStickClick) {
-                    this.startedQuadrantRight = this.rightQuadrant;
+                if ((this.startedQuadrant === DEADZONE || this.currentQuadrant === DEADZONE) && !_this.stickClick) {
+                    this.startedQuadrant = this.currentQuadrant;
                 }
             }
 
-            if (this.disabledLeft && !this.leftTeleport.active && (_this.touchLY < STICK_DEADZONE)) {
-                this.disabledLeft = false;
-            }
-
-            if (this.disabledRight && !this.rightTeleport.active && (_this.touchRY < STICK_DEADZONE)) {
-                this.disabledRight = false;
+            if (this.disabled && !this.teleport.active && (_this.touchY < STICK_DEADZONE)) {
+                this.disabled = false;
             }
 
             //this.updateMappings();
@@ -214,164 +133,119 @@ Script.include("/~/system/libraries/controllers.js");
             return makeRunningValues(true, [], []);
         };
 
+        // SET UP VIVE MAPPINGS
+
+        this.viveY = 0;
+        this.viveX = 0;
+
+        this.viveAxisY = function (value) {
+            _this.viveY = value;
+        }
+
+        this.viveAxisX = function (value) {
+            _this.viveX = value;
+        }
+
         this.buildViveMappings = function () {
-            viveMapName = 'Hifi-Vive-Drive-' + Math.random();
+            viveMapName = (this.hand === RIGHT_HAND) ? "Drive-Vive-Mapping-Right" : "Drive-Vive-Mapping-Left";
             viveMapping = Controller.newMapping(viveMapName);
 
-            // Peek the values on the Y axes for calculating our controller-relative stuff...
-            viveMapping.from(Controller.Hardware.Vive.LY).peek().to(_this.viveAxisLY);
-            viveMapping.from(Controller.Hardware.Vive.RY).peek().to(_this.viveAxisRY);
-            viveMapping.from(Controller.Hardware.Vive.LX).peek().to(_this.viveAxisLX);
-            viveMapping.from(Controller.Hardware.Vive.RX).peek().to(_this.viveAxisRX);
+            //// Peek the values on the Y axes for calculating our controller-relative stuff...
+            viveMapping.from(_this.hand === RIGHT_HAND ? Controller.Hardware.Vive.RY : Controller.Hardware.Vive.LY).peek().to(_this.viveY);
+            viveMapping.from(_this.hand === RIGHT_HAND ? Controller.Hardware.Vive.RX : Controller.Hardware.Vive.LX).peek().to(_this.viveX);
 
             // Controller-oriented movement...
             viveMapping.from(function () {
-                var RY = _this.viveRY;
+                var y = _this.viveY;
 
-                var rightVec = Vec3.ZERO;
-                var rightProj = 0;
+                var pointingVec = Vec3.ZERO;
+                var projection = 0;
 
-                if (notDeadzone(RY) && !_this.rightTeleport.active && _this.shouldMoveRightHand()) {
-                    rightVec = getPointVector(RIGHT_HAND);
-                    rightProj = projectVontoW(rightVec, Vec3.UNIT_X).x;
+                if (notDeadzone(y) && !_this.teleport.active && _this.shouldMove()) {
+                    pointingVec = getPointVector(_this.hand);
+                    projection = projectVontoW(pointingVec, Vec3.UNIT_X).x;
                 }
 
-                var retMe = (rightProj * RY);
+                var retMe = (projection * y);
                 return retMe;
             }).to(Controller.Standard.LX);
 
             viveMapping.from(function () {
-                var LY = _this.viveLY;
+                var y = _this.viveY;
 
-                var leftVec = Vec3.ZERO;
-                var leftProj = 0;
+                var pointingVec = Vec3.ZERO;
+                var projection = 0;
 
-                if (notDeadzone(LY) && !_this.leftTeleport.active && _this.shouldMoveLeftHand()) {
-                    leftVec = getPointVector(LEFT_HAND);
-                    leftProj = projectVontoW(leftVec, Vec3.UNIT_X).x;
+                if (notDeadzone(y) && !_this.teleport.active && _this.shouldMove()) {
+                    pointingVec = getPointVector(_this.hand);
+                    projection = projectVontoW(pointingVec, Vec3.UNIT_Z).z;
                 }
 
-                var retMe = (leftProj * LY);
-                return retMe;
-            }).to(Controller.Standard.LX);
-
-            viveMapping.from(function () {
-                var RY = _this.viveRY;
-
-                var rightVec = Vec3.ZERO;
-                var rightProj = 0;
-
-                if (notDeadzone(RY) && !_this.rightTeleport.active && _this.shouldMoveRightHand()) {
-                    rightVec = getPointVector(RIGHT_HAND);
-                    rightProj = projectVontoW(rightVec, Vec3.UNIT_Z).z;
-                }
-
-                var retMe = (rightProj * RY);
-                return retMe;
-            }).to(Controller.Standard.LY);
-
-            viveMapping.from(function () {
-                var LY = _this.viveLY;
-
-                var leftVec = Vec3.ZERO;
-                var leftProj = 0;
-
-                if (notDeadzone(LY) && !_this.leftTeleport.active && _this.shouldMoveLeftHand()) {
-                    leftVec = getPointVector(LEFT_HAND);
-                    leftProj = projectVontoW(leftVec, Vec3.UNIT_Z).z;
-                }
-
-                var retMe = (leftProj * LY);
+                var retMe = (projection * y);
                 return retMe;
             }).to(Controller.Standard.LY);
 
             // Snapturn
             viveMapping.from(function () {
-                if (_this.leftStickClick && Math.abs(_this.viveLX) > 0.05 && (_this.startedQuadrantLeft === WEST || _this.startedQuadrantLeft === EAST)) {
-                    return _this.viveLX;
+                if (_this.stickClick && Math.abs(_this.viveX) > 0.05 && (_this.startedQuadrant === WEST || _this.startedQuadrant === EAST)) {
+                    return _this.viveX;
                 }
-                return 0;
-            }).when(_this.leftStickClick).deadZone(0.05).to(Controller.Standard.RX);
-            viveMapping.from(function () {
-                if (_this.rightStickClick && Math.abs(_this.viveRX) > 0.05 && (_this.startedQuadrantRight === WEST || _this.startedQuadrantRight === EAST)) {
-                    return _this.viveRX;
-                }
-                return 0;
-            }).when(_this.rightStickClick).deadZone(0.05).to(Controller.Standard.RX);
+            }).when(_this.stickClick).deadZone(0.05).to(Controller.Standard.RX);
+        }
+
+        // SET UP TOUCH MAPPINGS
+
+        this.touchY = 0;
+        this.touchX = 0;
+
+        this.touchAxisY = function (value) {
+            this.touchY = value;
+        }
+
+        this.touchAxisX = function (value) {
+            this.touchX = value;
         }
 
         this.buildTouchMappings = function () {
-            touchMapName = 'Hifi-Touch-Drive-' + Math.random();
+            touchMapName = (this.hand === RIGHT_HAND) ? "Drive-Touch-Map-Right" : "Drive-Touch-Map-Left";
             touchMapping = Controller.newMapping(touchMapName);
 
             // Peek the values on the Y axes for calculating our controller-relative stuff...
-            touchMapping.from(Controller.Hardware.OculusTouch.LY).peek().to(_this.touchAxisLY);
-            touchMapping.from(Controller.Hardware.OculusTouch.RY).peek().to(_this.touchAxisRY);
+            touchMapping.from((_this.hand === RIGHT_HAND) ? Controller.Hardware.OculusTouch.RY : Controller.Hardware.OculusTouch.LY).peek().to(_this.touchAxisY);
 
             // Controller-oriented movement...
             touchMapping.from(function () {
-                var LY = _this.touchLY;
+                var y = _this.touchY;
 
-                var leftVec = Vec3.ZERO;
-                var leftProj = 0;
+                var pointingVec = Vec3.ZERO;
+                var projection = 0;
 
-                if (notDeadzone(LY) && !_this.leftTeleport.active && _this.shouldMoveLeftHand()) {
-                    leftVec = getPointVector(LEFT_HAND);
-                    leftProj = projectVontoW(leftVec, Vec3.UNIT_X).x;
+                if (notDeadzone(y) && !_this.teleport.active && _this.shouldMove()) {
+                    pointingVec = getPointVector(_this.hand);
+                    projection = projectVontoW(pointingVec, Vec3.UNIT_X).x;
                 }
 
-                var retMe = (leftProj * LY);
+                var retMe = (projection * y);
                 return retMe;
             }).to(Controller.Standard.LX);
 
             touchMapping.from(function () {
-                var RY = _this.touchRY;
+                var y = _this.touchY;
 
-                var rightVec = Vec3.ZERO;
-                var rightProj = 0;
+                var pointingVec = Vec3.ZERO;
+                var projection = 0;
 
-                if (notDeadzone(RY) && !_this.rightTeleport.active && _this.shouldMoveRightHand()) {
-                    rightVec = getPointVector(RIGHT_HAND);
-                    rightProj = projectVontoW(rightVec, Vec3.UNIT_X).x;
+                if (notDeadzone(y) && !_this.teleport.active && _this.shouldMove()) {
+                    pointingVec = getPointVector(_this.hand);
+                    projection = projectVontoW(pointingVec, Vec3.UNIT_Z).z;
                 }
 
-                var retMe = (rightProj * RY);
-                return retMe;
-            }).to(Controller.Standard.LX);
-
-            touchMapping.from(function () {
-                var LY = _this.touchLY;
-
-                var leftVec = Vec3.ZERO;
-                var leftProj = 0;
-
-                if (notDeadzone(LY) && !_this.leftTeleport.active && _this.shouldMoveLeftHand()) {
-                    leftVec = getPointVector(LEFT_HAND);
-                    leftProj = projectVontoW(leftVec, Vec3.UNIT_Z).z;
-                }
-
-                var retMe = (leftProj * LY);
-                return retMe;
-            }).to(Controller.Standard.LY);
-
-            touchMapping.from(function () {
-                var RY = _this.touchRY;
-
-                var rightVec = Vec3.ZERO;
-                var rightProj = 0;
-
-                if (notDeadzone(RY) && !_this.rightTeleport.active && _this.shouldMoveRightHand()) {
-                    rightVec = getPointVector(RIGHT_HAND);
-                    rightProj = projectVontoW(rightVec, Vec3.UNIT_Z).z;
-                }
-
-                var retMe = (rightProj * RY);
+                var retMe = (projection * y);
                 return retMe;
             }).to(Controller.Standard.LY);
 
             // Snapturn...
-            touchMapping.from(Controller.Hardware.OculusTouch.LX).deadZone(0.7).to(Controller.Standard.RX);
-            touchMapping.from(Controller.Hardware.OculusTouch.RX).deadZone(0.7).to(Controller.Standard.RX);
+            touchMapping.from(_this.hand === RIGHT_HAND ? Controller.Hardware.OculusTouch.RX : Controller.Hardware.OculusTouch.LX).deadZone(0.7).to(Controller.Standard.RX);
         }
 
         this.buildMMRMappings = function () {
@@ -437,20 +311,25 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.parameters = makeDispatcherModuleParameters(
             600,
-            "exp5",
+            (this.hand === RIGHT_HAND) ? "exp5Right" : "exp5Left",
             [],
             100
         );
     } // END Driver(hand)
 
     var leftDriver = new Driver(LEFT_HAND);
+    var rightDriver = new Driver(RIGHT_HAND);
     leftDriver.updateMappings();
+    rightDriver.updateMappings();
 
     enableDispatcherModule("LeftDriver", leftDriver);
+    enableDispatcherModule("RightDriver", rightDriver);
     Controller.hardwareChanged.connect(leftDriver.onHardwareChanged);
     function cleanup() {
         leftDriver.cleanup();
+        rightDriver.cleanup();
         disableDispatcherModule("LeftDriver");
+        disableDispatcherModule("RightDriver");
     }
     Script.scriptEnding.connect(cleanup);
 }()); // END LOCAL_SCOPE
