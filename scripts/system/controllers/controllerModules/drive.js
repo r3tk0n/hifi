@@ -48,7 +48,7 @@ Script.include("/~/system/libraries/controllers.js");
 
         this.shouldMove = function () {
             if (Controller.Hardware.Vive) {
-                return _this.stickClick && (_this.startedQuadrant === NORTH || _this.startedQuadrant === SOUTH);
+                return _this.stickClick && (_this.startedQuadrant === NORTH || _this.startedQuadrant === SOUTH) && !this.disabled;
             }
             return !this.disabled;
         }
@@ -119,6 +119,10 @@ Script.include("/~/system/libraries/controllers.js");
                 return makeRunningValues(false, [], []);
             }
 
+            if (this.disabled && !controllerData.stickTouch[this.hand] && !this.teleport.active) {
+                this.disabled = false;
+            }
+
             this.stickClick = controllerData.stickClicks[this.hand];
 
             if (Controller.Hardware.Vive) {
@@ -130,9 +134,9 @@ Script.include("/~/system/libraries/controllers.js");
                     this.startedQuadrant = this.currentQuadrant;
                 }
             }
-            if (this.disabled && !_this.teleport.active && (_this.touchY < STICK_DEADZONE)) {
-                this.disabled = false;
-            }
+            //if (this.disabled && !_this.teleport.active && (_this.touchY < STICK_DEADZONE)) {
+            //    this.disabled = false;
+            //}
 
             //this.updateMappings();
 

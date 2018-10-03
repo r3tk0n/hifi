@@ -92,7 +92,7 @@ SIGNED_ANGLES = true;
 CONSIDER_VERTICAL = true;
 
 // Timer constants
-TELEPORT_DELAY = 0.1;               // 100ms, as per Brad's spec.
+TELEPORT_DELAY = 0.2;               // 100ms, as per Brad's spec.
 
 // "Forward":
 FORWARD_VEC = { x: 0, y: 0, z: -1 };

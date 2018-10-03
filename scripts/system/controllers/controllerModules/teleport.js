@@ -452,7 +452,7 @@ Script.include("/~/system/libraries/controllers.js");
             var driver = this.getDriver();
             if (!controllerData.stickTouch[this.hand]) {
                 if (driver) {
-                    driver.disabled = false;
+                    //driver.disabled = false;
                 }
                 this.disableLasers();
                 this.active = false;
