@@ -212,11 +212,11 @@ Script.include("/~/system/libraries/controllers.js");
         this.touchX = 0;
 
         this.touchAxisY = function (value) {
-            this.touchY = value;
+            _this.touchY = value;
         }
 
         this.touchAxisX = function (value) {
-            this.touchX = value;
+            _this.touchX = value;
         }
 
         this.buildTouchMappings = function () {
