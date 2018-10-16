@@ -197,9 +197,9 @@ Script.include("/~/system/libraries/controllers.js");
             var playAreaOverlayProperties = {
                 dimensions:
                     Vec3.multiply(this.teleportScaleFactor * avatarScale, {
-                        x: this.playArea.width,
+                        x: this.playArea.x,
                         y: this.PLAY_AREA_OVERLAY_MODEL_DIMENSIONS.y,
-                        z: this.playArea.height
+                        z: this.playArea.y
                     })
             };
 
@@ -413,7 +413,7 @@ Script.include("/~/system/libraries/controllers.js");
 
 
             _this.playArea = HMD.playArea;
-            _this.isPlayAreaAvailable = HMD.active && _this.playArea.width !== 0 && _this.playArea.height !== 0;
+            _this.isPlayAreaAvailable = HMD.active && _this.playArea.x !== 0 && _this.playArea.y !== 0;
             if (_this.isPlayAreaAvailable) {
                 _this.playAreaCenterOffset = Vec3.sum({ x: _this.playArea.x, y: 0, z: _this.playArea.y },
                     _this.PLAY_AREA_OVERLAY_OFFSET);
