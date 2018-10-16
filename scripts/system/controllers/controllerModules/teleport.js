@@ -523,6 +523,8 @@ Script.include("/~/system/libraries/controllers.js");
             var keepGoing = false;
 
             if (Controller.Hardware.OculusTouch) {
+                //print("We're here.");
+                //print("yAxis: " + this.yAxis);
                 keepGoing = (this.yAxis < STICK_DEADZONE && !controllerData.stickClicks[this.hand]);
             } else {
                 keepGoing = !controllerData.stickClicks[this.hand];
