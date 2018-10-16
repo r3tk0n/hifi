@@ -124,6 +124,7 @@ Script.include("/~/system/libraries/controllers.js");
             //}
 
             if (this.disabled) {
+                //print("Was disabled on " + (this.hand === RIGHT_HAND ? "Right Hand" : "Left Hand") + " driver");
                 if (!controllerData.stickTouch[this.hand] && !this.teleport.active && !controllerData.yAxis[this.hand]) {
                     this.disabled = false;
                     this.updateMappings();

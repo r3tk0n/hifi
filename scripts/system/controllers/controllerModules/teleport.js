@@ -420,6 +420,7 @@ Script.include("/~/system/libraries/controllers.js");
                 this.enterTeleport();
                 this.timer = 0;
                 if (driver) {
+                    //print("Disabling " + (this.hand === RIGHT_HAND ? "Right Hand" : "Left Hand") + "driver");
                     driver.disabled = true;
                 }
                 return makeRunningValues(true, [], []);
@@ -554,6 +555,7 @@ Script.include("/~/system/libraries/controllers.js");
                 MyAvatar.centerBody();
             }
 
+            this.timer = 0;
             this.disableLasers();
             this.active = false;
             return makeRunningValues(false, [], []);
