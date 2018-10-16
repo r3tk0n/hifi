@@ -197,9 +197,9 @@ Script.include("/~/system/libraries/controllers.js");
             var playAreaOverlayProperties = {
                 dimensions:
                     Vec3.multiply(this.teleportScaleFactor * avatarScale, {
-                        x: this.playArea.width,
+                        x: this.playArea.x,
                         y: this.PLAY_AREA_OVERLAY_MODEL_DIMENSIONS.y,
-                        z: this.playArea.height
+                        z: this.playArea.y
                     })
             };
 
