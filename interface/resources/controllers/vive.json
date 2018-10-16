@@ -2,11 +2,16 @@
     "name": "Vive to Standard",
     "channels": [
         { "from": "Vive.LY", "to": "Standard.LeftIndexPoint",
-            "peek": true
+            "peek": true,
+            "filters": [ { "type": "hysteresis", "min": 0.7, "max": 0.75 } ]
         },
         { "from": "Vive.RY", "to": "Standard.RightIndexPoint",
-            "peek": true
+            "peek": true,
+            "filters": [ { "type": "hysteresis", "min": 0.7, "max": 0.75 } ]
         },
+
+        { "from": "Vive.LY", "when": "Vive.LSY", "filters": ["invert"], "to": "Standard.LY" },
+        { "from": "Vive.LX", "when": "Vive.LSX", "to": "Standard.LX" },
         {
             "from": "Vive.LT", "to": "Standard.LT",
             "filters": [
@@ -22,10 +27,13 @@
             "filters": [ { "type": "logicalNot" } ]
         },
         { "from": "Vive.LSTouch", "to": "Standard.LSTouch" },
+
+        { "from": "Vive.RY", "when": "Vive.RSY", "filters": ["invert"], "to": "Standard.RY" },
+        { "from": "Vive.RX", "when": "Vive.RSX", "to": "Standard.RX" },
         {
             "from": "Vive.RT", "to": "Standard.RT",
             "filters": [
-                { "type": "deadZone", "min": 0.5 }
+                { "type": "deadZone", "min": 0.05 }
             ]
         },
         { "from": "Vive.RTClick", "to": "Standard.RTClick" },

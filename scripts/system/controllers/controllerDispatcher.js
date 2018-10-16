@@ -105,6 +105,10 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
         this.rightStickClicked = 0;
         this.leftStickTouched = 0;
         this.rightStickTouched = 0;
+        this.leftStickY = 0;
+        this.rightStickY = 0;
+        this.leftStickX = 0;
+        this.rightStickX = 0;
 
         this.leftTriggerPress = function (value) {
             _this.leftTriggerValue = value;
@@ -135,6 +139,18 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
         }
         this.rightStickTouch = function (value) {
             _this.rightStickTouched = value;
+        }
+        this.leftStickYAxis = function (value) {
+            _this.leftStickY = value;
+        }
+        this.rightStickYAxis = function (value) {
+            _this.rightStickY = value;
+        }
+        this.leftStickXAxis = function (value) {
+            _this.leftStickX = value;
+        }
+        this.rightStickXAxis = function (value) {
+            _this.rightStickX = value;
         }
 
         this.dataGatherers = {};
@@ -338,6 +354,8 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
                 triggerValues: [_this.leftTriggerValue, _this.rightTriggerValue],
                 triggerClicks: [_this.leftTriggerClicked, _this.rightTriggerClicked],
                 stickTouch: [_this.leftStickTouched, _this.rightStickTouched],
+                yAxis: [_this.leftStickY, _this.rightStickY],
+                xAxis: [_this.leftStickX, _this.rightStickX],
                 secondaryValues: [_this.leftSecondaryValue, _this.rightSecondaryValue],
                 stickClicks: [_this.leftStickClicked, _this.rightStickClicked],
                 controllerLocations: controllerLocations,
@@ -444,6 +462,10 @@ Script.include("/~/system/libraries/controllerDispatcherUtils.js");
         mapping.from([Controller.Standard.RS]).peek().to(_this.rightStickClick);
         mapping.from([Controller.Standard.LSTouch]).peek().to(_this.leftStickTouch);
         mapping.from([Controller.Standard.RSTouch]).peek().to(_this.rightStickTouch);
+        mapping.from([Controller.Standard.LY]).peek().to(_this.leftStickYAxis);
+        mapping.from([Controller.Standard.RY]).peek().to(_this.rightStickYAxis);
+        mapping.from([Controller.Standard.LX]).peek().to(_this.leftStickXAxis);
+        mapping.from([Controller.Standard.RX]).peek().to(_this.rightStickXAxis);
 
         Controller.enableMapping(MAPPING_NAME);
 

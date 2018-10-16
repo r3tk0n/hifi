@@ -119,9 +119,19 @@ Script.include("/~/system/libraries/controllers.js");
                 return makeRunningValues(false, [], []);
             }
 
-            if (this.disabled && !controllerData.stickTouch[this.hand] && !this.teleport.active) {
-                this.disabled = false;
+            //if (this.hand === LEFT_HAND) {
+            //    print("Disabled: " + this.disabled);
+            //}
+
+            if (this.disabled) {
+                if (!controllerData.stickTouch[this.hand] && !this.teleport.active && !controllerData.yAxis[this.hand]) {
+                    this.disabled = false;
+                    this.updateMappings();
+                } else {
+                    this.disableMappings();
+                }
             }
+
 
             this.stickClick = controllerData.stickClicks[this.hand];
 
@@ -137,8 +147,6 @@ Script.include("/~/system/libraries/controllers.js");
             //if (this.disabled && !_this.teleport.active && (_this.touchY < STICK_DEADZONE)) {
             //    this.disabled = false;
             //}
-
-            //this.updateMappings();
 
             return makeRunningValues(true, [], []);
         };
