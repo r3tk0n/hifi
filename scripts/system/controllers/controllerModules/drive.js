@@ -27,8 +27,8 @@ Script.include("/~/system/libraries/controllers.js");
         this.lastHardware = null;
 
         this.onHardwareChanged = function () {
-            this.updateMappings();
-            this.changed = true;
+            _this.updateMappings();
+            _this.changed = true;
         }
 
         this.teleport = null;
@@ -278,8 +278,8 @@ Script.include("/~/system/libraries/controllers.js");
         this.updateMappings = function () {
             var hardware = getCurrentHardware();
 
-            if (hardware !== this.lastHardware) {
-                this.disableMappings();
+            if (hardware !== _this.lastHardware) {
+                _this.disableMappings();
             }
 
             switch (hardware) {
@@ -289,7 +289,7 @@ Script.include("/~/system/libraries/controllers.js");
                 case VIVE:
                     // HTC Vive:
                     if (!viveMapping) {
-                        this.buildViveMappings();
+                        _this.buildViveMappings();
                         // Add mappings here...
                     }
                     //print("Enabling mapping...");
@@ -298,20 +298,20 @@ Script.include("/~/system/libraries/controllers.js");
                 case TOUCH:
                     // Oculus Touch:
                     if (!touchMapping) {
-                        this.buildTouchMappings();
+                        _this.buildTouchMappings();
                     }
                     Controller.enableMapping(touchMapName);
                     break;
                 case MMR:
                     // Microsoft Windows Mixed Reality:
                     if (!mmrMapping) {
-                        this.buildMMRMappings();
+                        _this.buildMMRMappings();
                     }
                     Controller.enableMapping(mmrMapName);
                     break;
             }
 
-            this.lastHardware = hardware;
+            _this.lastHardware = hardware;
         };
 
         this.disableMappings = function () {
