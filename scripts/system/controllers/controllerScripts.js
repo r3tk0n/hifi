@@ -13,7 +13,7 @@ var CONTOLLER_SCRIPTS = [
     "squeezeHands.js",
     "controllerDisplayManager.js",
     "grab.js",
-    "toggleAdvancedMovementForHandControllers.js",
+    //"toggleAdvancedMovementForHandControllers.js",
     "handTouch.js",
     "controllerDispatcher.js",
     "controllerModules/nearParentGrabEntity.js",
