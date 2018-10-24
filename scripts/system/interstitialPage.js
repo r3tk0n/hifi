@@ -583,6 +583,10 @@
 
     Overlays.editOverlay(loadingToTheSpotText, loadingTextProperties);
 
+    function onGeometryChanged(rect) {
+        // Set overlay offsets
+    }
+
     function cleanup() {
         Overlays.deleteOverlay(loadingSphereID);
         Overlays.deleteOverlay(loadingToTheSpotID);
@@ -607,5 +611,6 @@
         }
     }
 
+    Window.geometryChanged.connect(onGeometryChanged);
     Script.scriptEnding.connect(cleanup);
 }());
