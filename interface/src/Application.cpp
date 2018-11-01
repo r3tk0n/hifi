@@ -3360,7 +3360,9 @@ void Application::setSettingConstrainToolbarPosition(bool setting) {
 void Application::showHelp() {
     static const QString HAND_CONTROLLER_NAME_VIVE = "vive";
     static const QString HAND_CONTROLLER_NAME_OCULUS_TOUCH = "oculus";
+    static const QString HAND_CONTROLLER_NAME_OCULUS_STORE = "oculus-store";
     static const QString HAND_CONTROLLER_NAME_WINDOWS_MR = "windowsMR";
+    static const QString OCULUS_STORE_ARG = "--oculus-store";
 
     static const QString TAB_KEYBOARD_MOUSE = "kbm";
     static const QString TAB_GAMEPAD = "gamepad";
@@ -3372,6 +3374,9 @@ void Application::showHelp() {
     if (PluginUtils::isViveControllerAvailable()) {
         defaultTab = TAB_HAND_CONTROLLERS;
         handControllerName = HAND_CONTROLLER_NAME_VIVE;
+    } else if (PluginUtils::isOculusTouchControllerAvailable() && (arguments().indexOf(OCULUS_STORE_ARG) != -1)) {
+        defaultTab = TAB_HAND_CONTROLLERS;
+        handControllerName = HAND_CONTROLLER_NAME_OCULUS_STORE;
     } else if (PluginUtils::isOculusTouchControllerAvailable()) {
         defaultTab = TAB_HAND_CONTROLLERS;
         handControllerName = HAND_CONTROLLER_NAME_OCULUS_TOUCH;

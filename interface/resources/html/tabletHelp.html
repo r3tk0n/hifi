@@ -67,6 +67,7 @@
             var handControllerImageURL = null;
             var index = 0;
             var count = 5;
+			var oculusStore = false;
 
             function showKbm() {
                 document.getElementById("main_image").setAttribute("src", "img/tablet-help-keyboard.jpg");
@@ -94,11 +95,13 @@
                 switch (index) 
                 {
                     case 0:
-                        handControllerImageURL = "img/tablet-help-oculus.jpg";
-                        showHandControllers();
-                        break;
+						if (!oculusStore) {
+							handControllerImageURL = "img/tablet-help-vive.jpg";
+							showHandControllers();
+							break;
+						}
                     case 1:
-                        handControllerImageURL = "img/tablet-help-vive.jpg";
+                        handControllerImageURL = "img/tablet-help-oculus.jpg";
                         showHandControllers();
                         break;
                     case 2:
@@ -144,9 +147,11 @@
                 }
 
                 switch (params.handControllerName) {
+					case "oculus-store":
+						oculusStore = true;
                     case "oculus":
                         handControllerImageURL = "img/tablet-help-oculus.jpg";
-                        index = 0;
+                        index = 1;
                         break;
                     case "windowsMR":
                         handControllerImageURL = "img/tablet-help-windowsMR.jpg";
@@ -155,7 +160,7 @@
                     case "vive":
                     default:
                         handControllerImageURL = "img/tablet-help-vive.jpg";
-                        index = 1;
+                        index = 0;
                 }
 
                 switch (params.defaultTab) {
