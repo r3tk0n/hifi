@@ -4069,6 +4069,8 @@ void Application::keyPressEvent(QKeyEvent* event) {
         bool isShifted = event->modifiers().testFlag(Qt::ShiftModifier);
         bool isMeta = event->modifiers().testFlag(Qt::ControlModifier);
         bool isOption = event->modifiers().testFlag(Qt::AltModifier);
+        auto audioScriptingInterface = DependencyManager::get<AudioScriptingInterface>();
+        auto audioClient = DependencyManager::get<AudioClient>();
         switch (event->key()) {
             case Qt::Key_Enter:
             case Qt::Key_Return:
@@ -4195,6 +4197,14 @@ void Application::keyPressEvent(QKeyEvent* event) {
                 }
                 break;
 
+            case Qt::Key_T:
+                if (qApp->isHMDMode() && audioScriptingInterface->getPTTHMDEnabled()) {
+                    audioClient->setMuted(false);
+                }
+                else if (!qApp->isHMDMode() && audioScriptingInterface->getPTTDesktopEnabled()) {
+                    audioClient->setMuted(false);
+                }
+                break;
             case Qt::Key_P: {
                 if (!isShifted && !isMeta && !isOption && !event->isAutoRepeat()) {
                     AudioInjectorOptions options;
@@ -4282,6 +4292,19 @@ void Application::keyPressEvent(QKeyEvent* event) {
 void Application::keyReleaseEvent(QKeyEvent* event) {
     if (!event->isAutoRepeat()) {
         _keysPressed.remove(event->key());
+    }
+
+    auto audioScriptingInterface = DependencyManager::get<AudioScriptingInterface>();
+    auto audioClient = DependencyManager::get<AudioClient>();
+    switch (event->key()) {
+        case Qt::Key_T:
+            if (qApp->isHMDMode() && audioScriptingInterface->getPTTHMDEnabled()) {
+                audioClient->setMuted(true);
+            }
+            else if (!qApp->isHMDMode() && audioScriptingInterface->getPTTDesktopEnabled()) {
+                audioClient->setMuted(true);
+            }
+            break;
     }
 
 #if defined(Q_OS_ANDROID)
@@ -5253,6 +5276,8 @@ void Application::saveSettings() const {
     DependencyManager::get<LODManager>()->saveSettings();
 
     Menu::getInstance()->saveSettings();
+    auto audioScriptingInterface = DependencyManager::get<AudioScriptingInterface>();
+    audioScriptingInterface->saveSettings();
     getMyAvatar()->saveData();
     PluginManager::getInstance()->saveSettings();
 }
