@@ -60,6 +60,11 @@ const int AudioClient::MIN_BUFFER_FRAMES = 1;
 
 const int AudioClient::MAX_BUFFER_FRAMES = 20;
 
+QString AUDIOCLIENT{ "AudioClient" };
+
+Setting::Handle<bool> muteSettingDesktop{ QStringList{AudioClient::AUDIOCLIENT, "mutedDesktop"}, true };
+Setting::Handle<bool> muteSettingHMD{ QStringList{AudioClient::AUDIOCLIENT, "mutedHMD"}, false };
+
 static const int RECEIVED_AUDIO_STREAM_CAPACITY_FRAMES = 100;
 
 #if defined(Q_OS_ANDROID)
@@ -253,7 +258,8 @@ AudioClient::AudioClient() :
     _lastSmoothedRawInputLoudness(0.0f),
     _lastInputLoudness(0.0f),
     _timeSinceLastClip(-1.0f),
-    _muted(false),
+    _mutedHMD(false),
+    _mutedDesktop(true),
     _shouldEchoLocally(false),
     _shouldEchoToServer(false),
     _isNoiseGateEnabled(true),
@@ -853,7 +859,7 @@ void AudioClient::Gate::flush() {
 
 
 void AudioClient::handleNoisyMutePacket(QSharedPointer<ReceivedMessage> message) {
-    if (!_muted) {
+    if (!isMuted()) {
         setMuted(true);
 
         // have the audio scripting interface emit a signal to say we were muted by the mixer
@@ -1052,7 +1058,7 @@ void AudioClient::setReverbOptions(const AudioEffectOptions* options) {
 void AudioClient::handleLocalEchoAndReverb(QByteArray& inputByteArray) {
     // If there is server echo, reverb will be applied to the recieved audio stream so no need to have it here.
     bool hasReverb = _reverb || _receivedAudioStream.hasReverb();
-    if (_muted || !_audioOutput || (!_shouldEchoLocally && !hasReverb)) {
+    if (isMuted() || !_audioOutput || (!_shouldEchoLocally && !hasReverb)) {
         return;
     }
 
@@ -1131,7 +1137,7 @@ void AudioClient::handleAudioInput(QByteArray& audioBuffer) {
 
         bool audioGateOpen = false;
 
-        if (!_muted) {
+        if (!isMuted()) {
             int16_t* samples = reinterpret_cast<int16_t*>(audioBuffer.data());
             int numSamples = audioBuffer.size() / AudioConstants::SAMPLE_SIZE;
             int numFrames = numSamples / (_isStereoInput ? AudioConstants::STEREO : AudioConstants::MONO);
@@ -1147,7 +1153,7 @@ void AudioClient::handleAudioInput(QByteArray& audioBuffer) {
         }
 
         // loudness after mute/gate
-        _lastInputLoudness = (_muted || !audioGateOpen) ? 0.0f : _lastRawInputLoudness;
+        _lastInputLoudness = (isMuted() || !audioGateOpen) ? 0.0f : _lastRawInputLoudness;
 
         // detect gate opening and closing
         bool openedInLastBlock = !_audioGateOpen && audioGateOpen;  // the gate just opened
@@ -1245,7 +1251,7 @@ void AudioClient::handleMicAudioInput() {
 
         emit inputLoudnessChanged(_lastSmoothedRawInputLoudness, isClipping);
 
-        if (!_muted) {
+        if (!isMuted()) {
             possibleResampling(_inputToNetworkResampler,
                 inputAudioSamples.get(), networkAudioSamples,
                 inputSamplesRequired, numNetworkSamples,
@@ -1514,10 +1520,16 @@ void AudioClient::sendMuteEnvironmentPacket() {
 }
 
 void AudioClient::setMuted(bool muted, bool emitSignal) {
-    if (_muted != muted) {
-        _muted = muted;
+    if (isMuted() != muted) {
+        
+        if (isHMDMode()) {
+            _mutedHMD = muted;
+        }
+        else {
+            _mutedDesktop = muted;
+        }
         if (emitSignal) {
-            emit muteToggled(_muted);
+            emit muteToggled((isHMDMode() ? _mutedHMD : _mutedDesktop));
         }
     }
 }
@@ -2160,6 +2172,8 @@ void AudioClient::stopRecording() {
 void AudioClient::loadSettings() {
     _receivedAudioStream.setDynamicJitterBufferEnabled(dynamicJitterBufferEnabled.get());
     _receivedAudioStream.setStaticJitterBufferFrames(staticJitterBufferFrames.get());
+    _mutedDesktop = muteSettingDesktop.get();
+    _mutedHMD = muteSettingHMD.get();
 
     qCDebug(audioclient) << "---- Initializing Audio Client ----";
     auto codecPlugins = PluginManager::getInstance()->getCodecPlugins();
@@ -2172,6 +2186,8 @@ void AudioClient::loadSettings() {
 void AudioClient::saveSettings() {
     dynamicJitterBufferEnabled.set(_receivedAudioStream.dynamicJitterBufferEnabled());
     staticJitterBufferFrames.set(_receivedAudioStream.getStaticJitterBufferFrames());
+    muteSettingDesktop.set(_mutedDesktop);
+    muteSettingHMD.set(_mutedHMD);
 }
 
 void AudioClient::setAvatarBoundingBoxParameters(glm::vec3 corner, glm::vec3 scale) {

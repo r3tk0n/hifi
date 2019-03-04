@@ -84,6 +84,7 @@ class AudioClient : public AbstractAudioInterface, public Dependency {
 
     using LocalInjectorsStream = AudioMixRingBuffer;
 public:
+    static QString AUDIOCLIENT;
     static const int MIN_BUFFER_FRAMES;
     static const int MAX_BUFFER_FRAMES;
 
@@ -202,7 +203,8 @@ public slots:
     void audioMixerKilled();
 
     void setMuted(bool muted, bool emitSignal = true);
-    bool isMuted() { return _muted; }
+    bool isMuted() { return (qApp->isHMDMode()) ? _mutedHMD : _mutedDesktop; };
+    bool isHMDMode() { return qApp->isHMDMode(); };
 
     virtual bool setIsStereoInput(bool stereo) override;
     virtual bool isStereoInput() override { return _isStereoInput; }
@@ -361,7 +363,8 @@ private:
     float _timeSinceLastClip;
     int _totalInputAudioSamples;
 
-    bool _muted;
+    bool _mutedDesktop;
+    bool _mutedHMD;
     bool _shouldEchoLocally;
     bool _shouldEchoToServer;
     bool _isNoiseGateEnabled;
