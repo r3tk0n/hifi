@@ -18,11 +18,43 @@
 #include "ScriptAudioInjector.h"
 #include "ScriptEngineLogging.h"
 
+QString AudioScriptingInterface::AUDIOSCRIPTINGINTERFACE{ "AudioScriptingInterface" };
+Setting::Handle<bool> pushToTalkHMDSetting{ QStringList { AudioScriptingInterface::AUDIOSCRIPTINGINTERFACE, "PTTHMD" }, false };
+Setting::Handle<bool> pushToTalkDesktopSetting{ QStringList { AudioScriptingInterface::AUDIOSCRIPTINGINTERFACE, "PTTDesktop" }, false };
+
 void registerAudioMetaTypes(QScriptEngine* engine) {
     qScriptRegisterMetaType(engine, injectorOptionsToScriptValue, injectorOptionsFromScriptValue);
     qScriptRegisterMetaType(engine, soundSharedPointerToScriptValue, soundSharedPointerFromScriptValue);
 }
 
+void AudioScriptingInterface::saveSettings() {
+    pushToTalkDesktopSetting.set(_PTTDesktop);
+    pushToTalkHMDSetting.set(_PTTHMD);
+}
+
+void AudioScriptingInterface::enablePTTDesktop(bool enabled) {
+    if (QThread::currentThread() != thread()) {
+        QMetaObject::invokeMethod(this, "enablePTTDesktop", Q_ARG(float, enabled));
+        return;
+    }
+    _PTTDesktop = enabled;
+}
+
+void AudioScriptingInterface::enablePTTHMD(bool enabled) {
+    if (QThread::currentThread() != thread()) {
+        QMetaObject::invokeMethod(this, "enablePTTHMD", Q_ARG(float, enabled));
+        return;
+    }
+    _PTTHMD = enabled;
+}
+
+bool AudioScriptingInterface::getPTTDesktopEnabled() {
+    return _PTTDesktop;
+}
+
+bool AudioScriptingInterface::getPTTHMDEnabled() {
+    return _PTTHMD;
+}
 
 void AudioScriptingInterface::setLocalAudioInterface(AbstractAudioInterface* audioInterface) {
     if (_localAudioInterface) {

@@ -16,6 +16,7 @@
 #include <AudioInjector.h>
 #include <DependencyManager.h>
 #include <Sound.h>
+#include "SettingHandle.h"
 
 class ScriptAudioInjector;
 
@@ -27,10 +28,19 @@ class AudioScriptingInterface : public QObject, public Dependency {
     Q_PROPERTY(bool isStereoInput READ isStereoInput WRITE setStereoInput NOTIFY isStereoInputChanged)
     Q_PROPERTY(bool isSoloing READ isSoloing)
     Q_PROPERTY(QVector<QUuid> soloList READ getSoloList)
+    Q_PROPERTY(bool pushToTalkDesktop READ getPTTDesktopEnabled WRITE enablePTTDesktop NOTIFY pushToTalkDesktopChanged)
+    Q_PROPERTY(bool pushToTalkHMD READ getPTTHMDEnabled WRITE enablePTTHMD NOTIFY pushToTalkHMDChanged)
 
 public:
+    static QString AUDIOSCRIPTINGINTERFACE;
     virtual ~AudioScriptingInterface() = default;
+    void saveSettings();
+    void enablePTTDesktop(bool enabled);
+    void enablePTTHMD(bool enabled);
+    bool getPTTDesktopEnabled();
+    bool getPTTHMDEnabled();
     void setLocalAudioInterface(AbstractAudioInterface* audioInterface);
+    bool getPushToTalk();
 
     bool isSoloing() const {
         return _localAudioInterface->getAudioSolo().isSoloing();
@@ -187,8 +197,13 @@ signals:
      */
     void isStereoInputChanged(bool isStereo);
 
+    void pushToTalkDesktopChanged(bool enabled);
+    void pushToTalkHMDChanged(bool enabled);
+
 private:
     AbstractAudioInterface* _localAudioInterface { nullptr };
+    bool _PTTDesktop { false };
+    bool _PTTHMD { false };
 };
 
 void registerAudioMetaTypes(QScriptEngine* engine);
